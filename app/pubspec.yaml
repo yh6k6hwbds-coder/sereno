@@ -1,0 +1,19 @@
+name: sereno
+description: Sereno — cliente Flutter do piloto de neuromodulação (ferramenta complementar).
+publish_to: "none"
+version: 0.1.0+1
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  flutter_secure_storage: ^9.2.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+flutter:
+  uses-material-design: true
+  # Fontes da identidade (adicionar os arquivos .ttf em assets/fonts e descomentar):
+  #   Fraunces (display), Inter (corpo), IBM Plex Mono (dados)

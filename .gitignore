@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+# Node / Flutter
+node_modules/
+.dart_tool/
+build/
+.flutter-plugins*
+# Áudio renderizado (gerado pela pipeline; não versionar binários grandes)
+audio-pipeline/out/
+*.wav
+*.flac
+# Segredos e dados — NUNCA versionar
+*.pem
+*.key
+secrets/
+data/
+# SO / editor
+.DS_Store
+.idea/
+.vscode/

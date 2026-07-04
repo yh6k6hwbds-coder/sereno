@@ -1,0 +1,414 @@
+openapi: 3.1.0
+info:
+  title: Sereno API
+  version: "1.0.0"
+  description: >
+    API do piloto de neuromodulação não invasiva. Contrato é a fonte de verdade.
+    Erros seguem problem+json (RFC 9457). O braço do estudo nunca é exposto:
+    endpoints de participante recebem apenas um handle de protocolo neutro, e a
+    exportação de pesquisa usa braço codificado (A/B).
+servers:
+  - url: https://api.sereno.example/v1
+security:
+  - bearerAuth: []
+paths:
+  /auth/token:
+    post:
+      summary: Autenticar e obter tokens
+      security: []
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginIn' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /auth/refresh:
+    post:
+      summary: Renovar token de acesso
+      security: []
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RefreshIn' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+  /auth/mfa/verify:
+    post:
+      summary: Verificar segundo fator (TOTP) — pesquisador/admin
+      operationId: verifyMfa
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/MfaIn' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+  /auth/participant/request-otp:
+    post:
+      summary: Solicitar código de uso único (OTP) — participante
+      operationId: participantRequestOtp
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RequestOtpIn' } } }
+      responses:
+        '200': { description: "OK (resposta genérica, sem enumeração)" }
+  /auth/participant/verify-otp:
+    post:
+      summary: Verificar OTP e emitir token de participante
+      operationId: participantVerifyOtp
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/VerifyOtpIn' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+  /diary:
+    post:
+      summary: Registrar entrada do diário de sono (um por dia)
+      operationId: addDiaryEntry
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/DiaryIn' } } }
+      responses:
+        '201': { description: Registrado }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /participants/me/followup:
+    post:
+      summary: Enviar avaliação de seguimento (PSQI + GAD-7 + SUS + palpite de cegamento)
+      operationId: submitFollowup
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/FollowupIn' } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/FollowupOut' } } } }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /participants/me/consent:
+    post:
+      summary: Registrar consentimento (TCLE)
+      operationId: recordConsent
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ConsentIn' } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/ConsentOut' } } } }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /participants/me/baseline:
+    post:
+      summary: Enviar avaliação de linha de base (PSQI + GAD-7)
+      operationId: submitBaseline
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BaselineIn' } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/ScoreOut' } } } }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sessions:
+    post:
+      summary: Iniciar uma sessão
+      operationId: startSession
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SessionIn' } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/SessionOut' } } } }
+        '422': { $ref: '#/components/responses/Problem' }
+    get:
+      summary: Listar sessões do participante
+      operationId: listSessions
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SessionPage' } } } }
+  /sessions/{id}/complete:
+    post:
+      summary: Encerrar a sessão (telemetria)
+      operationId: completeSession
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SessionCompleteIn' } } }
+      responses:
+        '200': { description: Encerrada }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sessions/{id}/survey:
+    post:
+      summary: Enviar micro-questionário pós-sessão
+      operationId: submitSurvey
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SurveyIn' } } }
+      responses:
+        '201': { description: Criado }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /adverse-events:
+    post:
+      summary: Registrar evento adverso
+      operationId: reportAdverseEvent
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AdverseEventIn' } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/AdverseEventAccepted' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /research/participants:
+    get:
+      summary: Listar participantes (pesquisa) — RBAC, braço codificado
+      operationId: researchListParticipants
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ResearchPage' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
+  /allocation:
+    post:
+      summary: Alocar participante (staff) — resposta NEUTRA, nunca revela o braço
+      operationId: allocateParticipant
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AllocateIn' } } }
+      responses:
+        '201': { description: Alocado (confirmação neutra), content: { application/json: { schema: { $ref: '#/components/schemas/AllocationAccepted' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /research/export:
+    post:
+      summary: Solicitar exportação pseudonimizada (assíncrona) — RBAC
+      operationId: requestExport
+      responses:
+        '202': { description: Aceito (processamento assíncrono), content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    PathId: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    Limit: { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+    Cursor: { name: cursor, in: query, required: false, schema: { type: string } }
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: false, schema: { type: string } }
+  responses:
+    Problem:
+      description: Erro (application/problem+json, RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    Problem:
+      type: object
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+      required: [title, status]
+    FollowupIn:
+      type: object
+      properties:
+        gad7_items: { type: array, items: { type: integer, minimum: 0, maximum: 3 }, minItems: 7, maxItems: 7 }
+        psqi: { $ref: '#/components/schemas/PSQIIn' }
+        sus_items: { type: array, items: { type: integer, minimum: 1, maximum: 5 }, minItems: 10, maxItems: 10 }
+        blinding_guess: { type: string, enum: [A, B, nao_sei] }
+      required: [gad7_items, psqi, sus_items, blinding_guess]
+    FollowupOut:
+      type: object
+      properties:
+        gad7_total: { type: integer }
+        gad7_severity: { type: string }
+        psqi_global: { type: integer }
+        psqi_interpretation: { type: string }
+        sus_score: { type: number }
+        sus_band: { type: string }
+        blinding_guess: { type: string }
+        score_version: { type: string }
+    RequestOtpIn:
+      type: object
+      properties: { study_code: { type: string } }
+      required: [study_code]
+    VerifyOtpIn:
+      type: object
+      properties:
+        study_code: { type: string }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+      required: [study_code, code]
+    DiaryIn:
+      type: object
+      properties:
+        diary_date: { type: string, format: date }
+        latency_min: { type: [integer, "null"], minimum: 0, maximum: 1440 }
+        awakenings: { type: [integer, "null"], minimum: 0, maximum: 50 }
+        duration_h: { type: [number, "null"], minimum: 0, maximum: 24 }
+        quality: { type: [integer, "null"], minimum: 0, maximum: 4 }
+      required: [diary_date]
+    LoginIn:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+      required: [email, password]
+    RefreshIn:
+      type: object
+      properties: { refresh_token: { type: string } }
+      required: [refresh_token]
+    MfaIn:
+      type: object
+      properties:
+        mfa_token: { type: string }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+      required: [mfa_token, code]
+    TokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        token_type: { type: string, enum: [bearer] }
+        expires_in: { type: integer }
+        mfa_required: { type: boolean }
+      required: [token_type]
+    ConsentIn:
+      type: object
+      properties:
+        tcle_version: { type: string }
+        accepted: { type: boolean }
+      required: [tcle_version, accepted]
+    ConsentOut:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        accepted_at: { type: string, format: date-time }
+        content_hash: { type: string }
+    PSQIIn:
+      type: object
+      properties:
+        subjective_quality: { type: integer, minimum: 0, maximum: 3 }
+        latency_min: { type: integer, minimum: 0, maximum: 1440 }
+        cannot_sleep_30min_freq: { type: integer, minimum: 0, maximum: 3 }
+        hours_slept: { type: number, exclusiveMinimum: 0, maximum: 24 }
+        hours_in_bed: { type: number, exclusiveMinimum: 0, maximum: 24, description: "derivado no cliente (deitar→levantar)" }
+        disturbance_items:
+          type: array
+          items: { type: integer, minimum: 0, maximum: 3 }
+          minItems: 9
+          maxItems: 9
+        medication_freq: { type: integer, minimum: 0, maximum: 3 }
+        stay_awake_freq: { type: integer, minimum: 0, maximum: 3 }
+        enthusiasm_problem: { type: integer, minimum: 0, maximum: 3 }
+      required: [subjective_quality, latency_min, cannot_sleep_30min_freq, hours_slept, hours_in_bed, disturbance_items, medication_freq, stay_awake_freq, enthusiasm_problem]
+    BaselineIn:
+      type: object
+      properties:
+        gad7_items:
+          type: array
+          items: { type: integer, minimum: 0, maximum: 3 }
+          minItems: 7
+          maxItems: 7
+        psqi: { $ref: '#/components/schemas/PSQIIn' }
+      required: [gad7_items, psqi]
+    ScoreOut:
+      type: object
+      properties:
+        gad7_total: { type: integer }
+        gad7_severity: { type: string }
+        psqi_global: { type: integer }
+        psqi_interpretation: { type: string }
+        score_version: { type: string }
+    SessionIn:
+      type: object
+      properties:
+        protocol_handle: { type: string, description: "handle neutro — não revela o braço" }
+        headphones_ok: { type: boolean }
+        device_info: { type: object, additionalProperties: true }
+      required: [protocol_handle, headphones_ok]
+    SessionOut:
+      type: object
+      properties:
+        session_id: { type: string, format: uuid }
+        protocol_handle: { type: string, description: "banda neutra — idêntica nos dois braços" }
+        content_hash: { type: string, description: "opaco; o cliente reproduz o arquivo bit-a-bit" }
+        started_at: { type: string, format: date-time }
+    SessionCompleteIn:
+      type: object
+      properties:
+        effective_seconds: { type: integer, minimum: 0, maximum: 86400 }
+        interruptions: { type: integer, minimum: 0 }
+      required: [effective_seconds]
+    SurveyIn:
+      type: object
+      properties:
+        feeling: { type: integer, minimum: 0, maximum: 4 }
+        relaxation: { type: integer, minimum: 0, maximum: 4 }
+        slept_better: { type: [integer, "null"], minimum: 0, maximum: 4 }
+        liked: { type: integer, minimum: 0, maximum: 4 }
+        intensity: { type: integer, minimum: 0, maximum: 4 }
+        would_repeat: { type: boolean }
+      required: [feeling, relaxation, liked, intensity, would_repeat]
+    AdverseEventAccepted:
+      type: object
+      description: "Confirmação com sinalização de atenção e orientação de cuidado."
+      properties:
+        status: { type: string, enum: [recorded] }
+        requires_attention: { type: boolean }
+        guidance: { type: string }
+      required: [status, requires_attention, guidance]
+    AdverseEventIn:
+      type: object
+      properties:
+        type: { type: string }
+        severity: { type: string, enum: [mild, moderate, severe] }
+        session_id: { type: [string, "null"], format: uuid }
+        action: { type: [string, "null"] }
+      required: [type, severity]
+    SessionPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/SessionOut' } }
+        next_cursor: { type: [string, "null"] }
+      required: [items]
+    ResearchParticipant:
+      type: object
+      properties:
+        study_code: { type: string }
+        arm_coded: { type: string, enum: [A, B] }
+        adherence_pct: { type: number }
+        adverse_events: { type: integer }
+    ResearchPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/ResearchParticipant' } }
+        next_cursor: { type: [string, "null"] }
+      required: [items]
+    AllocateIn:
+      type: object
+      properties:
+        participant_id: { type: string, format: uuid }
+      required: [participant_id]
+    AllocationAccepted:
+      type: object
+      description: "Confirmação neutra — deliberadamente SEM o braço (ocultação da alocação)."
+      properties:
+        status: { type: string, enum: [allocated] }
+        block: { type: integer }
+      required: [status, block]
+    JobAccepted:
+      type: object
+      properties:
+        job_id: { type: string, format: uuid }
+        status: { type: string, enum: [queued] }
+      required: [job_id, status]

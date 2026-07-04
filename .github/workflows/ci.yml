@@ -1,0 +1,40 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r backend/requirements.txt
+      - name: Lint
+        run: ruff check backend || true
+      - name: Migração (SQLite) — smoke test do Alembic
+        run: cd backend && DATABASE_URL=sqlite:///./ci.db alembic upgrade head
+      - name: Testes do backend (bloqueiam merge)
+        run: cd backend && pytest -q
+  audio-fft:                     # decisão inegociável: o estímulo é validado por FFT
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install numpy scipy
+      - name: Bateria de validação de sinal (FFT)
+        run: cd audio-pipeline && python binaural_instrument.py
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install openapi-spec-validator pyyaml
+      - name: Validar contrato OpenAPI
+        run: python -c "import yaml,openapi_spec_validator as v; v.validate(yaml.safe_load(open('shared-contracts/openapi.yaml'))); print('OpenAPI ok')"
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+      - run: cd app && flutter pub get && flutter analyze && flutter test || true
