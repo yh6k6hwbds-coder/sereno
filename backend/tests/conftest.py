@@ -23,8 +23,10 @@ def _reset_throttles():
     from app.core.rate_limit import get_rate_limiter
     from app.core.token_revocation import get_denylist
     from app.core.email import set_email_sender
+    from app.modules.research.export_service import get_job_store
     get_rate_limiter().reset()
     get_denylist().reset()
+    get_job_store().reset()
     set_email_sender(None)   # próxima chamada reconstrói a partir do ambiente
     yield
     set_email_sender(None)

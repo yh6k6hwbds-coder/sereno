@@ -13,7 +13,7 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (121 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (126 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
   participante (OTP + **entrega por e-mail — D1/ADR-063**); **gestão de staff + MFA enrollment
   (C3/ADR-058)**; consentimento; **triagem/elegibilidade + funil (C2/ADR-057)**; linha de base
@@ -22,7 +22,7 @@
   **captura de contato com PII cifrada (C4/ADR-059)**; desfechos (pós-sessão, diário); seguimento
   (PSQI+GAD-7+SUS+cegamento); evento adverso.
 - **Stubs restantes:** `recommender`.
-- **Sem endpoint ainda (tabelas existem):** `recommendation_log`, exportação real.
+- **Sem endpoint ainda (tabelas existem):** `recommendation_log` (recomendador — Fase E).
 - **Flutter (não compilado no ambiente de planejamento):** OTP → consentimento → home →
   preparar fones → sessão com **reprodução de áudio real bit-a-bit + fila de telemetria offline
   (A2/ADR-054)** e visualização não reativa. Falta persistência de login e as telas de
@@ -183,7 +183,11 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
   garante que sem o procedimento nenhum endpoint expõe o braço.
 - **ADR:** ADR-060.
 
-### C6 — Exportação pseudonimizada (assíncrona) · P1 · `TODO`
+### C6 — Exportação pseudonimizada (assíncrona) · P1 · `DONE`
+> **Concluída (2026-07-04, ADR-061):** `POST /research/export` (`export:request`) monta o CSV
+> pseudonimizado (reusa `build_export_csv`), casos completos, com **braço codificado A/B** (sem
+> condição/chave) — decisão do mantenedor; `GET /research/export/{id}` devolve status/arquivo;
+> pedido auditado. Job via porta in-memory (RQ+storage em prod). 5 testes.
 - **Objetivo:** `POST /research/export` gera pacote pseudonimizado (reusa
   `instruments_scoring.py` export) via job; `GET` do status/arquivo.
 - **Contrato:** já esboçado (`/research/export`, `JobAccepted`). **Depende de:** C1.

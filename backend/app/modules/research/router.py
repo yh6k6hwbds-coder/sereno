@@ -1,11 +1,14 @@
 """modules/research/router.py — área de pesquisa (RBAC). Braço sempre CODIFICADO."""
 from __future__ import annotations
-from fastapi import APIRouter, Depends, Query
+import uuid
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.security import require
-from app.modules.audit.service import list_events
+from app.core.problem import ProblemException
+from app.modules.audit.service import list_events, record_event
+from app.modules.research.export_service import build_export_csv_from_db, get_job_store
 
 router = APIRouter(prefix="/research", tags=["research"])
 
@@ -37,3 +40,32 @@ async def read_audit(limit: int = Query(20, ge=1, le=100), cursor: str | None = 
     """Lê o log de auditoria (admin). Append-only, sem PII nem braço; keyset por cursor."""
     rows, next_cursor = list_events(db, limit=limit, cursor=cursor)
     return {"items": [_serialize_event(e) for e in rows], "next_cursor": next_cursor}
+
+
+@router.post("/export", status_code=202)
+async def request_export(db: Session = Depends(get_db),
+                         user: dict = Depends(require("export:request"))):
+    """Solicita a exportação pseudonimizada (sem PII, sem condição). Registrada em auditoria."""
+    job = get_job_store().run(lambda: build_export_csv_from_db(db))
+    actor_id = None
+    try:
+        actor_id = uuid.UUID(str(user["id"]))
+    except (KeyError, ValueError, TypeError):
+        pass
+    record_event(db, action="export.requested", resource_type="research_export",
+                 actor_type="staff", actor_id=actor_id, resource_id=uuid.UUID(job.id),
+                 meta={"status": job.status})
+    return {"job_id": job.id, "status": job.status}
+
+
+@router.get("/export/{job_id}")
+async def get_export(job_id: uuid.UUID, _user: dict = Depends(require("export:request"))):
+    """Status (JSON) ou o arquivo (CSV) quando concluído. Nunca contém PII nem a condição."""
+    job = get_job_store().get(str(job_id))
+    if job is None:
+        raise ProblemException(404, "Exportação não encontrada", "Job de exportação inexistente.")
+    if job.status != "done" or job.result is None:
+        return {"job_id": job.id, "status": job.status}
+    return Response(content=job.result, media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="sereno_export.csv"',
+                             "Cache-Control": "private, no-store"})

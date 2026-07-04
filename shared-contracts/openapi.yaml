@@ -284,9 +284,27 @@ paths:
     post:
       summary: Solicitar exportação pseudonimizada (assíncrona) — RBAC
       operationId: requestExport
+      description: >
+        Solicita a exportação pseudonimizada (casos completos): sem PII e SEM a condição
+        (ativo/sham) — só o braço CODIFICADO A/B, para a análise cega. Registrada em auditoria.
       responses:
         '202': { description: Aceito (processamento assíncrono), content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+  /research/export/{id}:
+    get:
+      summary: Status/arquivo da exportação (RBAC)
+      operationId: getExport
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      responses:
+        '200':
+          description: Concluída (CSV) ou status do job (JSON)
+          content:
+            text/csv: { schema: { type: string } }
+            application/json: { schema: { $ref: '#/components/schemas/JobStatus' } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /research/audit:
     get:
       summary: Ler o log de auditoria (admin) — append-only, sem PII nem braço
@@ -631,5 +649,11 @@ components:
       type: object
       properties:
         job_id: { type: string, format: uuid }
-        status: { type: string, enum: [queued] }
+        status: { type: string, enum: [queued, running, done, failed] }
+      required: [job_id, status]
+    JobStatus:
+      type: object
+      properties:
+        job_id: { type: string, format: uuid }
+        status: { type: string, enum: [queued, running, done, failed] }
       required: [job_id, status]
