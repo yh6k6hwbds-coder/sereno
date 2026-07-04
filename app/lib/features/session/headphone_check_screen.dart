@@ -23,8 +23,8 @@ class _HeadphoneCheckScreenState extends State<HeadphoneCheckScreen> {
     try {
       final s = await widget.repo.start(protocolHandle: widget.protocolHandle, headphonesOk: _ok);
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => SessionPlayerScreen(repo: widget.repo, session: s)));
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (_) => SessionPlayerScreen.production(repo: widget.repo, session: s)));
     } on ApiException catch (e) {
       _snack(e.toString());
     } catch (_) {

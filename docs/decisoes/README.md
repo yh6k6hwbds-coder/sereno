@@ -58,6 +58,7 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 051 | Relato de evento adverso com sinalização de atenção **[novo]** |
 | 052 | UI de sessão idêntica e visualização não reativa (cegamento) **[novo]** |
 | 053 | Entrega de áudio da sessão sem vazamento + fidelidade bit-a-bit (`audio_sha256` = ETag) **[novo]** |
+| 054 | Player bit-a-bit (portas p/ just_audio) + fila de telemetria offline **[novo]** |
 | 056 | Log de auditoria append-only (guard ORM + GRANT; leitura admin `audit:read`) **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

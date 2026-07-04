@@ -22,8 +22,10 @@
 - **Sem endpoint ainda (tabelas existem):** `screening`, `recommendation_log`,
   `contact_info` (PII sem cifra), `staff_user` (sem gestão), exportação real.
 - **Flutter (não compilado no ambiente de planejamento):** OTP → consentimento → home →
-  preparar fones → sessão (visualização não reativa + telemetria). Falta reprodução de áudio
-  real, persistência de login, e as telas de baseline/pós-sessão/diário/seguimento/EA.
+  preparar fones → sessão com **reprodução de áudio real bit-a-bit + fila de telemetria offline
+  (A2/ADR-054)** e visualização não reativa. Falta persistência de login e as telas de
+  baseline/pós-sessão/diário/seguimento/EA. (Testes Flutter escritos, mas ainda não executados —
+  sem SDK local; dependem do job `app` do CI.)
 - **ADRs:** 041–052.
 
 ---
@@ -65,7 +67,13 @@ validação por FFT (que já roda no CI) ao que o participante ouve, **sem vazar
 - **Riscos/decisões:** onde materializar o WAV (disco local agora; **cloud storage** é Fase E);
   tamanho do arquivo (streaming/Range); cache no cliente sem persistir em claro.
 
-### A2 — Reprodução real + fila de telemetria offline (Flutter) · P0 · `TODO`
+### A2 — Reprodução real + fila de telemetria offline (Flutter) · P0 · `WIP`
+> **Código completo (2026-07-04, ADR-054):** download com verificação bit-a-bit (sha256==ETag),
+> reprodução via porta `AudioPlayerPort` (just_audio isolado; fonte em memória, sem DSP, sem cache
+> em claro), visualização mantida **não reativa**, e fila de telemetria offline (`TelemetrySender`
+> + `FileTelemetryQueue`) com reenvio. Testes em `app/test/` (widget + unit). **Falta:** rodar
+> `flutter analyze && flutter test` (sem SDK Flutter no ambiente de dev) — validação depende do job
+> `app` do CI, hoje não-bloqueante. Fecha de vez quando a fatia **D5** tornar esse job bloqueante.
 - **Objetivo:** o player toca o WAV baixado (A1) de forma **gapless/bit-exata**; a telemetria
   (duração efetiva, interrupções) é enfileirada e reenviada se a rede cair.
 - **Depende de:** A1.
