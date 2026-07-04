@@ -9,6 +9,7 @@ from app.core.security import require
 from app.core.problem import ProblemException
 from app.modules.audit.service import list_events, record_event
 from app.modules.research.export_service import build_export_csv_from_db, get_job_store
+from app.modules.research.analysis_service import build_report
 
 router = APIRouter(prefix="/research", tags=["research"])
 
@@ -22,6 +23,13 @@ async def status():
 async def list_participants(user: dict = Depends(require("research:read"))):
     # TODO (fatia vertical): listar com braço CODIFICADO (A/B) e paginação por cursor.
     return {"items": [], "next_cursor": None}
+
+
+@router.get("/analysis")
+async def get_analysis(db: Session = Depends(get_db),
+                       _user: dict = Depends(require("research:read"))):
+    """Relatório reprodutível e CEGO (por braço A/B). Exploratório; não decide eficácia."""
+    return build_report(db)
 
 
 def _serialize_event(e) -> dict:

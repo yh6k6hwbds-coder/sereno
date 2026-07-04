@@ -13,7 +13,7 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (126 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (132 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
   participante (OTP + **entrega por e-mail — D1/ADR-063**); **gestão de staff + MFA enrollment
   (C3/ADR-058)**; consentimento; **triagem/elegibilidade + funil (C2/ADR-057)**; linha de base
@@ -195,7 +195,11 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
   auditoria; teste do conteúdo exportado.
 - **ADR:** ADR-061.
 
-### C7 — Pipeline de análise + critérios de progressão (Etapa 7) · P1 · `TODO`
+### C7 — Pipeline de análise + critérios de progressão (Etapa 7) · P1 · `DONE`
+> **Concluída (2026-07-04, ADR-062):** `GET /research/analysis` (`research:read`) devolve relatório
+> reprodutível e CEGO (braço A/B): funil, viabilidade (Wilson), SUS, **índice de Bang** por braço,
+> exploratórios (GAD-7/PSQI) e **semáforo de progressão** pré-especificado. `nan`→`null`. Nada
+> decide eficácia ao vivo. 6 testes.
 - **Objetivo:** rodar `analysis_plan.py` sobre a exportação: viabilidade/adesão/usabilidade,
   **índice de Bang** (cegamento), testes exploratórios, **critérios de progressão CONSORT-pilot**.
 - **Depende de:** C6. **Pronto:** relatório reprodutível; índice de Bang a partir do

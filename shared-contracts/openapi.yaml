@@ -321,6 +321,19 @@ paths:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuditPage' } } } }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+  /research/analysis:
+    get:
+      summary: Relatório de análise do piloto (viabilidade, Bang, exploratórios, progressão)
+      operationId: getAnalysis
+      description: >
+        Relatório REPRODUZÍVEL e CEGO (por braço CODIFICADO A/B) — viabilidade/adesão/retenção,
+        usabilidade (SUS), índice de Bang (cegamento), testes exploratórios (GAD-7/PSQI) e
+        critérios de progressão pré-especificados (semáforo). Exploratório/gerador de hipóteses;
+        NÃO decide eficácia nem desfecho ao vivo. RBAC `research:read`.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AnalysisReport' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /staff:
     post:
       summary: Criar usuário de staff (admin) — sem auto-registro público
@@ -657,3 +670,16 @@ components:
         job_id: { type: string, format: uuid }
         status: { type: string, enum: [queued, running, done, failed] }
       required: [job_id, status]
+    AnalysisReport:
+      type: object
+      description: >
+        Relatório cego por braço codificado (A/B). Estrutura aberta (seções descritivas);
+        nunca contém a condição ativo/sham nem PII.
+      additionalProperties: true
+      properties:
+        framing: { type: string }
+        enrollment: { type: object, additionalProperties: true }
+        feasibility: { type: object, additionalProperties: true }
+        blinding: { type: object, additionalProperties: true }
+        exploratory: { type: object, additionalProperties: true }
+        progression: { type: object, additionalProperties: true }

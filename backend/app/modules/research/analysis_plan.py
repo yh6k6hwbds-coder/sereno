@@ -107,6 +107,44 @@ def categorical(table: list[list[int]]) -> dict:
     return {"test": test, "p_value": round(float(p), 4)}
 
 
+# ----------------------------------------------------- Critérios de progressão (semáforo)
+# Limiares PRÉ-ESPECIFICADOS de VIABILIDADE (CONSORT-pilot). Ilustrativos: os valores
+# definitivos vêm do protocolo aprovado (CEP). Verde = seguir; amarelo = seguir com ajustes;
+# vermelho = revisar/parar. Não decide EFICÁCIA — só progressão do piloto.
+PROGRESSION_THRESHOLDS = {
+    "adesao_pct": (70.0, 50.0),      # (verde ≥, amarelo ≥)
+    "retencao_pct": (80.0, 60.0),
+}
+
+
+def _traffic(value: float | None, green: float, amber: float) -> str:
+    if value is None:
+        return "indeterminado"
+    return "verde" if value >= green else ("amarelo" if value >= amber else "vermelho")
+
+
+def progression_semaphore(adherence_pct: float | None, retention_pct: float | None,
+                          severe_adverse_events: int, blinding_maintained: bool) -> dict:
+    """Semáforo de progressão a partir de limiares pré-especificados (determinístico).
+
+    Segurança: qualquer evento adverso GRAVE marca vermelho (revisar). Cegamento não
+    mantido marca amarelo (interpretar com cautela). O geral é o pior dos critérios."""
+    g_ad, a_ad = PROGRESSION_THRESHOLDS["adesao_pct"]
+    g_re, a_re = PROGRESSION_THRESHOLDS["retencao_pct"]
+    criteria = {
+        "adesao": _traffic(adherence_pct, g_ad, a_ad),
+        "retencao": _traffic(retention_pct, g_re, a_re),
+        "seguranca": "verde" if severe_adverse_events == 0 else "vermelho",
+        "cegamento": "verde" if blinding_maintained else "amarelo",
+    }
+    rank = {"verde": 0, "amarelo": 1, "vermelho": 2, "indeterminado": 1}
+    overall = max(criteria.values(), key=lambda c: rank[c])
+    return {"criteria": criteria, "overall": overall,
+            "thresholds": PROGRESSION_THRESHOLDS,
+            "note": ("Critérios pré-especificados de VIABILIDADE (CONSORT-pilot); "
+                     "geram recomendação de progressão, não decisão de eficácia.")}
+
+
 # ----------------------------------------------------------------- Testes (auto-validação)
 if __name__ == "__main__":
     ok = True
