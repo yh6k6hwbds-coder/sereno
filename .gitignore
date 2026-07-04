@@ -12,10 +12,13 @@ node_modules/
 .dart_tool/
 build/
 .flutter-plugins*
-# Áudio renderizado (gerado pela pipeline; não versionar binários grandes)
+# Áudio renderizado (gerado pela pipeline/backend; não versionar binários grandes)
 audio-pipeline/out/
+backend/.audio_cache/
 *.wav
 *.flac
+# Bancos de teste locais (CI-espelho SQLite)
+*.db
 # Segredos e dados — NUNCA versionar
 *.pem
 *.key

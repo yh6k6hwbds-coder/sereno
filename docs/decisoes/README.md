@@ -57,5 +57,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 050 | Fundação do cliente Flutter (OTP + consentimento) **[novo]** |
 | 051 | Relato de evento adverso com sinalização de atenção **[novo]** |
 | 052 | UI de sessão idêntica e visualização não reativa (cegamento) **[novo]** |
+| 053 | Entrega de áudio da sessão sem vazamento + fidelidade bit-a-bit (`audio_sha256` = ETag) **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

@@ -11,7 +11,7 @@ Protegido contra IDOR (a sessão precisa ser do participante autenticado). probl
 from __future__ import annotations
 import datetime as dt
 import uuid
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
@@ -19,9 +19,9 @@ from sqlalchemy.orm import Session as DbSession
 from app.core.db import get_db
 from app.core.security import require, current_participant
 from app.core.problem import ProblemException
-from app.core.models import Session as SessionModel, PostSessionSurvey
+from app.core.models import Session as SessionModel, PostSessionSurvey, AudioProtocol
 from app.modules.allocation.service import resolve_arm
-from app.modules.sessions.service import condition_for_arm, resolve_protocol
+from app.modules.sessions.service import condition_for_arm, resolve_protocol, materialize_audio
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -101,6 +101,79 @@ async def complete_session(session_id: uuid.UUID, body: SessionCompleteIn,
     s.completed = True
     db.flush()
     return {"status": "completed", "effective_seconds": s.effective_seconds}
+
+
+def _parse_range(header: str, total: int) -> tuple[int, int] | None:
+    """Interpreta um único intervalo ``bytes=<ini>-<fim>`` (RFC 9110).
+
+    Devolve ``(inicio, fim)`` inclusivos, ou ``None`` se o intervalo for insatisfazível
+    (o chamador responde 416). Suporta ``bytes=ini-``, ``bytes=ini-fim`` e sufixo
+    ``bytes=-n`` (últimos n bytes). Não trata multi-range (fora do escopo do piloto)."""
+    if not header.startswith("bytes=") or total <= 0:
+        return None
+    spec = header[len("bytes="):].split(",")[0].strip()
+    if "-" not in spec:
+        return None
+    ini_s, fim_s = spec.split("-", 1)
+    try:
+        if ini_s == "":                       # sufixo: últimos N bytes
+            n = int(fim_s)
+            if n <= 0:
+                return None
+            start = max(total - n, 0)
+            return (start, total - 1)
+        start = int(ini_s)
+        end = int(fim_s) if fim_s != "" else total - 1
+    except ValueError:
+        return None
+    end = min(end, total - 1)
+    if start > end or start < 0:
+        return None
+    return (start, end)
+
+
+@router.get("/{session_id}/audio")
+async def get_session_audio(session_id: uuid.UUID, request: Request,
+                            db: DbSession = Depends(get_db),
+                            participant_id: uuid.UUID = Depends(current_participant),
+                            _user: dict = Depends(require("session:write"))):
+    """Transmite o WAV da PRÓPRIA sessão, bit-a-bit, sem revelar o braço.
+
+    O protocolo já foi resolvido e congelado na sessão (``protocol_uuid``); aqui não se
+    re-resolve nem se decide condição. Headers e forma da resposta são IDÊNTICOS entre
+    braços — só os bytes (opacos) diferem. ``ETag`` = sha256 do corpo (integridade)."""
+    # IDOR: a sessão precisa pertencer ao participante autenticado (404 não vaza existência).
+    s = db.scalar(select(SessionModel).where(
+        SessionModel.id == session_id, SessionModel.participant_id == participant_id))
+    if s is None:
+        raise ProblemException(404, "Sessão não encontrada", "Sessão inexistente para este participante.")
+    proto = db.get(AudioProtocol, s.protocol_uuid)
+    if proto is None:
+        raise ProblemException(409, "Protocolo indisponível",
+                               "O áudio desta sessão não está disponível na biblioteca.")
+
+    rendered = materialize_audio(proto)
+    body = rendered.wav_bytes
+    total = len(body)
+    # Headers NEUTROS (iguais nos dois braços). ETag identifica os BYTES (não a condição).
+    headers = {
+        "ETag": f'"{rendered.sha256}"',
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "private, no-store",
+    }
+
+    range_header = request.headers.get("range")
+    if range_header:
+        rng = _parse_range(range_header, total)
+        if rng is None:
+            raise ProblemException(416, "Faixa inválida",
+                                   "O intervalo solicitado não pode ser satisfeito.")
+        start, end = rng
+        chunk = body[start:end + 1]
+        headers["Content-Range"] = f"bytes {start}-{end}/{total}"
+        return Response(content=chunk, status_code=206, media_type="audio/wav", headers=headers)
+
+    return Response(content=body, status_code=200, media_type="audio/wav", headers=headers)
 
 
 class SurveyIn(BaseModel):

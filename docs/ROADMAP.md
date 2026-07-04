@@ -13,13 +13,14 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (63 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (70 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA); auth de participante (OTP); consentimento; linha de base
   (PSQI+GAD-7); randomização + **alocação oculta**; sessão + telemetria com **resolução cega**;
-  desfechos (pós-sessão, diário); seguimento (PSQI+GAD-7+SUS+cegamento); evento adverso.
+  **entrega de áudio bit-a-bit (A1/ADR-053)**; desfechos (pós-sessão, diário); seguimento
+  (PSQI+GAD-7+SUS+cegamento); evento adverso.
 - **Stubs restantes:** `audit`, `recommender`.
 - **Sem endpoint ainda (tabelas existem):** `screening`, `recommendation_log`, `audit_log`,
-  `contact_info` (PII sem cifra), `staff_user` (sem gestão), entrega de áudio, exportação real.
+  `contact_info` (PII sem cifra), `staff_user` (sem gestão), exportação real.
 - **Flutter (não compilado no ambiente de planejamento):** OTP → consentimento → home →
   preparar fones → sessão (visualização não reativa + telemetria). Falta reprodução de áudio
   real, persistência de login, e as telas de baseline/pós-sessão/diário/seguimento/EA.
@@ -31,7 +32,12 @@
 A sessão hoje é conduzida por relógio; falta o áudio de verdade. Esta fase conecta a
 validação por FFT (que já roda no CI) ao que o participante ouve, **sem vazar o braço**.
 
-### A1 — Endpoint de entrega de áudio (backend) · P0 · `TODO`
+### A1 — Endpoint de entrega de áudio (backend) · P0 · `DONE`
+> **Concluída (2026-07-04, ADR-053):** `GET /v1/sessions/{id}/audio` serve o WAV materializado
+> (determinístico, validado por FFT, cache em disco), bit-a-bit, com `ETag=audio_sha256`,
+> `Accept-Ranges`/`Range` (206/416) e `Cache-Control: private, no-store`. Erros 401/404(IDOR)/409.
+> DoD coberto por `tests/test_session_audio.py` (7 testes). Decisão-chave: separar `audio_sha256`
+> (integridade dos bytes) de `content_hash` (identidade opaca) — o ROADMAP se contradizia aqui.
 - **Objetivo:** servir o arquivo de áudio da sessão, autenticado, **bit-a-bit**, sem revelar
   o braço. O cliente pede pelo `session_id` (não pelo braço); o servidor resolve o protocolo
   internamente (reusa `resolve_arm`/`resolve_protocol`) e transmite o WAV correspondente.

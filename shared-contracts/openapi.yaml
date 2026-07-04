@@ -155,6 +155,45 @@ paths:
         '201': { description: Criado }
         '404': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /sessions/{id}/audio:
+    get:
+      summary: Baixar o áudio da sessão (bit-a-bit, sem revelar o braço)
+      operationId: getSessionAudio
+      description: >
+        Transmite o WAV PCM sem perdas da PRÓPRIA sessão do participante autenticado.
+        O protocolo (ativo/sham) foi resolvido no servidor e CONGELADO na sessão; nada
+        é re-resolvido aqui e nenhum header/metadado revela a condição. Suporta Range
+        para retomada. ETag = sha256 do corpo (integridade bit-a-bit) — distinto do
+        content_hash, que é a identidade OPACA do protocolo. Cache-Control: private,
+        no-store (o cliente não persiste o áudio em claro).
+      parameters:
+        - { $ref: '#/components/parameters/PathId' }
+        - name: Range
+          in: header
+          required: false
+          schema: { type: string }
+          description: 'Faixa de bytes para retomada (ex.: bytes=0-1048575).'
+      responses:
+        '200':
+          description: Áudio completo (WAV PCM 16-bit, estéreo)
+          headers:
+            ETag: { description: sha256 hex do corpo (bit-a-bit), schema: { type: string } }
+            Accept-Ranges: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
+          content:
+            audio/wav: { schema: { type: string, format: binary } }
+        '206':
+          description: Conteúdo parcial (resposta a Range)
+          headers:
+            Content-Range: { schema: { type: string } }
+            ETag: { schema: { type: string } }
+            Accept-Ranges: { schema: { type: string } }
+          content:
+            audio/wav: { schema: { type: string, format: binary } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '416': { $ref: '#/components/responses/Problem' }
   /adverse-events:
     post:
       summary: Registrar evento adverso
