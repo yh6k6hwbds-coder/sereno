@@ -15,9 +15,10 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.problem import ProblemException
-from app.core.models import Participant, OtpChallenge
-from app.core import otp, auth
+from app.core.models import Participant, OtpChallenge, ContactInfo
+from app.core import otp, auth, pii_crypto
 from app.core.rate_limit import enforce as rate_limit
+from app.core.email import get_email_sender, EmailMessage
 
 router = APIRouter(prefix="/auth/participant", tags=["participant-auth"])
 
@@ -31,9 +32,25 @@ class VerifyOtpIn(BaseModel):
     code: str = Field(pattern=r"^\d{6}$")
 
 
-def deliver_otp(participant_id, code: str) -> None:
-    """DEV: apenas registra. PROD: enviar por e-mail ao contato cifrado (integração pendente)."""
-    print(f"[otp] participante {participant_id} -> código {code}")
+def deliver_otp(participant: Participant, code: str, db: Session) -> None:
+    """Envia o OTP ao e-mail do participante (cifrado em repouso → decifrado aqui).
+
+    Best-effort e SEM logar o código: se não houver contato/chave ou o envio falhar, apenas
+    não envia — o código já foi gravado e a resposta ao cliente é genérica de qualquer modo."""
+    contact = db.scalar(select(ContactInfo).where(ContactInfo.participant_id == participant.id))
+    if contact is None:
+        return
+    try:
+        email_addr = pii_crypto.decrypt(contact.enc_email,
+                                        aad=pii_crypto.aad_for(participant.id, "email"))
+        get_email_sender().send(EmailMessage(
+            to=email_addr,
+            subject="Seu código de acesso — Sereno",
+            body=(f"Use este código de uso único para entrar no Sereno: {code}\n"
+                  "Ele expira em alguns minutos. Se você não solicitou, ignore este e-mail."),
+        ))
+    except Exception:  # noqa: BLE001 — envio é best-effort; não pode derrubar o request
+        return
 
 
 @router.post("/request-otp")
@@ -49,7 +66,7 @@ async def request_otp(body: RequestOtpIn, request: Request, db: Session = Depend
         code = otp.generate_code()
         db.add(OtpChallenge(participant_id=p.id, code_hash=otp.hash_code(code), expires_at=otp.expiry()))
         db.flush()
-        deliver_otp(p.id, code)
+        deliver_otp(p, code, db)
     # Resposta genérica — não revela se o código de estudo existe.
     return {"status": "otp_sent_if_exists"}
 

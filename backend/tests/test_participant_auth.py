@@ -21,7 +21,8 @@ VER = "/v1/auth/participant/verify-otp"
 @pytest.fixture
 def capture_otp(monkeypatch):
     box = {}
-    monkeypatch.setattr(pa_router, "deliver_otp", lambda pid, code: box.update(code=code, pid=pid))
+    monkeypatch.setattr(pa_router, "deliver_otp",
+                        lambda participant, code, db: box.update(code=code, pid=participant.id))
     return box
 
 

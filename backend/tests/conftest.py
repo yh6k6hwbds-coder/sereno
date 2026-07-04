@@ -19,12 +19,15 @@ from app.main import app
 
 @pytest.fixture(autouse=True)
 def _reset_throttles():
-    """Isola o estado dos singletons de rate limit / denylist entre testes."""
+    """Isola o estado dos singletons de rate limit / denylist / e-mail entre testes."""
     from app.core.rate_limit import get_rate_limiter
     from app.core.token_revocation import get_denylist
+    from app.core.email import set_email_sender
     get_rate_limiter().reset()
     get_denylist().reset()
+    set_email_sender(None)   # próxima chamada reconstrói a partir do ambiente
     yield
+    set_email_sender(None)
 
 
 @pytest.fixture

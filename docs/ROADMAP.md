@@ -13,9 +13,9 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (93 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (98 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
-  participante (OTP); consentimento; linha de base
+  participante (OTP + **entrega por e-mail — D1/ADR-063**); consentimento; linha de base
   (PSQI+GAD-7); randomização + **alocação oculta**; sessão + telemetria com **resolução cega**;
   **entrega de áudio bit-a-bit (A1/ADR-053)**; **auditoria append-only (C1/ADR-056)**;
   **captura de contato com PII cifrada (C4/ADR-059)**; desfechos (pós-sessão, diário); seguimento
@@ -195,9 +195,13 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
 ## FASE D — Segurança, privacidade e infraestrutura · P0/P1
 Endurecimento para dado real e para o CEP.
 
-### D1 — SMTP: entrega real de OTP + notificação de EA · P0 · `TODO`
+### D1 — SMTP: entrega real de OTP + notificação de EA · P0 · `DONE`
 - Substitui os hooks `deliver_otp`/`notify_team` por envio real (fila + retries). **ADR-063.**
 - **Pronto:** teste com fake SMTP; segredo em cofre; sem logar o código em produção.
+> **Concluída (2026-07-04, ADR-063):** interface `EmailSender` (SMTP prod c/ retries; Null seguro;
+> Console dev; Memory teste). `request-otp` envia o OTP ao e-mail **decifrado de C4** (best-effort,
+> sem logar o código); `notify_team` alerta a equipe (sem PII) em EA moderate/severe. 5 testes.
+> **Pendências:** fila assíncrona (RQ/ADR-031); segredo SMTP em cofre; bounces.
 
 ### D2 — Rate limiting + denylist de `jti` · P1 · `DONE`
 - Limite por IP no `request-otp` e no `login`; revogação de token por `jti` (Redis).

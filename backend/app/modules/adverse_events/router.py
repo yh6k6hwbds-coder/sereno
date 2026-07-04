@@ -9,6 +9,7 @@ problem+json em erros.
 """
 from __future__ import annotations
 import datetime as dt
+import os
 import uuid
 from typing import Literal
 from fastapi import APIRouter, Depends
@@ -20,6 +21,7 @@ from app.core.db import get_db
 from app.core.security import require, current_participant
 from app.core.problem import ProblemException
 from app.core.models import AdverseEvent, Session as SessionModel
+from app.core.email import get_email_sender, EmailMessage
 
 router = APIRouter(prefix="/adverse-events", tags=["adverse-events"])
 
@@ -36,8 +38,22 @@ class AdverseEventIn(BaseModel):
 
 
 def notify_team(event_id: uuid.UUID, severity: str) -> None:
-    """DEV: apenas registra. PROD: alertar a equipe do estudo (integração pendente)."""
-    print(f"[adverse-event] ATENÇÃO ({severity}) evento {event_id}")
+    """Alerta a equipe do estudo por e-mail em EA moderado/grave. Best-effort, SEM PII.
+
+    Destino em ``TEAM_NOTIFY_EMAIL``; sem ele, não notifica. A mensagem traz só o id do
+    evento e a gravidade (nada de dados do participante)."""
+    to = os.getenv("TEAM_NOTIFY_EMAIL")
+    if not to:
+        return
+    try:
+        get_email_sender().send(EmailMessage(
+            to=to,
+            subject=f"[Sereno] Evento adverso ({severity})",
+            body=(f"Um evento adverso de gravidade '{severity}' foi registrado "
+                  f"(id {event_id}). Acesse o painel de pesquisa para os detalhes."),
+        ))
+    except Exception:  # noqa: BLE001 — alerta é best-effort; não pode derrubar o request
+        return
 
 
 @router.post("", status_code=201)
