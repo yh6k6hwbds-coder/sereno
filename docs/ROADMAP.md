@@ -13,14 +13,15 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (78 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (87 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA); auth de participante (OTP); consentimento; linha de base
   (PSQI+GAD-7); randomização + **alocação oculta**; sessão + telemetria com **resolução cega**;
-  **entrega de áudio bit-a-bit (A1/ADR-053)**; **auditoria append-only (C1/ADR-056)**; desfechos
-  (pós-sessão, diário); seguimento (PSQI+GAD-7+SUS+cegamento); evento adverso.
+  **entrega de áudio bit-a-bit (A1/ADR-053)**; **auditoria append-only (C1/ADR-056)**;
+  **captura de contato com PII cifrada (C4/ADR-059)**; desfechos (pós-sessão, diário); seguimento
+  (PSQI+GAD-7+SUS+cegamento); evento adverso.
 - **Stubs restantes:** `recommender`.
 - **Sem endpoint ainda (tabelas existem):** `screening`, `recommendation_log`,
-  `contact_info` (PII sem cifra), `staff_user` (sem gestão), exportação real.
+  `staff_user` (sem gestão), exportação real.
 - **Flutter (não compilado no ambiente de planejamento):** OTP → consentimento → home →
   preparar fones → sessão com **reprodução de áudio real bit-a-bit + fila de telemetria offline
   (A2/ADR-054)** e visualização não reativa. Falta persistência de login e as telas de
@@ -152,7 +153,12 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
   auto-registro público.
 - **ADR:** ADR-058.
 
-### C4 — Captura de contato + **cifra de PII** · P0 · `TODO`
+### C4 — Captura de contato + **cifra de PII** · P0 · `DONE`
+> **Concluída (2026-07-04, ADR-059):** `POST /v1/participants/{id}/contact` (staff `enroll:write`)
+> grava nome/e-mail cifrados em repouso (AES-256-GCM; AAD amarra ao participante+campo), separados
+> do dado de pesquisa; resposta neutra (sem PII); captura auditada sem PII (C1). Chave via
+> `PII_ENC_KEY` (env/cofre), nunca versionada. 9 testes. **Pendências:** rotação de chave e KMS
+> (prod); decifra é consumida na entrega de OTP (D1).
 - **Objetivo:** popular `contact_info` (nome/e-mail) **cifrados em repouso** (envelope/AEAD),
   separados do dado de pesquisa. Pré-requisito para a entrega real de OTP por e-mail.
 - **Contrato:** `POST /v1/participants/{id}/contact` (staff) — grava `enc_name`/`enc_email`.

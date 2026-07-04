@@ -205,6 +205,25 @@ paths:
         '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/AdverseEventAccepted' } } } }
         '404': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /participants/{id}/contact:
+    post:
+      summary: Gravar contato do participante (staff) — PII CIFRADA em repouso
+      operationId: storeParticipantContact
+      description: >
+        Grava nome e e-mail do participante CIFRADOS em repouso (AES-256-GCM), separados
+        do dado de pesquisa (LGPD). A chave vem do ambiente/cofre e nunca é versionada.
+        A resposta é NEUTRA e nunca ecoa a PII. Pré-requisito para a entrega real de OTP
+        por e-mail. Somente staff de inscrição (`enroll:write`).
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ContactIn' } } }
+      responses:
+        '201': { description: Contato gravado (confirmação neutra) }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /research/participants:
     get:
       summary: Listar participantes (pesquisa) — RBAC, braço codificado
@@ -473,6 +492,13 @@ components:
       properties:
         participant_id: { type: string, format: uuid }
       required: [participant_id]
+    ContactIn:
+      type: object
+      description: "PII do participante — cifrada em repouso no servidor; nunca ecoada de volta."
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        email: { type: string, format: email, minLength: 3, maxLength: 254 }
+      required: [name, email]
     AllocationAccepted:
       type: object
       description: "Confirmação neutra — deliberadamente SEM o braço (ocultação da alocação)."
