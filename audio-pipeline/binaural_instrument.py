@@ -233,25 +233,26 @@ def validate_signal(stereo: np.ndarray, protocol: AudioProtocol, sham: bool,
 
 
 # ----------------------------------------------------------------------------
-# Demonstração executável (renderiza, valida e gera figura de validação)
+# Biblioteca mínima de referência (portadora constante; varia só o Δf por banda).
+# Exposta no módulo para ser reutilizada pelos testes e pelo gate de CI.
 # ----------------------------------------------------------------------------
-if __name__ == "__main__":
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+REFERENCE_LIBRARY = [
+    AudioProtocol("alpha-10", "1.0.0", "alpha", 200.0, 10.0, duration_s=30.0),
+    AudioProtocol("theta-6",  "1.0.0", "theta", 200.0,  6.0, duration_s=30.0),
+    AudioProtocol("delta-2",  "1.0.0", "delta", 200.0,  2.0, duration_s=30.0),
+]
 
-    # Biblioteca mínima de protocolos (portadora constante; varia só o Δf por banda)
-    LIBRARY = [
-        AudioProtocol("alpha-10", "1.0.0", "alpha", 200.0, 10.0, duration_s=30.0),
-        AudioProtocol("theta-6",  "1.0.0", "theta", 200.0,  6.0, duration_s=30.0),
-        AudioProtocol("delta-2",  "1.0.0", "delta", 200.0,  2.0, duration_s=30.0),
-    ]
 
+def run_battery(library) -> bool:
+    """Roda a bateria de validação por FFT sobre a biblioteca; devolve True se tudo passou.
+
+    Este é o **gate inegociável de CI**: usa apenas numpy/scipy (nenhuma dependência de
+    plotagem) para que a validação do estímulo nunca dependa de matplotlib."""
     print("=" * 70)
     print("VALIDAÇÃO DO INSTRUMENTO — síntese binaural + FFT")
     print("=" * 70)
     all_passed = True
-    for proto in LIBRARY:
+    for proto in library:
         for sham in (False, True):
             sig = synthesize(proto, sham=sham)
             rep = validate_signal(sig, proto, sham=sham)
@@ -264,17 +265,33 @@ if __name__ == "__main__":
             for c in rep["checks"]:
                 print(f"   {'✓' if c['ok'] else '✗'} {c['check']:32s} — {c['detail']}")
             print(f"   → RESULTADO: {'APROVADO' if rep['passed'] else 'REPROVADO'}")
-
     print("\n" + "=" * 70)
     print(f"BATERIA COMPLETA: {'TODOS APROVADOS' if all_passed else 'HÁ FALHAS'}")
     print("=" * 70)
+    return all_passed
 
-    # ---- Figura de validação (protocolo alpha-10: ATIVO vs SHAM) ----
-    NAVY, PETROL, ELEC, CORAL = "#0B2447", "#19536B", "#2D7FF9", "#D85A30"
-    proto = LIBRARY[0]
+
+def render_validation_figure(library, out_dir: str | None = None) -> str | None:
+    """Gera a figura FFT (ATIVO vs SHAM) do primeiro protocolo. OPCIONAL — fora do gate.
+
+    Requer matplotlib; se ausente, apenas avisa e retorna ``None`` (a bateria de validação
+    roda só com numpy/scipy). Devolve o caminho do PNG gerado ou ``None``."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("\n[aviso] matplotlib ausente — figura de validação ignorada "
+              "(a bateria FFT roda só com numpy/scipy).")
+        return None
+    import os
+
+    NAVY, PETROL, CORAL = "#0B2447", "#19536B", "#D85A30"
+    proto = library[0]
     fs = proto.sample_rate
+    beat = proto.beat_hz
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 4.6))
-    for ax, sham, title in [(axes[0], False, "Braço ATIVO — batimento binaural (Δf = 10 Hz)"),
+    for ax, sham, title in [(axes[0], False, f"Braço ATIVO — batimento binaural (Δf = {beat:.0f} Hz)"),
                             (axes[1], True,  "Braço SHAM — placebo ativo (Δf = 0)")]:
         sig = synthesize(proto, sham=sham)
         for idx, (ch, color) in enumerate([("Canal L", PETROL), ("Canal R", CORAL)]):
@@ -294,6 +311,24 @@ if __name__ == "__main__":
     fig.suptitle("Validação por FFT do estímulo de referência — canais L/R por braço",
                  fontsize=12.5, color=NAVY, fontweight="bold", y=1.02)
     fig.tight_layout()
-    import os as _os; _out=_os.path.join(_os.path.dirname(_os.path.abspath(__file__)),"out"); _os.makedirs(_out, exist_ok=True); fig.savefig(_os.path.join(_out,"fft_validation.png"), dpi=150, bbox_inches="tight",
-                facecolor="white")
-    print("\nFigura salva em out/fft_validation.png")
+    out_dir = out_dir or os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, "fft_validation.png")
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    print(f"\nFigura salva em {path}")
+    return path
+
+
+# ----------------------------------------------------------------------------
+# Demonstração executável / gate de CI (valida por FFT; figura é opcional)
+# ----------------------------------------------------------------------------
+if __name__ == "__main__":
+    import sys
+
+    passed = run_battery(REFERENCE_LIBRARY)
+    # A figura é conveniência local: nunca bloqueia o gate nem exige matplotlib no CI.
+    if "--no-plot" not in sys.argv:
+        render_validation_figure(REFERENCE_LIBRARY)
+    # Dentes do gate: código de saída ≠ 0 se qualquer protocolo reprovar na FFT.
+    sys.exit(0 if passed else 1)
