@@ -303,6 +303,43 @@ paths:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuditPage' } } } }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+  /staff:
+    post:
+      summary: Criar usuário de staff (admin) — sem auto-registro público
+      operationId: createStaff
+      description: Cria pesquisador/admin. Somente admin (`user:manage`); a senha é cifrada (argon2id).
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/StaffCreateIn' } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/StaffCreated' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /staff/me/mfa/enroll:
+    post:
+      summary: Iniciar cadastro de MFA (TOTP) — gera segredo e URI otpauth
+      operationId: enrollMfa
+      description: >
+        Gera e guarda um segredo TOTP para o staff autenticado e devolve o `provisioning_uri`
+        (QR). O MFA só é ATIVADO após confirmar um código válido (`/staff/me/mfa/confirm`).
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/MfaEnrollOut' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /staff/me/mfa/confirm:
+    post:
+      summary: Confirmar e ATIVAR o MFA com um código TOTP
+      operationId: confirmMfa
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/MfaConfirmIn' } } }
+      responses:
+        '200': { description: MFA ativado, content: { application/json: { schema: { $ref: '#/components/schemas/MfaConfirmed' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -554,6 +591,35 @@ components:
         status: { type: string, enum: [screened] }
         eligible: { type: boolean }
       required: [status, eligible]
+    StaffCreateIn:
+      type: object
+      properties:
+        email: { type: string, format: email, minLength: 3, maxLength: 120 }
+        role: { type: string, enum: [researcher, admin] }
+        password: { type: string, minLength: 8, maxLength: 200 }
+      required: [email, role, password]
+    StaffCreated:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        role: { type: string, enum: [researcher, admin] }
+      required: [id, email, role]
+    MfaEnrollOut:
+      type: object
+      description: "provisioning_uri (otpauth://) para o app autenticador; secret para entrada manual."
+      properties:
+        provisioning_uri: { type: string }
+        secret: { type: string }
+      required: [provisioning_uri, secret]
+    MfaConfirmIn:
+      type: object
+      properties: { code: { type: string, pattern: '^[0-9]{6}$' } }
+      required: [code]
+    MfaConfirmed:
+      type: object
+      properties: { mfa_enabled: { type: boolean, enum: [true] } }
+      required: [mfa_enabled]
     AllocationAccepted:
       type: object
       description: "Confirmação neutra — deliberadamente SEM o braço (ocultação da alocação)."

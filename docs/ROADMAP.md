@@ -13,17 +13,16 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (111 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (121 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
-  participante (OTP + **entrega por e-mail — D1/ADR-063**); consentimento; **triagem/elegibilidade
-  + funil (C2/ADR-057)**; linha de base
+  participante (OTP + **entrega por e-mail — D1/ADR-063**); **gestão de staff + MFA enrollment
+  (C3/ADR-058)**; consentimento; **triagem/elegibilidade + funil (C2/ADR-057)**; linha de base
   (PSQI+GAD-7); randomização + **alocação oculta** (com gate de inscrição); sessão + telemetria com **resolução cega**;
   **entrega de áudio bit-a-bit (A1/ADR-053)**; **auditoria append-only (C1/ADR-056)**;
   **captura de contato com PII cifrada (C4/ADR-059)**; desfechos (pós-sessão, diário); seguimento
   (PSQI+GAD-7+SUS+cegamento); evento adverso.
 - **Stubs restantes:** `recommender`.
-- **Sem endpoint ainda (tabelas existem):** `recommendation_log`,
-  `staff_user` (sem gestão), exportação real.
+- **Sem endpoint ainda (tabelas existem):** `recommendation_log`, exportação real.
 - **Flutter (não compilado no ambiente de planejamento):** OTP → consentimento → home →
   preparar fones → sessão com **reprodução de áudio real bit-a-bit + fila de telemetria offline
   (A2/ADR-054)** e visualização não reativa. Falta persistência de login e as telas de
@@ -152,12 +151,16 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
 > A alocação passou a exigir triagem elegível + consentimento (`enrollment_blocker` → 409). 13
 > testes; testes de alocação/auditoria atualizados p/ semear o funil.
 
-### C3 — Gestão de staff + MFA enrollment (admin) · P1 · `TODO`
+### C3 — Gestão de staff + MFA enrollment (admin) · P1 · `DONE`
 - **Contrato:** `POST /v1/staff` (admin `user:manage`), `POST /v1/staff/me/mfa/enroll`
   (gera segredo + URI otpauth). **Depende de:** auth de staff (feito).
 - **Pronto:** admin cria pesquisador; enrollment de MFA emite `provisioning_uri`; sem
   auto-registro público.
 - **ADR:** ADR-058.
+> **Concluída (2026-07-04, ADR-058):** `POST /v1/staff` (admin) cria staff (argon2, e-mail único,
+> auditado sem PII); MFA em dois passos — `enroll` (gera segredo + `provisioning_uri`, não ativa)
+> e `confirm` (valida TOTP → ativa). 10 testes. **Pendências:** exigir MFA p/ admin; rotação de
+> senha; convite por e-mail; lifecycle (listar/desativar).
 
 ### C4 — Captura de contato + **cifra de PII** · P0 · `DONE`
 > **Concluída (2026-07-04, ADR-059):** `POST /v1/participants/{id}/contact` (staff `enroll:write`)
