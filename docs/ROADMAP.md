@@ -13,13 +13,13 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (70 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (78 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA); auth de participante (OTP); consentimento; linha de base
   (PSQI+GAD-7); randomização + **alocação oculta**; sessão + telemetria com **resolução cega**;
-  **entrega de áudio bit-a-bit (A1/ADR-053)**; desfechos (pós-sessão, diário); seguimento
-  (PSQI+GAD-7+SUS+cegamento); evento adverso.
-- **Stubs restantes:** `audit`, `recommender`.
-- **Sem endpoint ainda (tabelas existem):** `screening`, `recommendation_log`, `audit_log`,
+  **entrega de áudio bit-a-bit (A1/ADR-053)**; **auditoria append-only (C1/ADR-056)**; desfechos
+  (pós-sessão, diário); seguimento (PSQI+GAD-7+SUS+cegamento); evento adverso.
+- **Stubs restantes:** `recommender`.
+- **Sem endpoint ainda (tabelas existem):** `screening`, `recommendation_log`,
   `contact_info` (PII sem cifra), `staff_user` (sem gestão), exportação real.
 - **Flutter (não compilado no ambiente de planejamento):** OTP → consentimento → home →
   preparar fones → sessão (visualização não reativa + telemetria). Falta reprodução de áudio
@@ -115,7 +115,12 @@ Reusa endpoints já prontos. Cada tela é uma fatia com widget tests.
 ## FASE C — Fluxo de pesquisa e integridade científica · P0/P1
 O que o CEP e a análise exigem. Tudo com trilha de auditoria.
 
-### C1 — Log de auditoria append-only (transversal) · P0 · `TODO`
+### C1 — Log de auditoria append-only (transversal) · P0 · `DONE`
+> **Concluída (2026-07-04, ADR-056):** serviço `audit.service` (`record_event`/`list_events`),
+> append-only por guard no ORM (`AuditAppendOnlyError`) + GRANT no Postgres (prod); `consent` e
+> `allocation` emitem eventos (alocação **sem o braço**); `GET /research/audit` (admin, `audit:read`)
+> com paginação keyset. 8 testes. **Parcial por design:** export (C6) e unblind (C5) plugam o hook
+> quando existirem.
 - **Objetivo:** registrar ações sensíveis (consentimento, alocação, pedido de exportação,
   pedido/execução de desbloqueio) em `audit_log`, **append-only**, sem PII.
 - **Depende de:** —. **Contrato:** interno (sem endpoint público) + `GET /research/audit`

@@ -234,6 +234,22 @@ paths:
       responses:
         '202': { description: Aceito (processamento assíncrono), content: { application/json: { schema: { $ref: '#/components/schemas/JobAccepted' } } } }
         '403': { $ref: '#/components/responses/Problem' }
+  /research/audit:
+    get:
+      summary: Ler o log de auditoria (admin) — append-only, sem PII nem braço
+      operationId: readAuditLog
+      description: >
+        Lista eventos de auditoria de ações sensíveis (consentimento, alocação e, quando
+        implementados, pedido de exportação e desbloqueio). Somente admin (`audit:read`).
+        Paginação por cursor keyset (mais recentes primeiro). O log é append-only e nunca
+        contém PII em claro nem o braço (ativo/sham).
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuditPage' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -431,6 +447,25 @@ components:
       type: object
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/ResearchParticipant' } }
+        next_cursor: { type: [string, "null"] }
+      required: [items]
+    AuditEvent:
+      type: object
+      description: "Evento de auditoria — append-only, SEM PII e SEM o braço (ativo/sham)."
+      properties:
+        id: { type: string, format: uuid }
+        action: { type: string, examples: [consent.recorded, allocation.created] }
+        resource_type: { type: string }
+        resource_id: { type: [string, "null"], format: uuid }
+        actor_type: { type: string, enum: [participant, staff, system] }
+        actor_id: { type: [string, "null"], format: uuid }
+        occurred_at: { type: string, format: date-time }
+        meta: { type: [object, "null"], additionalProperties: true }
+      required: [id, action, resource_type, actor_type, occurred_at]
+    AuditPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/AuditEvent' } }
         next_cursor: { type: [string, "null"] }
       required: [items]
     AllocateIn:

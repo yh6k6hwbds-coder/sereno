@@ -17,6 +17,7 @@ from app.core.db import get_db
 from app.core.security import require, current_participant
 from app.core.problem import ProblemException
 from app.core.models import ConsentRecord
+from app.modules.audit.service import record_event
 
 router = APIRouter(prefix="/participants/me", tags=["consent"])
 
@@ -71,6 +72,11 @@ async def record_consent(
     )
     db.add(record)
     db.flush()   # obtem o id; o commit ocorre em get_db
+
+    # Auditoria (append-only, sem PII): registra o aceite/recusa na mesma transação.
+    record_event(db, action="consent.recorded", resource_type="consent_record",
+                 actor_type="participant", actor_id=participant_id, resource_id=record.id,
+                 meta={"tcle_version": body.tcle_version, "accepted": body.accepted})
 
     return ConsentOut(id=record.id, accepted=record.accepted,
                       accepted_at=record.accepted_at, content_hash=record.content_hash)

@@ -18,6 +18,7 @@ from app.core.security import require
 from app.core.problem import ProblemException
 from app.core.models import Participant
 from app.modules.allocation.service import allocate_participant, is_allocated
+from app.modules.audit.service import record_event
 
 router = APIRouter(prefix="/allocation", tags=["allocation"])
 
@@ -37,11 +38,23 @@ async def status():
 
 @router.post("", status_code=201)
 async def allocate(body: AllocateIn, db: Session = Depends(get_db),
-                   _user: dict = Depends(require("enroll:write"))):
+                   user: dict = Depends(require("enroll:write"))):
     if db.scalar(select(Participant.id).where(Participant.id == body.participant_id)) is None:
         raise ProblemException(404, "Participante não encontrado", "ID de participante inexistente.")
     if is_allocated(db, body.participant_id):
         raise ProblemException(409, "Participante já alocado", "Este participante já possui alocação.")
     alloc = allocate_participant(db, body.participant_id, seed=SEED, block_size=BLOCK_SIZE)
+
+    # Auditoria (append-only): registra que houve alocação — NUNCA o braço (arm_coded),
+    # que permanece oculto inclusive na trilha. Apenas metadado neutro (bloco).
+    actor_id = None
+    try:
+        actor_id = uuid.UUID(str(user["id"]))
+    except (KeyError, ValueError, TypeError):
+        pass
+    record_event(db, action="allocation.created", resource_type="allocation",
+                 actor_type="staff", actor_id=actor_id, resource_id=alloc.id,
+                 meta={"block": alloc.block})
+
     # Confirmação NEUTRA — sem o braço (ocultação da alocação, inclusive para o staff).
     return {"status": "allocated", "block": alloc.block}

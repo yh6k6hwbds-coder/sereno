@@ -22,7 +22,8 @@ from app.core.models import Participant
 RBAC: dict[str, set[str]] = {
     "participant": {"consent:write", "session:write", "assessment:write", "diary:write", "ae:write"},
     "researcher": {"research:read", "export:request", "enroll:write"},
-    "admin": {"research:read", "export:request", "enroll:write", "user:manage", "unblind:request"},
+    "admin": {"research:read", "export:request", "enroll:write", "user:manage",
+              "unblind:request", "audit:read"},
 }
 
 _bearer = HTTPBearer(auto_error=False)
