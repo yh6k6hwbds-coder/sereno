@@ -26,6 +26,7 @@ paths:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
         '401': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /auth/refresh:
     post:
       summary: Renovar token de acesso
@@ -36,6 +37,19 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/RefreshIn' } } }
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+  /auth/logout:
+    post:
+      summary: Revogar o token atual (denylist por jti) — encerra a sessão
+      operationId: logout
+      description: >
+        Revoga o token de acesso apresentado (adiciona seu `jti` à denylist até expirar);
+        se um `refresh_token` for enviado, revoga também o seu `jti`. Requer autenticação.
+      requestBody:
+        required: false
+        content: { application/json: { schema: { $ref: '#/components/schemas/LogoutIn' } } }
+      responses:
+        '200': { description: Sessão encerrada (token revogado) }
         '401': { $ref: '#/components/responses/Problem' }
   /auth/mfa/verify:
     post:
@@ -57,6 +71,7 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/RequestOtpIn' } } }
       responses:
         '200': { description: "OK (resposta genérica, sem enumeração)" }
+        '429': { $ref: '#/components/responses/Problem' }
   /auth/participant/verify-otp:
     post:
       summary: Verificar OTP e emitir token de participante
@@ -341,6 +356,10 @@ components:
       type: object
       properties: { refresh_token: { type: string } }
       required: [refresh_token]
+    LogoutIn:
+      type: object
+      description: "refresh_token opcional — se enviado, também é revogado."
+      properties: { refresh_token: { type: [string, "null"] } }
     MfaIn:
       type: object
       properties:

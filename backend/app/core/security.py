@@ -17,6 +17,7 @@ from app.core.problem import ProblemException
 from app.core import auth as auth_core
 from app.core.db import get_db
 from app.core.models import Participant
+from app.core.token_revocation import get_denylist
 
 # Matriz mínima de permissões (espelha a Etapa 5).
 RBAC: dict[str, set[str]] = {
@@ -39,6 +40,10 @@ async def current_user(cred: HTTPAuthorizationCredentials = Depends(_bearer)) ->
         raise ProblemException(401, "Sessão expirada", "O token de acesso expirou.")
     except jwt.InvalidTokenError:
         raise ProblemException(401, "Token inválido", "Não foi possível validar o token.")
+    # Revogação: um token com jti na denylist (ex.: pós-logout) é recusado.
+    jti = payload.get("jti")
+    if jti and get_denylist().is_revoked(jti):
+        raise ProblemException(401, "Sessão encerrada", "Token revogado.")
     return {"id": payload["sub"], "role": payload.get("role"), "scope": payload.get("scope", "")}
 
 

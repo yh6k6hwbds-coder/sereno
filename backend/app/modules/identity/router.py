@@ -7,9 +7,11 @@ Sem enumeração de usuário (falhas retornam 401 genérico). Erros em problem+j
 Autenticação de PARTICIPANTE é uma fatia à parte (fluxo mais simples).
 """
 from __future__ import annotations
+import datetime as dt
 import uuid
 import jwt
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -18,9 +20,20 @@ from app.core.db import get_db
 from app.core.problem import ProblemException
 from app.core.models import StaffUser
 from app.core import auth
-from app.core.security import RBAC
+from app.core.security import RBAC, current_user
+from app.core.rate_limit import enforce as rate_limit
+from app.core.token_revocation import get_denylist
 
 router = APIRouter(prefix="/auth", tags=["identity"])
+_bearer = HTTPBearer(auto_error=False)
+
+
+def _revoke(payload: dict) -> None:
+    """Adiciona o jti do token à denylist até o seu próprio exp (nada além disso)."""
+    jti, exp = payload.get("jti"), payload.get("exp")
+    if jti and exp:
+        now = int(dt.datetime.now(dt.timezone.utc).timestamp())
+        get_denylist().revoke(jti, max(int(exp) - now, 1))
 
 
 class LoginIn(BaseModel):
@@ -37,6 +50,10 @@ class RefreshIn(BaseModel):
     refresh_token: str
 
 
+class LogoutIn(BaseModel):
+    refresh_token: str | None = None
+
+
 def _tokens(sub: str, role: str) -> dict:
     scope = " ".join(sorted(RBAC.get(role, set())))
     return {
@@ -49,7 +66,9 @@ def _tokens(sub: str, role: str) -> dict:
 
 
 @router.post("/token")
-async def login(body: LoginIn, db: Session = Depends(get_db)):
+async def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
+    # Limite por IP ANTES da verificação de senha (freia força-bruta; erro também conta).
+    rate_limit(request, bucket="login", default_limit=10)
     user = db.scalars(select(StaffUser).where(StaffUser.email == body.email)).first()
     if user is None or not auth.verify_password(user.password_hash, body.password):
         raise ProblemException(401, "Credenciais inválidas", "E-mail ou senha incorretos.")
@@ -78,4 +97,22 @@ async def refresh(body: RefreshIn):
         payload = auth.decode_token(body.refresh_token, expected_type="refresh")
     except jwt.InvalidTokenError:
         raise ProblemException(401, "Sessão inválida", "Token de renovação inválido ou expirado.")
+    jti = payload.get("jti")
+    if jti and get_denylist().is_revoked(jti):
+        raise ProblemException(401, "Sessão inválida", "Token de renovação revogado.")
     return _tokens(payload["sub"], payload["role"])
+
+
+@router.post("/logout")
+async def logout(body: LogoutIn | None = None,
+                 cred: HTTPAuthorizationCredentials = Depends(_bearer),
+                 _user: dict = Depends(current_user)):
+    """Revoga o token de acesso atual (e o refresh, se enviado) por jti — até expirarem."""
+    # current_user já validou o access; revoga o seu jti.
+    _revoke(auth.decode_token(cred.credentials, expected_type="access"))
+    if body and body.refresh_token:
+        try:
+            _revoke(auth.decode_token(body.refresh_token, expected_type="refresh"))
+        except jwt.InvalidTokenError:
+            pass  # refresh inválido/expirado: nada a revogar
+    return {"status": "logged_out"}

@@ -8,7 +8,7 @@ solicitar OTP responde de forma genérica. Entrega por e-mail é integração à
 """
 from __future__ import annotations
 import datetime as dt
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -17,6 +17,7 @@ from app.core.db import get_db
 from app.core.problem import ProblemException
 from app.core.models import Participant, OtpChallenge
 from app.core import otp, auth
+from app.core.rate_limit import enforce as rate_limit
 
 router = APIRouter(prefix="/auth/participant", tags=["participant-auth"])
 
@@ -36,7 +37,9 @@ def deliver_otp(participant_id, code: str) -> None:
 
 
 @router.post("/request-otp")
-async def request_otp(body: RequestOtpIn, db: Session = Depends(get_db)):
+async def request_otp(body: RequestOtpIn, request: Request, db: Session = Depends(get_db)):
+    # Limite por IP: freia enumeração/abuso do disparo de OTP (antes de qualquer trabalho).
+    rate_limit(request, bucket="otp", default_limit=10)
     p = db.scalar(select(Participant).where(Participant.study_code == body.study_code))
     if p is not None:
         # invalida desafios anteriores não consumidos e emite um novo

@@ -17,6 +17,16 @@ from app.core import db as db_module
 from app.main import app
 
 
+@pytest.fixture(autouse=True)
+def _reset_throttles():
+    """Isola o estado dos singletons de rate limit / denylist entre testes."""
+    from app.core.rate_limit import get_rate_limiter
+    from app.core.token_revocation import get_denylist
+    get_rate_limiter().reset()
+    get_denylist().reset()
+    yield
+
+
 @pytest.fixture
 def api():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)

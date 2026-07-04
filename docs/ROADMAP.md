@@ -13,8 +13,9 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (87 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
-  auth de staff (argon2+JWT+MFA); auth de participante (OTP); consentimento; linha de base
+- **Backend (93 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+  auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
+  participante (OTP); consentimento; linha de base
   (PSQI+GAD-7); randomização + **alocação oculta**; sessão + telemetria com **resolução cega**;
   **entrega de áudio bit-a-bit (A1/ADR-053)**; **auditoria append-only (C1/ADR-056)**;
   **captura de contato com PII cifrada (C4/ADR-059)**; desfechos (pós-sessão, diário); seguimento
@@ -198,9 +199,13 @@ Endurecimento para dado real e para o CEP.
 - Substitui os hooks `deliver_otp`/`notify_team` por envio real (fila + retries). **ADR-063.**
 - **Pronto:** teste com fake SMTP; segredo em cofre; sem logar o código em produção.
 
-### D2 — Rate limiting + denylist de `jti` · P1 · `TODO`
+### D2 — Rate limiting + denylist de `jti` · P1 · `DONE`
 - Limite por IP no `request-otp` e no `login`; revogação de token por `jti` (Redis).
 - **Pronto:** testes de limite e de token revogado. **ADR-064.** (Pendência do ADR-043/047.)
+> **Concluída (2026-07-04, ADR-064):** rate limit por IP (429, configurável) em `request-otp` e
+> `login`; denylist por `jti` com `POST /auth/logout` (revoga access + refresh) e enforcement em
+> `current_user`/`refresh`. Portas in-memory (teste) / Redis (prod via `REDIS_URL`). 6 testes.
+> **Pendências:** confiança de proxy p/ IP real (`X-Forwarded-For`); política de falha do Redis.
 
 ### D3 — Docker + compose (Postgres/Redis) + segredos · P0 · `TODO`
 - `docker-compose` para ambiente prod-like; migrações no deploy; config por ambiente/cofre.
