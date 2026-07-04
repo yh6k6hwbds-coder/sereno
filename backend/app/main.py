@@ -15,6 +15,7 @@ from app.core.problem import install_problem_handlers
 # Roteadores por domínio (fronteiras explícitas do monólito modular).
 from app.modules.identity.router import router as identity_router
 from app.modules.consent.router import router as consent_router
+from app.modules.screening.router import router as screening_router
 from app.modules.allocation.router import router as allocation_router
 from app.modules.sessions.router import router as sessions_router
 from app.modules.instruments.router import router as instruments_router
@@ -60,10 +61,10 @@ def create_app() -> FastAPI:
         # TODO: checar conexões (DB, Redis) antes de reportar pronto.
         return {"status": "ready"}
 
-    for r in (identity_router, consent_router, allocation_router, sessions_router,
-              instruments_router, recommender_router, research_router, audit_router,
-              participant_auth_router, contact_router, diary_router, followup_router,
-              adverse_events_router):
+    for r in (identity_router, consent_router, screening_router, allocation_router,
+              sessions_router, instruments_router, recommender_router, research_router,
+              audit_router, participant_auth_router, contact_router, diary_router,
+              followup_router, adverse_events_router):
         app.include_router(r, prefix=API_PREFIX)
 
     return app

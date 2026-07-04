@@ -8,12 +8,24 @@ Prova as DUAS propriedades inegociáveis:
 Cobre ainda: 409 (duplicado), 404 (inexistente), 403 (papel errado), 401 (sem token).
 """
 from __future__ import annotations
-from app.core.models import Participant, StaffUser
+import datetime as dt
+from app.core.models import Participant, StaffUser, Screening, ConsentRecord
 from app.core import auth
 from app.modules.allocation.randomization import generate_sequence, arm_for_index
 from app.modules.allocation.service import allocate_participant, resolve_arm
 
 ALLOC_URL = "/v1/allocation"
+
+
+def _seed_allocatable(TestSession, code):
+    """Participante que passou pelo funil (C2): triado elegível + consentimento aceito."""
+    with TestSession() as s:
+        p = Participant(study_code=code); s.add(p); s.flush()
+        s.add(Screening(participant_id=p.id, eligible=True, criteria={"version": "1.0.0"}))
+        s.add(ConsentRecord(participant_id=p.id, tcle_version="1.0.0", accepted=True,
+                            accepted_at=dt.datetime.now(dt.timezone.utc), content_hash="0" * 64))
+        s.commit()
+        return p.id
 
 
 def _researcher_headers(TestSession, email="enroll@uninta.edu.br"):
@@ -58,7 +70,7 @@ def test_service_matches_deterministic_sequence(api):
 def test_endpoint_allocates_without_leaking_arm(api):
     client, TestSession = api
     hdr = _researcher_headers(TestSession)
-    pid = _seed_participant(TestSession, "P-A")
+    pid = _seed_allocatable(TestSession, "P-A")
     r = client.post(ALLOC_URL, headers=hdr, json={"participant_id": str(pid)})
     assert r.status_code == 201
     body = r.json()
@@ -81,7 +93,7 @@ def test_research_endpoint_has_no_arm(api):
 def test_duplicate_allocation_409(api):
     client, TestSession = api
     hdr = _researcher_headers(TestSession)
-    pid = _seed_participant(TestSession, "P-DUP")
+    pid = _seed_allocatable(TestSession, "P-DUP")
     assert client.post(ALLOC_URL, headers=hdr, json={"participant_id": str(pid)}).status_code == 201
     r2 = client.post(ALLOC_URL, headers=hdr, json={"participant_id": str(pid)})
     assert r2.status_code == 409

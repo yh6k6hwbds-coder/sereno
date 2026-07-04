@@ -249,6 +249,25 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ResearchPage' } } } }
         '403': { $ref: '#/components/responses/Problem' }
+  /screening:
+    post:
+      summary: Triagem/elegibilidade do participante (staff) — ordena o funil de inscrição
+      operationId: recordScreening
+      description: >
+        Registra a triagem: o servidor calcula a elegibilidade por regra transparente e
+        versionada (todas as inclusões verdadeiras E nenhuma exclusão presente) e grava
+        critérios + decisão. É pré-condição, junto ao consentimento, para a alocação.
+        Somente staff de inscrição (`enroll:write`).
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ScreeningIn' } } }
+      responses:
+        '201': { description: Triagem registrada, content: { application/json: { schema: { $ref: '#/components/schemas/ScreeningResult' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /allocation:
     post:
       summary: Alocar participante (staff) — resposta NEUTRA, nunca revela o braço
@@ -518,6 +537,23 @@ components:
         name: { type: string, minLength: 1, maxLength: 200 }
         email: { type: string, format: email, minLength: 3, maxLength: 254 }
       required: [name, email]
+    ScreeningIn:
+      type: object
+      description: >
+        Critérios estruturados. Elegível ⇔ todas as inclusões verdadeiras E nenhuma exclusão
+        presente. As chaves concretas vêm do protocolo aprovado (CEP); o servidor só aplica a regra.
+      properties:
+        participant_id: { type: string, format: uuid }
+        inclusion: { type: object, additionalProperties: { type: boolean } }
+        exclusion: { type: object, additionalProperties: { type: boolean } }
+        symptoms: { type: [object, "null"], additionalProperties: true }
+      required: [participant_id, inclusion, exclusion]
+    ScreeningResult:
+      type: object
+      properties:
+        status: { type: string, enum: [screened] }
+        eligible: { type: boolean }
+      required: [status, eligible]
     AllocationAccepted:
       type: object
       description: "Confirmação neutra — deliberadamente SEM o braço (ocultação da alocação)."

@@ -19,6 +19,7 @@ from app.core.problem import ProblemException
 from app.core.models import Participant
 from app.modules.allocation.service import allocate_participant, is_allocated
 from app.modules.audit.service import record_event
+from app.modules.screening.service import enrollment_blocker
 
 router = APIRouter(prefix="/allocation", tags=["allocation"])
 
@@ -41,6 +42,10 @@ async def allocate(body: AllocateIn, db: Session = Depends(get_db),
                    user: dict = Depends(require("enroll:write"))):
     if db.scalar(select(Participant.id).where(Participant.id == body.participant_id)) is None:
         raise ProblemException(404, "Participante não encontrado", "ID de participante inexistente.")
+    # Funil de inscrição: só aloca quem foi triado (elegível) e consentiu (C2).
+    blocker = enrollment_blocker(db, body.participant_id)
+    if blocker is not None:
+        raise ProblemException(409, "Inscrição incompleta", blocker)
     if is_allocated(db, body.participant_id):
         raise ProblemException(409, "Participante já alocado", "Este participante já possui alocação.")
     alloc = allocate_participant(db, body.participant_id, seed=SEED, block_size=BLOCK_SIZE)

@@ -10,10 +10,11 @@ Prova o "Pronto (DoD)":
   - resposta de leitura não vaza PII nem o braço; paginação keyset por cursor.
 """
 from __future__ import annotations
+import datetime as dt
 import pytest
 from sqlalchemy import select, func
 
-from app.core.models import Participant, StaffUser, AuditLog
+from app.core.models import Participant, StaffUser, AuditLog, Screening, ConsentRecord
 from app.core import auth
 from app.modules.audit.service import record_event, list_events, AuditAppendOnlyError
 
@@ -55,6 +56,12 @@ def test_allocation_records_audit_event_without_arm(api):
     client, TestSession = api
     _uid, staff_hdr = _staff(TestSession, "researcher")
     pid, _ = _participant(TestSession, "P-ALLOC")
+    # Funil (C2): triado elegível + consentimento, pré-condição da alocação.
+    with TestSession() as s:
+        s.add(Screening(participant_id=pid, eligible=True, criteria={"version": "1.0.0"}))
+        s.add(ConsentRecord(participant_id=pid, tcle_version="1.0.0", accepted=True,
+                            accepted_at=dt.datetime.now(dt.timezone.utc), content_hash="0" * 64))
+        s.commit()
     assert client.post(ALLOC_URL, headers=staff_hdr,
                        json={"participant_id": str(pid)}).status_code == 201
     with TestSession() as s:

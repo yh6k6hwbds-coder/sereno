@@ -13,15 +13,16 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (98 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (111 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
-  participante (OTP + **entrega por e-mail — D1/ADR-063**); consentimento; linha de base
-  (PSQI+GAD-7); randomização + **alocação oculta**; sessão + telemetria com **resolução cega**;
+  participante (OTP + **entrega por e-mail — D1/ADR-063**); consentimento; **triagem/elegibilidade
+  + funil (C2/ADR-057)**; linha de base
+  (PSQI+GAD-7); randomização + **alocação oculta** (com gate de inscrição); sessão + telemetria com **resolução cega**;
   **entrega de áudio bit-a-bit (A1/ADR-053)**; **auditoria append-only (C1/ADR-056)**;
   **captura de contato com PII cifrada (C4/ADR-059)**; desfechos (pós-sessão, diário); seguimento
   (PSQI+GAD-7+SUS+cegamento); evento adverso.
 - **Stubs restantes:** `recommender`.
-- **Sem endpoint ainda (tabelas existem):** `screening`, `recommendation_log`,
+- **Sem endpoint ainda (tabelas existem):** `recommendation_log`,
   `staff_user` (sem gestão), exportação real.
 - **Flutter (não compilado no ambiente de planejamento):** OTP → consentimento → home →
   preparar fones → sessão com **reprodução de áudio real bit-a-bit + fila de telemetria offline
@@ -140,12 +141,16 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
 - **Inegociável:** nunca gravar PII nem o braço em claro no log.
 - **ADR:** ADR-056.
 
-### C2 — Triagem/elegibilidade (enrollment) · P0 · `TODO`
+### C2 — Triagem/elegibilidade (enrollment) · P0 · `DONE`
 - **Objetivo:** `screening` → decide elegibilidade → habilita consentimento → habilita
   alocação. Ordena o funil de inscrição (staff).
 - **Contrato:** `POST /v1/screening` (staff `enroll:write`); grava critérios/elegibilidade.
 - **Pronto:** elegível vs inelegível; bloqueio de alocação antes de screening+consentimento.
 - **ADR:** ADR-057.
+> **Concluída (2026-07-04, ADR-057):** `POST /v1/screening` calcula elegibilidade por regra
+> versionada (inclusões-todas / exclusão-nenhuma), audita (sem PII), uma por participante (409).
+> A alocação passou a exigir triagem elegível + consentimento (`enrollment_blocker` → 409). 13
+> testes; testes de alocação/auditoria atualizados p/ semear o funil.
 
 ### C3 — Gestão de staff + MFA enrollment (admin) · P1 · `TODO`
 - **Contrato:** `POST /v1/staff` (admin `user:manage`), `POST /v1/staff/me/mfa/enroll`

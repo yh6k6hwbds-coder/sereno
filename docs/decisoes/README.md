@@ -60,6 +60,7 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 053 | Entrega de áudio da sessão sem vazamento + fidelidade bit-a-bit (`audio_sha256` = ETag) **[novo]** |
 | 054 | Player bit-a-bit (portas p/ just_audio) + fila de telemetria offline **[novo]** |
 | 056 | Log de auditoria append-only (guard ORM + GRANT; leitura admin `audit:read`) **[novo]** |
+| 057 | Triagem/elegibilidade (regra versionada) + gate do funil de alocação **[novo]** |
 | 059 | Cifra de PII em repouso (AES-256-GCM/AEAD, AAD por participante+campo; chave em env) **[novo]** |
 | 063 | Entrega de e-mail (interface): OTP por e-mail (decifra C4) + alerta de EA, best-effort **[novo]** |
 | 064 | Rate limiting por IP (429) + denylist de token por `jti` (logout/revogação) **[novo]** |
