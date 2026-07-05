@@ -71,5 +71,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 064 | Rate limiting por IP (429) + denylist de token por `jti` (logout/revogação) **[novo]** |
 | 065 | Docker + compose (Postgres/Redis) + segredos por env; migração no deploy; CI Postgres **[novo]** |
 | 067 | Observabilidade (logs JSON sem PII/braço) + CI endurecido (cobertura ≥80%, Flutter bloqueante) **[novo]** |
+| 073 | Telas de captura de desfechos (B2–B6): componentes Likert/PSQI reutilizáveis + OutcomesRepository **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

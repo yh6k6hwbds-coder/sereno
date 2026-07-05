@@ -105,7 +105,11 @@ Reusa endpoints já prontos. Cada tela é uma fatia com widget tests.
 - **ADR:** ADR-055. **Sugestão:** adotar **Riverpod + go_router** aqui (ver ADR-050) e
   empacotar as **fontes** da identidade.
 
-### B2 — Tela de linha de base (PSQI + GAD-7) · P0 · `TODO`
+### B2 — Tela de linha de base (PSQI + GAD-7) · P0 · `DONE` (via CI)
+> **Código completo (2026-07-05, ADR-073):** `BaselineScreen` compõe GAD-7 (`LikertGroup`) + PSQI
+> (`PsqiSection`), envia itens brutos via `OutcomesRepository` (escore versionado no servidor),
+> trata 409/422, não exibe escore alarmante, enunciados próprios. Base reutilizável (Likert/PSQI/
+> repo) testada com MockClient. Validação via job `app` do CI (não rodado localmente).
 - **Contrato:** `POST /participants/me/baseline` (feito). **Depende de:** B1.
 - **Pronto:** widget tests — validação de faixa no cliente, envio, tratamento de 409/422;
   não exibe escore de forma alarmante (bem-estar).
