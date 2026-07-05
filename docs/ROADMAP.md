@@ -196,7 +196,8 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
 > **Concluída (2026-07-04, ADR-060):** `POST /allocation/{id}/unblind-request` (admin
 > `unblind:request`) revela a condição de UM participante via chave selada, exige justificativa,
 > grava `unblind.performed` **sem** a condição na trilha e marca `unblinded_at`. Único caminho da
-> API para a condição. 7 testes. **Pendência:** aprovação por duas pessoas (prod).
+> API para a condição. 7 testes. **Pendência:** ~~aprovação por duas pessoas~~ (feita, ADR-075:
+> pedido → aprovação por 2º admin distinto; a revelação só ocorre no 2º passo; 12 testes).
 - **Objetivo:** `unblind:request` (admin) inicia desbloqueio auditado; a revelação usa a
   **chave selada** e é registrada. Nunca automático, nunca em massa sem justificativa.
 - **Contrato:** `POST /v1/allocation/{participant}/unblind-request` + fluxo de aprovação.

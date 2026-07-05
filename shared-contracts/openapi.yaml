@@ -315,24 +315,41 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
   /allocation/{id}/unblind-request:
     post:
-      summary: Desbloqueio CONTROLADO de um participante (admin) — único caminho para a condição
+      summary: Solicitar desbloqueio de um participante (admin) — passo 1 de 2, NÃO revela
       operationId: unblindRequest
       description: >
-        Procedimento auditado que revela a condição (ativo/sham) de UM participante, usando a
-        chave selada. Exige papel admin (`unblind:request`) e uma justificativa. Nunca automático,
-        nunca em massa. A condição é revelada APENAS nesta resposta ao admin; a auditoria registra
-        o evento (quem/quando/por quê) SEM a condição em claro. Nenhum outro endpoint expõe o braço.
+        Passo 1 do desbloqueio em DUAS PESSOAS: um admin (`unblind:request`) abre um pedido
+        justificado. NÃO revela a condição — apenas registra a pendência e audita o pedido
+        (`unblind.requested`, sem a condição). A revelação só ocorre no passo 2 (`unblind-approve`),
+        exigido a um SEGUNDO admin distinto. 409 se já houver pedido pendente ou já desbloqueado.
       parameters: [ { $ref: '#/components/parameters/PathId' } ]
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/UnblindIn' } } }
       responses:
-        '200': { description: Condição revelada (ao admin), content: { application/json: { schema: { $ref: '#/components/schemas/UnblindResult' } } } }
+        '200': { description: Pedido registrado (aguarda 2º aprovador), content: { application/json: { schema: { $ref: '#/components/schemas/UnblindRequestResult' } } } }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /allocation/{id}/unblind-approve:
+    post:
+      summary: Aprovar desbloqueio (SEGUNDO admin) — passo 2 de 2, revela a condição
+      operationId: unblindApprove
+      description: >
+        Passo 2 do desbloqueio em duas pessoas: um SEGUNDO admin (`unblind:request`), DISTINTO do
+        solicitante, aprova o pedido pendente. Só aqui a condição (ativo/sham) é revelada, usando a
+        chave selada; a auditoria registra `unblind.performed` (quem aprovou/quando) SEM a condição
+        em claro. 409 se não houver pedido pendente, se o aprovador for o mesmo solicitante, ou se já
+        desbloqueado. É o ÚNICO caminho da API para a condição.
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      responses:
+        '200': { description: Condição revelada (ao 2º admin), content: { application/json: { schema: { $ref: '#/components/schemas/UnblindResult' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /research/export:
     post:
       summary: Solicitar exportação pseudonimizada (assíncrona) — RBAC
@@ -739,9 +756,17 @@ components:
       properties:
         justification: { type: string, minLength: 10, maxLength: 500 }
       required: [justification]
+    UnblindRequestResult:
+      type: object
+      description: "Passo 1: pedido registrado; NÃO contém a condição (aguarda 2º aprovador)."
+      properties:
+        participant_id: { type: string, format: uuid }
+        status: { type: string, enum: [pending_approval] }
+        requested_at: { type: string, format: date-time }
+      required: [participant_id, status, requested_at]
     UnblindResult:
       type: object
-      description: "Condição revelada ao admin — ÚNICO ponto onde a condição aparece na API."
+      description: "Passo 2: condição revelada ao 2º admin — ÚNICO ponto onde a condição aparece na API."
       properties:
         participant_id: { type: string, format: uuid }
         condition: { type: string, enum: [active, sham] }

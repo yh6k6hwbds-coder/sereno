@@ -71,36 +71,77 @@ async def allocate(body: AllocateIn, db: Session = Depends(get_db),
     return {"status": "allocated", "block": alloc.block}
 
 
+def _actor_id(user: dict) -> uuid.UUID | None:
+    try:
+        return uuid.UUID(str(user["id"]))
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
 @router.post("/{participant_id}/unblind-request")
 async def unblind_request(participant_id: uuid.UUID, body: UnblindIn,
                           db: Session = Depends(get_db),
                           user: dict = Depends(require("unblind:request"))):
-    """Desbloqueio CONTROLADO de UM participante: revela a condição (ativo/sham) usando a
-    chave selada, exigindo admin + justificativa e registrando o evento em auditoria.
+    """Passo 1 do desbloqueio em DUAS PESSOAS: um admin abre um pedido justificado.
 
-    A condição é revelada APENAS nesta resposta ao admin; a trilha NÃO guarda a condição em
-    claro. É o ÚNICO caminho da API para a condição — nenhum outro endpoint a expõe."""
-    arm = resolve_arm(db, participant_id)
-    if arm is None:
+    NÃO revela a condição — apenas registra a pendência (quem/quando/por quê) e audita o
+    pedido SEM a condição. A revelação só ocorre em `unblind-approve`, exigida a um SEGUNDO
+    admin distinto. Impede reveal por uma única pessoa (integridade do cegamento)."""
+    alloc = db.scalar(select(Allocation).where(Allocation.participant_id == participant_id))
+    if alloc is None:
         raise ProblemException(404, "Participante não alocado",
                                "Não há alocação para desbloquear.")
-    condition = condition_for_arm(arm)          # usa a chave selada (ARM_CONDITION_MAP)
+    if alloc.unblinded_at is not None:
+        raise ProblemException(409, "Já desbloqueado", "Esta alocação já foi revelada.")
+    if alloc.unblind_requested_at is not None:
+        raise ProblemException(409, "Pedido já pendente",
+                               "Já existe um pedido de desbloqueio aguardando aprovação.")
+    alloc.unblind_requested_by = _actor_id(user)
+    alloc.unblind_requested_at = dt.datetime.now(dt.timezone.utc)
+    alloc.unblind_justification = body.justification
+    db.flush()
+
+    # Auditoria do PEDIDO — sem a condição (o braço nunca entra na trilha).
+    record_event(db, action="unblind.requested", resource_type="allocation",
+                 actor_type="staff", actor_id=alloc.unblind_requested_by,
+                 resource_id=participant_id, meta={"justification": body.justification})
+
+    return {"participant_id": participant_id, "status": "pending_approval",
+            "requested_at": alloc.unblind_requested_at}
+
+
+@router.post("/{participant_id}/unblind-approve")
+async def unblind_approve(participant_id: uuid.UUID, db: Session = Depends(get_db),
+                          user: dict = Depends(require("unblind:request"))):
+    """Passo 2 do desbloqueio em duas pessoas: um SEGUNDO admin DISTINTO aprova e revela.
+
+    A condição (ativo/sham) é revelada APENAS nesta resposta, via chave selada; a trilha
+    NÃO guarda a condição. Regra das duas pessoas: o aprovador não pode ser o solicitante.
+    É o ÚNICO caminho da API para a condição — nenhum outro endpoint a expõe."""
+    alloc = db.scalar(select(Allocation).where(Allocation.participant_id == participant_id))
+    if alloc is None:
+        raise ProblemException(404, "Participante não alocado",
+                               "Não há alocação para desbloquear.")
+    if alloc.unblinded_at is not None:
+        raise ProblemException(409, "Já desbloqueado", "Esta alocação já foi revelada.")
+    if alloc.unblind_requested_at is None:
+        raise ProblemException(409, "Sem pedido pendente",
+                               "É preciso um pedido de desbloqueio antes de aprovar.")
+    approver = _actor_id(user)
+    if approver is not None and approver == alloc.unblind_requested_by:
+        raise ProblemException(409, "Requer segundo aprovador",
+                               "A aprovação exige um admin distinto de quem solicitou.")
+    condition = condition_for_arm(resolve_arm(db, participant_id))   # chave selada (ARM_CONDITION_MAP)
     if condition is None:
         raise ProblemException(409, "Desbloqueio indisponível",
                                "Chave de condição não configurada; procedimento não pode concluir.")
-    alloc = db.scalar(select(Allocation).where(Allocation.participant_id == participant_id))
     alloc.unblinded_at = dt.datetime.now(dt.timezone.utc)
     db.flush()
 
-    actor_id = None
-    try:
-        actor_id = uuid.UUID(str(user["id"]))
-    except (KeyError, ValueError, TypeError):
-        pass
-    # Auditoria: quem/quando/POR QUÊ — SEM a condição em claro (o braço nunca entra na trilha).
+    # Auditoria da APROVAÇÃO — quem aprovou/quando/por quê — SEM a condição em claro.
     record_event(db, action="unblind.performed", resource_type="allocation",
-                 actor_type="staff", actor_id=actor_id, resource_id=participant_id,
-                 meta={"justification": body.justification})
+                 actor_type="staff", actor_id=approver, resource_id=participant_id,
+                 meta={"justification": alloc.unblind_justification})
 
     return {"participant_id": participant_id, "condition": condition,
-            "unblinded_at": alloc.unblinded_at, "justification": body.justification}
+            "unblinded_at": alloc.unblinded_at, "justification": alloc.unblind_justification}

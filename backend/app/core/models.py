@@ -104,6 +104,11 @@ class Allocation(Base):                        # braço CODIFICADO; mapa A/B→a
     block: Mapped[int] = mapped_column(Integer, nullable=False)
     sequence_seed_ref: Mapped[str] = mapped_column(String(64), nullable=False)
     allocated_at: Mapped[dt.datetime] = TS()
+    # Desbloqueio em DUAS PESSOAS (ADR-075): passo 1 grava o pedido; passo 2 (2º admin distinto)
+    # grava unblinded_at ao revelar. requested_by guarda o solicitante p/ impor a regra "2 pessoas".
+    unblind_requested_by: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=True)
+    unblind_requested_at: Mapped[dt.datetime] = TS(default=False)
+    unblind_justification: Mapped[str] = mapped_column(String(500), nullable=True)
     unblinded_at: Mapped[dt.datetime] = TS(default=False)
     __table_args__ = (
         UniqueConstraint("participant_id", name="uq_allocation_participant"),

@@ -74,5 +74,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 067 | Observabilidade (logs JSON sem PII/braço) + CI endurecido (cobertura ≥80%, Flutter bloqueante) **[novo]** |
 | 073 | Telas de captura de desfechos (B2–B6): componentes Likert/PSQI reutilizáveis + OutcomesRepository **[novo]** |
 | 074 | MFA obrigatório para staff: login sem 2º fator dá só token de cadastro restrito (sem escopo) **[novo]** |
+| 075 | Desbloqueio em duas pessoas: pedido (não revela) → aprovação por 2º admin distinto (revela) **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.
