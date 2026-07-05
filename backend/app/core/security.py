@@ -47,6 +47,30 @@ async def current_user(cred: HTTPAuthorizationCredentials = Depends(_bearer)) ->
     return {"id": payload["sub"], "role": payload.get("role"), "scope": payload.get("scope", "")}
 
 
+async def current_staff_enrolling(cred: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
+    """Autentica para o CADASTRO de MFA aceitando token de acesso OU de "enroll".
+
+    Resolve o ovo-galinha do MFA obrigatório: o staff sem 2º fator ativo recebe no login
+    apenas um token de tipo "enroll" (sem escopo), que abre SÓ os endpoints de enroll/confirm.
+    Todos os demais endpoints continuam exigindo `current_user` (type "access") — logo o
+    token de "enroll" não acessa mais nada. Um token de acesso pleno também é aceito aqui
+    (permite rotacionar o MFA já autenticado)."""
+    if cred is None or not cred.credentials:
+        raise ProblemException(401, "Não autenticado", "Token de acesso ausente.")
+    try:
+        payload = auth_core.decode_token(cred.credentials)   # valida assinatura/exp
+    except jwt.ExpiredSignatureError:
+        raise ProblemException(401, "Sessão expirada", "O token expirou.")
+    except jwt.InvalidTokenError:
+        raise ProblemException(401, "Token inválido", "Não foi possível validar o token.")
+    if payload.get("type") not in ("access", "enroll"):
+        raise ProblemException(401, "Token inválido", "Tipo de token não permitido aqui.")
+    jti = payload.get("jti")
+    if jti and get_denylist().is_revoked(jti):
+        raise ProblemException(401, "Sessão encerrada", "Token revogado.")
+    return {"id": payload["sub"], "role": payload.get("role"), "scope": payload.get("scope", "")}
+
+
 def require(perm: str):
     """Dependência de autorização: exige `perm` para o papel do usuário."""
     async def dep(user: dict = Depends(current_user)) -> dict:

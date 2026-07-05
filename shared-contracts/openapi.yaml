@@ -15,6 +15,10 @@ paths:
   /auth/token:
     post:
       summary: Autenticar e obter tokens
+      description: >
+        Login de staff por senha (argon2). MFA é obrigatório: se o 2º fator ainda não
+        estiver ativo, a resposta traz `mfa_enrollment_required` + `enrollment_token`
+        (não concede acesso pleno). Se estiver ativo, traz `mfa_required` + `mfa_token`.
       security: []
       operationId: login
       requestBody:
@@ -504,12 +508,21 @@ components:
       required: [mfa_token, code]
     TokenResponse:
       type: object
+      description: >
+        Resposta do login/refresh/verify. Três desfechos possíveis para staff:
+        (1) MFA ativo → `mfa_required: true` + `mfa_token` (troque por acesso em /auth/mfa/verify);
+        (2) MFA ainda NÃO ativo → `mfa_enrollment_required: true` + `enrollment_token`
+        (token de graça, SEM escopo: só habilita /staff/me/mfa/enroll e /confirm — MFA é
+        obrigatório para staff); (3) fluxo já autenticado → `access_token`+`refresh_token`.
       properties:
         access_token: { type: string }
         refresh_token: { type: string }
         token_type: { type: string, enum: [bearer] }
         expires_in: { type: integer }
         mfa_required: { type: boolean }
+        mfa_token: { type: string, description: "Desafio intermediário quando o MFA está ativo." }
+        mfa_enrollment_required: { type: boolean, description: "Staff sem 2º fator: precisa cadastrar MFA." }
+        enrollment_token: { type: string, description: "Token restrito ao cadastro de MFA (sem escopo)." }
       required: [token_type]
     ConsentIn:
       type: object

@@ -23,15 +23,65 @@ def _seed_staff(TestSession, email="pesq@uninta.edu.br", role="researcher",
     return uid, secret
 
 
-def test_login_without_mfa_returns_tokens(api):
+def _login_full(client, TestSession, email="pesq@uninta.edu.br", role="researcher"):
+    """Faz o login completo de um staff COM MFA ativo e devolve os tokens (access+refresh).
+
+    Reflete a regra nova: MFA é obrigatório, então o único caminho para o acesso pleno é
+    senha → desafio → TOTP. Usado pelos testes que precisam de um token de acesso real."""
+    _uid, secret = _seed_staff(TestSession, email=email, role=role, mfa=True)
+    r1 = client.post("/v1/auth/token", json={"email": email, "password": "Senha-Forte-123"}).json()
+    code = pyotp.TOTP(secret).now()
+    return client.post("/v1/auth/mfa/verify", json={"mfa_token": r1["mfa_token"], "code": code}).json()
+
+
+def test_login_without_mfa_requires_enrollment(api):
+    """Senha correta mas SEM 2º fator ativo NÃO concede acesso: só token de cadastro de MFA."""
     client, TestSession = api
-    _seed_staff(TestSession)
+    _seed_staff(TestSession)   # mfa=False
     r = client.post("/v1/auth/token", json={"email": "pesq@uninta.edu.br", "password": "Senha-Forte-123"})
     assert r.status_code == 200
     body = r.json()
-    assert body["mfa_required"] is False and body["token_type"] == "bearer"
-    payload = auth.decode_token(body["access_token"], expected_type="access")
-    assert payload["role"] == "researcher"
+    assert body["mfa_enrollment_required"] is True and body["token_type"] == "bearer"
+    # nenhum acesso pleno é emitido antes do 2º fator
+    assert "access_token" not in body and "refresh_token" not in body
+    # o token entregue é de tipo "enroll" (sem escopo), não "access"
+    payload = auth.decode_token(body["enrollment_token"], expected_type="enroll")
+    assert payload["role"] == "researcher" and payload.get("scope", "") == ""
+
+
+def test_enrollment_token_cannot_access_protected_endpoint(api):
+    """O token de cadastro não abre endpoint protegido (só enroll/confirm de MFA)."""
+    client, TestSession = api
+    _seed_staff(TestSession, email="adm@uninta.edu.br", role="admin")   # mfa=False
+    enroll = client.post("/v1/auth/token",
+                         json={"email": "adm@uninta.edu.br", "password": "Senha-Forte-123"}
+                         ).json()["enrollment_token"]
+    hdr = {"Authorization": f"Bearer {enroll}"}
+    # admin normalmente cria staff; com o token de "enroll", é recusado (401, tipo errado)
+    r = client.post("/v1/staff", headers=hdr,
+                    json={"email": "novo@uninta.edu.br", "role": "researcher", "password": "Senha-Forte-123"})
+    assert r.status_code == 401
+
+
+def test_full_mfa_onboarding(api):
+    """Onboarding: login sem MFA → token de cadastro → enroll → confirm → login exige TOTP → acesso."""
+    client, TestSession = api
+    email = "novo.staff@uninta.edu.br"
+    _seed_staff(TestSession, email=email, role="researcher")   # mfa=False
+    enroll = client.post("/v1/auth/token",
+                         json={"email": email, "password": "Senha-Forte-123"}).json()["enrollment_token"]
+    hdr = {"Authorization": f"Bearer {enroll}"}
+    # cadastra e confirma o 2º fator usando o token de "enroll"
+    secret = client.post("/v1/staff/me/mfa/enroll", headers=hdr).json()["secret"]
+    code = pyotp.TOTP(secret).now()
+    assert client.post("/v1/staff/me/mfa/confirm", headers=hdr, json={"code": code}
+                       ).json()["mfa_enabled"] is True
+    # agora o login exige o 2º fator e, com TOTP, concede acesso pleno
+    r1 = client.post("/v1/auth/token", json={"email": email, "password": "Senha-Forte-123"}).json()
+    assert r1["mfa_required"] is True
+    code2 = pyotp.TOTP(secret).now()
+    r2 = client.post("/v1/auth/mfa/verify", json={"mfa_token": r1["mfa_token"], "code": code2})
+    assert r2.status_code == 200 and "access_token" in r2.json()
 
 
 def test_wrong_password_401_problem_json(api):
@@ -67,16 +117,14 @@ def test_mfa_flow(api):
 
 def test_refresh_issues_new_access(api):
     client, TestSession = api
-    _seed_staff(TestSession)
-    tokens = client.post("/v1/auth/token", json={"email": "pesq@uninta.edu.br", "password": "Senha-Forte-123"}).json()
+    tokens = _login_full(client, TestSession)
     r = client.post("/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
     assert r.status_code == 200 and "access_token" in r.json()
 
 
 def test_rbac_chain_on_research_endpoint(api):
     client, TestSession = api
-    _seed_staff(TestSession)
-    tokens = client.post("/v1/auth/token", json={"email": "pesq@uninta.edu.br", "password": "Senha-Forte-123"}).json()
+    tokens = _login_full(client, TestSession)
     hdr = {"Authorization": f"Bearer {tokens['access_token']}"}
     # researcher tem research:read
     assert client.get("/v1/research/participants", headers=hdr).status_code == 200

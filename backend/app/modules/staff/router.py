@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.security import require, current_user
+from app.core.security import require, current_staff_enrolling
 from app.core.problem import ProblemException
 from app.core.models import StaffUser
 from app.core import auth
@@ -83,7 +83,7 @@ async def create_staff(body: StaffCreateIn, db: Session = Depends(get_db),
 
 
 @router.post("/me/mfa/enroll")
-async def enroll_mfa(db: Session = Depends(get_db), user: dict = Depends(current_user)):
+async def enroll_mfa(db: Session = Depends(get_db), user: dict = Depends(current_staff_enrolling)):
     staff = _current_staff(db, user)
     secret = auth.new_mfa_secret()
     staff.mfa_secret = secret.encode()      # guardado como bytes; NUNCA logado
@@ -94,7 +94,7 @@ async def enroll_mfa(db: Session = Depends(get_db), user: dict = Depends(current
 
 @router.post("/me/mfa/confirm")
 async def confirm_mfa(body: MfaConfirmIn, db: Session = Depends(get_db),
-                      user: dict = Depends(current_user)):
+                      user: dict = Depends(current_staff_enrolling)):
     staff = _current_staff(db, user)
     if not staff.mfa_secret or not auth.verify_totp(staff.mfa_secret.decode(), body.code):
         raise ProblemException(401, "Código inválido", "Código TOTP incorreto ou cadastro não iniciado.")

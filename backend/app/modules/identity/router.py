@@ -76,7 +76,11 @@ async def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         # Ainda não dá acesso: emite desafio; exige o 2º fator.
         return {"mfa_required": True, "token_type": "bearer",
                 "mfa_token": auth.issue_mfa_challenge(str(user.id), user.role)}
-    return _tokens(str(user.id), user.role)
+    # MFA é OBRIGATÓRIO para staff (CLAUDE.md, decisão inegociável #6). Sem o 2º fator
+    # ativo, a senha sozinha NÃO concede acesso pleno: emite-se apenas um token de
+    # CADASTRO (sem escopo) que só abre /staff/me/mfa/enroll e /confirm.
+    return {"mfa_enrollment_required": True, "token_type": "bearer",
+            "enrollment_token": auth.issue_enrollment(str(user.id), user.role)}
 
 
 @router.post("/mfa/verify")

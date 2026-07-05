@@ -25,6 +25,9 @@ ACCESS_TTL_MIN = int(os.getenv("ACCESS_TTL_MIN", "15"))
 REFRESH_TTL_DAYS = int(os.getenv("REFRESH_TTL_DAYS", "7"))
 # Token curto emitido após a senha, exigindo o 2º fator antes do acesso pleno.
 MFA_TTL_MIN = 5
+# Token de "graça" para staff SEM MFA ativo: só habilita o cadastro do 2º fator.
+# Um pouco mais longo que o desafio MFA (configurar o app autenticador leva alguns minutos).
+ENROLL_TTL_MIN = int(os.getenv("ENROLL_TTL_MIN", "10"))
 
 _ph = PasswordHasher()   # argon2id com parâmetros seguros por padrão
 
@@ -66,6 +69,16 @@ def issue_refresh(sub: str, role: str) -> str:
 def issue_mfa_challenge(sub: str, role: str) -> str:
     """Token intermediário: prova que a senha passou; exige TOTP para virar acesso."""
     return _encode({"sub": sub, "role": role}, dt.timedelta(minutes=MFA_TTL_MIN), "mfa")
+
+
+def issue_enrollment(sub: str, role: str) -> str:
+    """Token de graça p/ staff sem MFA ativo: senha passou, mas o 2º fator é OBRIGATÓRIO.
+
+    Não carrega escopo e é de tipo próprio ("enroll"): `current_user` (type "access") o
+    recusa, então ele NÃO abre nenhum endpoint protegido — só os de cadastro de MFA
+    (/staff/me/mfa/enroll e /confirm), que o aceitam explicitamente."""
+    return _encode({"sub": sub, "role": role, "scope": ""},
+                   dt.timedelta(minutes=ENROLL_TTL_MIN), "enroll")
 
 
 def decode_token(token: str, expected_type: str | None = None) -> dict:

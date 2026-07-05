@@ -175,8 +175,9 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
 - **ADR:** ADR-058.
 > **Concluída (2026-07-04, ADR-058):** `POST /v1/staff` (admin) cria staff (argon2, e-mail único,
 > auditado sem PII); MFA em dois passos — `enroll` (gera segredo + `provisioning_uri`, não ativa)
-> e `confirm` (valida TOTP → ativa). 10 testes. **Pendências:** exigir MFA p/ admin; rotação de
-> senha; convite por e-mail; lifecycle (listar/desativar).
+> e `confirm` (valida TOTP → ativa). 10 testes. **Pendências:** ~~exigir MFA p/ admin~~ (feito,
+> ADR-074: MFA obrigatório p/ staff — login sem 2º fator só emite token de cadastro restrito);
+> rotação de senha; convite por e-mail; lifecycle (listar/desativar).
 
 ### C4 — Captura de contato + **cifra de PII** · P0 · `DONE`
 > **Concluída (2026-07-04, ADR-059):** `POST /v1/participants/{id}/contact` (staff `enroll:write`)
