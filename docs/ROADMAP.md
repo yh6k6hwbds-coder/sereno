@@ -13,7 +13,7 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (132 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (139 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
   participante (OTP + **entrega por e-mail — D1/ADR-063**); **gestão de staff + MFA enrollment
   (C3/ADR-058)**; consentimento; **triagem/elegibilidade + funil (C2/ADR-057)**; linha de base
@@ -175,7 +175,11 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
 - **Inegociável:** PII cifrada/separada; LGPD.
 - **ADR:** ADR-059 (cifra de campo/AEAD + custódia de chave).
 
-### C5 — Procedimento de desbloqueio (unblinding) controlado · P1 · `TODO`
+### C5 — Procedimento de desbloqueio (unblinding) controlado · P1 · `DONE`
+> **Concluída (2026-07-04, ADR-060):** `POST /allocation/{id}/unblind-request` (admin
+> `unblind:request`) revela a condição de UM participante via chave selada, exige justificativa,
+> grava `unblind.performed` **sem** a condição na trilha e marca `unblinded_at`. Único caminho da
+> API para a condição. 7 testes. **Pendência:** aprovação por duas pessoas (prod).
 - **Objetivo:** `unblind:request` (admin) inicia desbloqueio auditado; a revelação usa a
   **chave selada** e é registrada. Nunca automático, nunca em massa sem justificativa.
 - **Contrato:** `POST /v1/allocation/{participant}/unblind-request` + fluxo de aprovação.

@@ -280,6 +280,26 @@ paths:
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+  /allocation/{id}/unblind-request:
+    post:
+      summary: Desbloqueio CONTROLADO de um participante (admin) — único caminho para a condição
+      operationId: unblindRequest
+      description: >
+        Procedimento auditado que revela a condição (ativo/sham) de UM participante, usando a
+        chave selada. Exige papel admin (`unblind:request`) e uma justificativa. Nunca automático,
+        nunca em massa. A condição é revelada APENAS nesta resposta ao admin; a auditoria registra
+        o evento (quem/quando/por quê) SEM a condição em claro. Nenhum outro endpoint expõe o braço.
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UnblindIn' } } }
+      responses:
+        '200': { description: Condição revelada (ao admin), content: { application/json: { schema: { $ref: '#/components/schemas/UnblindResult' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /research/export:
     post:
       summary: Solicitar exportação pseudonimizada (assíncrona) — RBAC
@@ -658,6 +678,21 @@ components:
         status: { type: string, enum: [allocated] }
         block: { type: integer }
       required: [status, block]
+    UnblindIn:
+      type: object
+      description: "Justificativa obrigatória do desbloqueio (auditada; nunca contém a condição)."
+      properties:
+        justification: { type: string, minLength: 10, maxLength: 500 }
+      required: [justification]
+    UnblindResult:
+      type: object
+      description: "Condição revelada ao admin — ÚNICO ponto onde a condição aparece na API."
+      properties:
+        participant_id: { type: string, format: uuid }
+        condition: { type: string, enum: [active, sham] }
+        unblinded_at: { type: string, format: date-time }
+        justification: { type: string }
+      required: [participant_id, condition, unblinded_at]
     JobAccepted:
       type: object
       properties:

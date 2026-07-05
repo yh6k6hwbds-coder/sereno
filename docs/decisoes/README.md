@@ -63,6 +63,7 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 057 | Triagem/elegibilidade (regra versionada) + gate do funil de alocação **[novo]** |
 | 058 | Gestão de staff (admin) + cadastro de MFA em dois passos (enroll→confirm) **[novo]** |
 | 059 | Cifra de PII em repouso (AES-256-GCM/AEAD, AAD por participante+campo; chave em env) **[novo]** |
+| 060 | Desbloqueio controlado (admin+justificativa, chave selada, auditado sem a condição) **[novo]** |
 | 061 | Exportação pseudonimizada (casos completos; braço codificado A/B, sem condição; job/porta) **[novo]** |
 | 062 | Pipeline de análise (relatório cego: Bang, viabilidade, exploratórios) + semáforo de progressão **[novo]** |
 | 063 | Entrega de e-mail (interface): OTP por e-mail (decifra C4) + alerta de EA, best-effort **[novo]** |
