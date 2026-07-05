@@ -68,3 +68,12 @@ def get_denylist() -> TokenDenylist:
         else:
             _denylist = InMemoryDenylist()
     return _denylist
+
+
+def set_denylist(denylist: TokenDenylist | None) -> None:
+    """Injeta uma denylist (ou ``None`` para reconstruir do ambiente na próxima chamada).
+
+    Uso em testes: forçar ``InMemoryDenylist`` garante isolamento mesmo quando
+    ``REDIS_URL`` está definido (o ``reset()`` do Redis é no-op deliberado em prod)."""
+    global _denylist
+    _denylist = denylist

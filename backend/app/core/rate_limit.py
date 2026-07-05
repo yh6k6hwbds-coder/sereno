@@ -70,6 +70,15 @@ def get_rate_limiter() -> RateLimiter:
     return _limiter
 
 
+def set_rate_limiter(limiter: RateLimiter | None) -> None:
+    """Injeta um limiter (ou ``None`` para reconstruir do ambiente na próxima chamada).
+
+    Uso em testes: forçar ``InMemoryRateLimiter`` garante isolamento mesmo quando
+    ``REDIS_URL`` está definido (o ``reset()`` do Redis é no-op deliberado em prod)."""
+    global _limiter
+    _limiter = limiter
+
+
 def enforce(request: Request, *, bucket: str, default_limit: int, window_s: int = 60) -> None:
     """Consome uma unidade de taxa para (bucket, IP); levanta 429 problem+json se estourar.
 

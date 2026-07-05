@@ -19,16 +19,23 @@ from app.main import app
 
 @pytest.fixture(autouse=True)
 def _reset_throttles():
-    """Isola o estado dos singletons de rate limit / denylist / e-mail entre testes."""
-    from app.core.rate_limit import get_rate_limiter
-    from app.core.token_revocation import get_denylist
+    """Isola o estado dos singletons de rate limit / denylist / e-mail entre testes.
+
+    Rate limit e denylist são forçados para as implementações **em memória**: se
+    ``REDIS_URL`` estiver no ambiente (ex.: rodando dentro do container prod-like), o
+    singleton seria o backend Redis, cujo ``reset()`` é no-op deliberado — o estado
+    vazaria entre testes. Injetar in-memory garante suíte hermética em qualquer ambiente."""
+    from app.core.rate_limit import set_rate_limiter, InMemoryRateLimiter
+    from app.core.token_revocation import set_denylist, InMemoryDenylist
     from app.core.email import set_email_sender
     from app.modules.research.export_service import get_job_store
-    get_rate_limiter().reset()
-    get_denylist().reset()
+    set_rate_limiter(InMemoryRateLimiter())
+    set_denylist(InMemoryDenylist())
     get_job_store().reset()
     set_email_sender(None)   # próxima chamada reconstrói a partir do ambiente
     yield
+    set_rate_limiter(None)   # próxima chamada reconstrói a partir do ambiente
+    set_denylist(None)
     set_email_sender(None)
 
 
