@@ -1,0 +1,57 @@
+# Ambiente prod-like do Sereno: Postgres + Redis + API.
+# Uso: copie .env.example para .env, ajuste os segredos e rode `docker compose up --build`.
+# As migrações rodam automaticamente no start da API (docker-entrypoint.sh).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sereno}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-sereno}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sereno} -d ${POSTGRES_DB:-sereno}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sereno:${POSTGRES_PASSWORD}@db:5432/sereno}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      PII_ENC_KEY: ${PII_ENC_KEY:?defina PII_ENC_KEY (base64 de 32 bytes) no .env}
+      ALLOCATION_SEED: ${ALLOCATION_SEED:?defina ALLOCATION_SEED no .env}
+      # Chave selada A/B->condição: idealmente custodiada FORA deste arquivo (cofre/KMS).
+      ARM_CONDITION_MAP: ${ARM_CONDITION_MAP:-A:active,B:sham}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@sereno.example}
+      TEAM_NOTIFY_EMAIL: ${TEAM_NOTIFY_EMAIL:-}
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:

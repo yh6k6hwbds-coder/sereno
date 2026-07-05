@@ -68,5 +68,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 062 | Pipeline de análise (relatório cego: Bang, viabilidade, exploratórios) + semáforo de progressão **[novo]** |
 | 063 | Entrega de e-mail (interface): OTP por e-mail (decifra C4) + alerta de EA, best-effort **[novo]** |
 | 064 | Rate limiting por IP (429) + denylist de token por `jti` (logout/revogação) **[novo]** |
+| 065 | Docker + compose (Postgres/Redis) + segredos por env; migração no deploy; CI Postgres **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

@@ -14,6 +14,24 @@ jobs:
         run: cd backend && DATABASE_URL=sqlite:///./ci.db alembic upgrade head
       - name: Testes do backend (bloqueiam merge)
         run: cd backend && pytest -q
+  backend-postgres:              # D3: valida a migração no Postgres REAL (JSONB/INET/CHECK que o SQLite ignora)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: sereno, POSTGRES_PASSWORD: sereno, POSTGRES_DB: sereno }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sereno" --health-interval 5s --health-timeout 3s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r backend/requirements.txt
+      - name: Migração no Postgres real (alembic upgrade head)
+        run: cd backend && alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+psycopg://sereno:sereno@localhost:5432/sereno
   audio-fft:                     # decisão inegociável: o estímulo é validado por FFT
     runs-on: ubuntu-latest
     steps:

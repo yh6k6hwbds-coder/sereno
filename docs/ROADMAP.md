@@ -231,10 +231,15 @@ Endurecimento para dado real e para o CEP.
 > `current_user`/`refresh`. Portas in-memory (teste) / Redis (prod via `REDIS_URL`). 6 testes.
 > **Pendências:** confiança de proxy p/ IP real (`X-Forwarded-For`); política de falha do Redis.
 
-### D3 — Docker + compose (Postgres/Redis) + segredos · P0 · `TODO`
+### D3 — Docker + compose (Postgres/Redis) + segredos · P0 · `DONE`
 - `docker-compose` para ambiente prod-like; migrações no deploy; config por ambiente/cofre.
 - **Pronto:** `alembic upgrade` no Postgres real via compose; CI opcional com serviço Postgres.
 - **ADR-065.**
+> **Concluída (2026-07-04, ADR-065):** `backend/Dockerfile` (slim, não-root, migração no
+> entrypoint), `docker-compose.yml` (postgres:16 + redis:7 + backend, healthchecks), `.env.example`
+> (segredos por env; `.env` gitignored; chave selada custodiada à parte) e job de CI
+> `backend-postgres` (migração no Postgres real). **Não** verificável localmente (sem Docker aqui);
+> validado por YAML + CI. **Pendências:** cofre/KMS; job de migração dedicado p/ multi-réplica.
 
 ### D4 — Direitos do titular (LGPD) + retenção · P1 · `TODO`
 - Exportar/eliminar dados de um participante; política de retenção; registro em auditoria.
