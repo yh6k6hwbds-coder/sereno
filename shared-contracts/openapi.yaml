@@ -239,6 +239,35 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /participants/{id}/data:
+    get:
+      summary: Exportar os dados do titular (LGPD/acesso) — admin
+      operationId: exportSubjectData
+      description: >
+        Reúne os dados do participante (com a PII decifrada, pois é o próprio dado dele) para
+        atender a um pedido de acesso/portabilidade (LGPD). NUNCA inclui o braço/condição
+        (cegamento preservado). Somente admin (`user:manage`). Registrado em auditoria.
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      responses:
+        '200': { description: Dados do titular, content: { application/json: { schema: { $ref: '#/components/schemas/SubjectData' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /participants/{id}/erase:
+    post:
+      summary: Eliminar dados pessoais do titular (LGPD) — admin
+      operationId: eraseParticipant
+      description: >
+        Remove a PII DIRETA (contato cifrado, artefatos de OTP) e marca o participante como
+        'withdrawn'. Os dados de pesquisa PSEUDONIMIZADOS são retidos (exceção de pesquisa da
+        LGPD; ver ADR-066) e a auditoria append-only NÃO é apagada. Somente admin (`user:manage`).
+        Registrado em auditoria.
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      responses:
+        '200': { description: Dados pessoais eliminados, content: { application/json: { schema: { $ref: '#/components/schemas/EraseResult' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /research/participants:
     get:
       summary: Listar participantes (pesquisa) — RBAC, braço codificado
@@ -642,6 +671,19 @@ components:
         status: { type: string, enum: [screened] }
         eligible: { type: boolean }
       required: [status, eligible]
+    EraseResult:
+      type: object
+      properties:
+        status: { type: string, enum: [erased] }
+        removed: { type: object, additionalProperties: { type: integer } }
+      required: [status, removed]
+    SubjectData:
+      type: object
+      description: "Dados do titular (com PII do próprio). NUNCA contém o braço/condição."
+      additionalProperties: true
+      properties:
+        profile: { type: object, additionalProperties: true }
+        contact: { type: [object, "null"], additionalProperties: true }
     StaffCreateIn:
       type: object
       properties:

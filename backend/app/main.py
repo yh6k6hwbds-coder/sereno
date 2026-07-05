@@ -27,6 +27,7 @@ from app.modules.audit.router import router as audit_router
 from app.modules.participant_auth.router import router as participant_auth_router
 from app.modules.staff.router import router as staff_router
 from app.modules.contact.router import router as contact_router
+from app.modules.data_rights.router import router as data_rights_router
 from app.modules.diary.router import router as diary_router
 from app.modules.followup.router import router as followup_router
 from app.modules.adverse_events.router import router as adverse_events_router
@@ -79,7 +80,7 @@ def create_app() -> FastAPI:
     for r in (identity_router, consent_router, screening_router, allocation_router,
               sessions_router, instruments_router, recommender_router, research_router,
               audit_router, participant_auth_router, staff_router, contact_router,
-              diary_router, followup_router, adverse_events_router):
+              data_rights_router, diary_router, followup_router, adverse_events_router):
         app.include_router(r, prefix=API_PREFIX)
 
     return app

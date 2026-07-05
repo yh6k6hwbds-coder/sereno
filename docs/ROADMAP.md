@@ -13,7 +13,7 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (142 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (147 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
   participante (OTP + **entrega por e-mail — D1/ADR-063**); **gestão de staff + MFA enrollment
   (C3/ADR-058)**; consentimento; **triagem/elegibilidade + funil (C2/ADR-057)**; linha de base
@@ -256,9 +256,13 @@ Endurecimento para dado real e para o CEP.
 > `backend-postgres` (migração no Postgres real). **Não** verificável localmente (sem Docker aqui);
 > validado por YAML + CI. **Pendências:** cofre/KMS; job de migração dedicado p/ multi-réplica.
 
-### D4 — Direitos do titular (LGPD) + retenção · P1 · `TODO`
+### D4 — Direitos do titular (LGPD) + retenção · P1 · `DONE`
 - Exportar/eliminar dados de um participante; política de retenção; registro em auditoria.
 - **Pronto:** testes de export/delete respeitando append-only do audit. **ADR-066.**
+> **Concluída (2026-07-05, ADR-066):** `GET /participants/{id}/data` (acesso; PII do próprio, sem
+> braço) e `POST /participants/{id}/erase` (elimina PII direta, marca `withdrawn`, retém pesquisa
+> pseudonimizada, **não apaga a auditoria**). Ambos admin (`user:manage`) e auditados. 5 testes.
+> **Pendências:** deleção total (decisão CEP); self-service; expurgo agendado.
 
 ### D5 — Observabilidade sem PII + CI endurecido · P1 · `DONE`
 - Logs estruturados (sem PII/braço); métricas; tornar o job **Flutter** bloqueante quando
