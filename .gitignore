@@ -33,3 +33,9 @@ data/
 .coverage
 .coverage.*
 htmlcov/
+
+# Artefatos de build do app
+*.apk
+app/android/
+app/web/
+app/ios/
