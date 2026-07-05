@@ -115,19 +115,25 @@ Reusa endpoints já prontos. Cada tela é uma fatia com widget tests.
   não exibe escore de forma alarmante (bem-estar).
 - **Inegociáveis:** não reproduzir texto verbatim dos instrumentos; linguagem cuidadosa.
 
-### B3 — Tela de pós-sessão · P1 · `TODO`
+### B3 — Tela de pós-sessão · P1 · `DONE` (via CI)
 - **Contrato:** `POST /sessions/{id}/survey` (feito). **Depende de:** A2.
+> **Concluída (2026-07-05, ADR-073):** `PostSessionSurveyScreen` (itens 0–4 + "repetiria?"), trata 409.
 
-### B4 — Tela de diário de sono · P1 · `TODO`
+### B4 — Tela de diário de sono · P1 · `DONE` (via CI)
 - **Contrato:** `POST /diary` (feito). **Depende de:** B1.
+> **Concluída (2026-07-05, ADR-073):** `SleepDiaryScreen` (registro do dia; campos opcionais), trata 409.
 
-### B5 — Tela de seguimento (PSQI+GAD-7+SUS + item de cegamento) · P1 · `TODO`
+### B5 — Tela de seguimento (PSQI+GAD-7+SUS + item de cegamento) · P1 · `DONE` (via CI)
 - **Contrato:** `POST /participants/me/followup` (feito). **Depende de:** B1.
 - **Inegociável:** o item de cegamento captura só o **palpite**; a UI nunca sugere o braço.
+> **Concluída (2026-07-05, ADR-073):** `FollowupScreen` (GAD-7 + PSQI + SUS + palpite). Item de
+> cegamento neutro (Grupo A/B/Não sei — rótulos codificados, não revela ativo/sham).
 
-### B6 — Tela de relato de evento adverso · P1 · `TODO`
+### B6 — Tela de relato de evento adverso · P1 · `DONE` (via CI)
 - **Contrato:** `POST /adverse-events` (feito). **Depende de:** B1.
 - **Bem-estar:** para gravidade alta, a tela reforça orientação de buscar ajuda (192/CVV 188).
+> **Concluída (2026-07-05, ADR-073):** `AdverseEventScreen` (tipo + gravidade + ação); gravidade
+> **grave** reforça 192/CVV 188. Smoke tests renderizam as 5 telas; repositório testado (MockClient).
 
 ---
 
