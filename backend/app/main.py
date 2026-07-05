@@ -7,6 +7,7 @@ Rodar: `uvicorn app.main:app --reload` (a partir de backend/).
 Aviso: ferramenta complementar de pesquisa; não substitui cuidado profissional.
 """
 from __future__ import annotations
+import os
 import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,8 +35,11 @@ from app.modules.adverse_events.router import router as adverse_events_router
 
 API_PREFIX = "/v1"
 
-# Em produção: carregar de configuração/variáveis de ambiente. CORS RESTRITO.
-ALLOWED_ORIGINS = ["https://app.sereno.example"]
+# CORS por ambiente. Em produção, deixe restrito à origem do app. Em dev, use
+# CORS_ALLOW_ORIGIN_REGEX (ex.: "http://localhost:\\d+") para liberar o app local.
+ALLOWED_ORIGINS = [o.strip() for o in
+                   os.getenv("CORS_ORIGINS", "https://app.sereno.example").split(",") if o.strip()]
+CORS_ORIGIN_REGEX = os.getenv("CORS_ALLOW_ORIGIN_REGEX") or None
 
 
 def create_app() -> FastAPI:
@@ -50,6 +54,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=ALLOWED_ORIGINS,          # nunca "*": dados sensíveis
+        allow_origin_regex=CORS_ORIGIN_REGEX,   # dev: liberar http://localhost:<porta>
         allow_methods=["GET", "POST"],
         allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
         allow_credentials=True,

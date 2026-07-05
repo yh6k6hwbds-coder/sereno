@@ -44,6 +44,9 @@ services:
       ALLOCATION_SEED: ${ALLOCATION_SEED:?defina ALLOCATION_SEED no .env}
       # Chave selada A/B->condição: idealmente custodiada FORA deste arquivo (cofre/KMS).
       ARM_CONDITION_MAP: ${ARM_CONDITION_MAP:-A:active,B:sham}
+      # --- DEV: para testar o app local. Em PRODUCAO, remova estas duas linhas. ---
+      EMAIL_DEV_CONSOLE: ${EMAIL_DEV_CONSOLE:-1}          # imprime o codigo do OTP no log
+      CORS_ALLOW_ORIGIN_REGEX: ${CORS_ALLOW_ORIGIN_REGEX:-http://localhost:\d+}  # libera o app local
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
