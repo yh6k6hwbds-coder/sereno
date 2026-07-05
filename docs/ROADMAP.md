@@ -23,11 +23,12 @@
   (PSQI+GAD-7+SUS+cegamento); evento adverso.
 - **Stubs restantes:** `recommender`.
 - **Sem endpoint ainda (tabelas existem):** `recommendation_log` (recomendador — Fase E).
-- **Flutter (não compilado no ambiente de planejamento):** **auto-login/refresh/logout (B1/ADR-055)**
-  → OTP → consentimento → home → preparar fones → sessão com **reprodução de áudio real bit-a-bit +
-  fila de telemetria offline (A2/ADR-054)** e visualização não reativa. Faltam as telas de
-  baseline/pós-sessão/diário/seguimento/EA (B2–B6). (Testes Flutter escritos, mas não executados
-  aqui — sem SDK local; o job `app` do CI, agora **bloqueante**, valida.)
+- **Flutter (não compilado no ambiente de planejamento):** fluxo do participante completo —
+  **auto-login/refresh/logout (B1)** → OTP → consentimento → **Home com CTA de sessão + acesso às
+  telas de registro (B2/B4/B5/B6)** → sessão com **áudio real bit-a-bit + telemetria offline (A2)**
+  e visualização não reativa → **pós-sessão (B3) encaixado ao fim da sessão**. Telas B2–B6 ligadas
+  à navegação. (Testes Flutter escritos, não executados aqui — sem SDK local; o job `app` do CI,
+  **bloqueante** em erros, valida.)
 - **ADRs:** 041–052.
 
 ---

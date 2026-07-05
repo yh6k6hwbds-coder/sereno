@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../services/session_repository.dart';
+import '../../services/outcomes_repository.dart';
 import '../../services/audio_player_port.dart';
 import '../../services/just_audio_player.dart';
 import '../../services/telemetry_queue.dart';
 import '../../shared/breathing_wave.dart';
+import 'post_session_survey_screen.dart';
 
 /// Reprodução da sessão (A2). A UI é IDÊNTICA para todos os participantes — não há
 /// qualquer informação de braço aqui (só o handle neutro e o hash do áudio). A
@@ -124,14 +126,26 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Sessão concluída'),
         content: Text(auto
-            ? 'Sessão finalizada. Obrigado por participar.'
+            ? 'Sessão finalizada. Como foi para você?'
             : 'Sessão encerrada. Registramos o tempo efetivo.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context)..pop()..pop(),
+            onPressed: () {
+              // Encaixa o pós-sessão (B3) desta sessão; ao enviar, volta ao início.
+              final nav = Navigator.of(dialogCtx);
+              nav.pop();
+              nav.pushReplacement(MaterialPageRoute(
+                  builder: (_) => PostSessionSurveyScreen(
+                      repo: OutcomesRepository(widget.repo.api),
+                      sessionId: widget.session.sessionId)));
+            },
+            child: const Text('Responder rápido'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx)..pop()..pop(),
             child: const Text('Voltar ao início'),
           ),
         ],
