@@ -34,6 +34,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Habilitar o GitHub Pages (auto, na 1a vez)
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: subosito/flutter-action@v2
       - name: Gerar plataforma Web + dependencias
         run: cd app && flutter create --platforms=web --project-name sereno . && flutter pub get
