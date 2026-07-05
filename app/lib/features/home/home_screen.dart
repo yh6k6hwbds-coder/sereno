@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../services/participant_repository.dart';
 import '../../services/session_repository.dart';
 import '../../services/session_store.dart';
 import '../../shared/disclaimer_banner.dart';
+import '../auth/otp_screen.dart';
 import '../session/headphone_check_screen.dart';
 
 /// Início pós-consentimento. Abre a preparação da sessão. (Próximas fatias: pós-sessão,
@@ -17,8 +19,28 @@ class HomeScreen extends StatelessWidget {
     return SessionRepository(ApiClient(store), store);
   }
 
+  Future<void> _logout(BuildContext context) async {
+    final store = SessionStore();
+    await store.clear(); // encerra a sessão (armazenamento seguro limpo)
+    if (!context.mounted) return;
+    final repo = ParticipantRepository(ApiClient(store), store);
+    Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => OtpScreen(repo: repo)), (route) => false);
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            IconButton(
+              tooltip: 'Sair',
+              icon: const Icon(Icons.logout_rounded),
+              onPressed: () => _logout(context),
+            ),
+          ],
+        ),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),

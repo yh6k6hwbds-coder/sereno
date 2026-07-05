@@ -23,7 +23,8 @@ class BytesResponse {
 }
 
 /// Cliente HTTP mínimo: injeta o token quando necessário e traduz erros
-/// problem+json em [ApiException]. Mantém a superfície pequena e testável.
+/// problem+json em [ApiException]. No 401 de uma chamada autenticada, tenta um
+/// refresh transparente (uma vez) e repete; se o refresh falhar, encerra a sessão.
 class ApiClient {
   final SessionStore store;
   final http.Client _http;
@@ -31,34 +32,66 @@ class ApiClient {
 
   Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body,
       {bool authenticated = false}) async {
-    final headers = <String, String>{'Content-Type': 'application/json'};
-    if (authenticated) {
-      final token = await store.accessToken();
-      if (token != null) headers['Authorization'] = 'Bearer $token';
+    var res = await _doPost(path, body, authenticated);
+    if (authenticated && res.statusCode == 401 && await _tryRefresh()) {
+      res = await _doPost(path, body, authenticated); // repete com o novo token
     }
-    final res = await _http.post(Uri.parse('$apiBaseUrl$path'),
-        headers: headers, body: jsonEncode(body));
     return _handle(res);
   }
 
   /// GET binário: baixa bytes (ex.: WAV da sessão) e devolve corpo + ETag.
-  /// Erros continuam em problem+json → [ApiException].
   Future<BytesResponse> getBytes(String path, {bool authenticated = false}) async {
-    final headers = <String, String>{};
-    if (authenticated) {
-      final token = await store.accessToken();
-      if (token != null) headers['Authorization'] = 'Bearer $token';
+    var res = await _doGet(path, authenticated);
+    if (authenticated && res.statusCode == 401 && await _tryRefresh()) {
+      res = await _doGet(path, authenticated);
     }
-    final res = await _http.get(Uri.parse('$apiBaseUrl$path'), headers: headers);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return BytesResponse(res.bodyBytes, res.headers['etag']);
     }
-    Map<String, dynamic> data = <String, dynamic>{};
+    _throwProblem(res.statusCode, _decode(res.bodyBytes));
+  }
+
+  Future<http.Response> _doPost(String path, Map<String, dynamic> body, bool authenticated) async {
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    await _maybeAuth(headers, authenticated);
+    return _http.post(Uri.parse('$apiBaseUrl$path'), headers: headers, body: jsonEncode(body));
+  }
+
+  Future<http.Response> _doGet(String path, bool authenticated) async {
+    final headers = <String, String>{};
+    await _maybeAuth(headers, authenticated);
+    return _http.get(Uri.parse('$apiBaseUrl$path'), headers: headers);
+  }
+
+  Future<void> _maybeAuth(Map<String, String> headers, bool authenticated) async {
+    if (!authenticated) return;
+    final token = await store.accessToken();
+    if (token != null) headers['Authorization'] = 'Bearer $token';
+  }
+
+  /// Tenta renovar o access token com o refresh guardado. Retorna true se renovou.
+  /// Refresh ausente/ inválido → encerra a sessão (limpa o armazenamento seguro).
+  Future<bool> _tryRefresh() async {
+    final refresh = await store.refreshToken();
+    if (refresh == null) return false;
+    final res = await _http.post(Uri.parse('$apiBaseUrl/auth/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refresh_token': refresh}));
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final d = jsonDecode(res.body) as Map<String, dynamic>;
+      await store.saveTokens(d['access_token'] as String, d['refresh_token'] as String);
+      return true;
+    }
+    await store.clear(); // sessão inválida → logout
+    return false;
+  }
+
+  Map<String, dynamic> _decode(Uint8List bodyBytes) {
     try {
-      data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
-    } catch (_) {/* corpo de erro não-JSON */}
-    throw ApiException(res.statusCode,
-        (data['title'] ?? 'Erro').toString(), data['detail']?.toString());
+      return jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
+    } catch (_) {
+      return <String, dynamic>{};
+    }
   }
 
   Map<String, dynamic> _handle(http.Response res) {
@@ -69,7 +102,10 @@ class ApiClient {
       } catch (_) {/* corpo não-JSON */}
     }
     if (res.statusCode >= 200 && res.statusCode < 300) return data;
-    throw ApiException(res.statusCode,
-        (data['title'] ?? 'Erro').toString(), data['detail']?.toString());
+    _throwProblem(res.statusCode, data);
+  }
+
+  Never _throwProblem(int status, Map<String, dynamic> data) {
+    throw ApiException(status, (data['title'] ?? 'Erro').toString(), data['detail']?.toString());
   }
 }

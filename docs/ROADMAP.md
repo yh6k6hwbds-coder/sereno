@@ -23,11 +23,11 @@
   (PSQI+GAD-7+SUS+cegamento); evento adverso.
 - **Stubs restantes:** `recommender`.
 - **Sem endpoint ainda (tabelas existem):** `recommendation_log` (recomendador — Fase E).
-- **Flutter (não compilado no ambiente de planejamento):** OTP → consentimento → home →
-  preparar fones → sessão com **reprodução de áudio real bit-a-bit + fila de telemetria offline
-  (A2/ADR-054)** e visualização não reativa. Falta persistência de login e as telas de
-  baseline/pós-sessão/diário/seguimento/EA. (Testes Flutter escritos, mas ainda não executados —
-  sem SDK local; dependem do job `app` do CI.)
+- **Flutter (não compilado no ambiente de planejamento):** **auto-login/refresh/logout (B1/ADR-055)**
+  → OTP → consentimento → home → preparar fones → sessão com **reprodução de áudio real bit-a-bit +
+  fila de telemetria offline (A2/ADR-054)** e visualização não reativa. Faltam as telas de
+  baseline/pós-sessão/diário/seguimento/EA (B2–B6). (Testes Flutter escritos, mas não executados
+  aqui — sem SDK local; o job `app` do CI, agora **bloqueante**, valida.)
 - **ADRs:** 041–052.
 
 ---
@@ -92,7 +92,12 @@ validação por FFT (que já roda no CI) ao que o participante ouve, **sem vazar
 ## FASE B — Completar a captura do participante (telas) · P0/P1
 Reusa endpoints já prontos. Cada tela é uma fatia com widget tests.
 
-### B1 — Persistência de login + refresh de token (Flutter) · P0 · `TODO`
+### B1 — Persistência de login + refresh de token (Flutter) · P0 · `DONE` (via CI)
+> **Código completo (2026-07-05, ADR-055):** auto-login (`AuthGate`), refresh transparente no 401
+> (`ApiClient` renova e repete uma vez; refresh inválido → logout) e logout na Home. Testes em
+> `app/test/auth_flow_test.dart` (MockClient + store fake). **Decisão:** SEM Riverpod/go_router
+> agora (mínimo e testável; refactor de estado fica p/ fatia dedicada). **Validação:** job `app` do
+> CI, agora bloqueante (não rodado localmente — sem SDK Flutter aqui).
 - **Objetivo:** auto-login se houver token válido; refresh transparente no 401; logout limpa
   o armazenamento seguro. Roteamento inicial decide OTP vs Home conforme sessão.
 - **Depende de:** —. **Contrato:** `POST /auth/refresh`.

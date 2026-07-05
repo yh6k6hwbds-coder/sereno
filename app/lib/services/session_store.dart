@@ -12,6 +12,7 @@ class SessionStore {
   }
 
   Future<String?> accessToken() => _s.read(key: _access);
+  Future<String?> refreshToken() => _s.read(key: _refresh);
   Future<bool> isAuthenticated() async => (await accessToken()) != null;
   Future<void> clear() => _s.deleteAll();
 }
