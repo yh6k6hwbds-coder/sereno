@@ -1,0 +1,56 @@
+name: Build & Deploy (app)
+# Gera o APK (artefato baixavel) e publica o build web no GitHub Pages, a cada push.
+# As pastas nativas (android/web) sao geradas no CI com `flutter create` (nao ficam no repo).
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: subosito/flutter-action@v2
+      - name: Gerar plataforma Android + dependencias
+        run: cd app && flutter create --platforms=android --project-name sereno . && flutter pub get
+      - name: Build do APK (release, para teste)
+        run: cd app && flutter build apk --release
+      - name: Publicar o APK como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: sereno-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+      - name: Gerar plataforma Web + dependencias
+        run: cd app && flutter create --platforms=web --project-name sereno . && flutter pub get
+      - name: Build web (base-href = /<repo>/ para o GitHub Pages)
+        run: cd app && flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      - name: Empacotar para o Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/build/web
+
+  deploy-pages:
+    needs: web
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
