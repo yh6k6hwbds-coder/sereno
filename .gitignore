@@ -28,3 +28,8 @@ data/
 .DS_Store
 .idea/
 .vscode/
+
+# Cobertura de testes
+.coverage
+.coverage.*
+htmlcov/
