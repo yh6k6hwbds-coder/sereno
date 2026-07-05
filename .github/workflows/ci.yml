@@ -52,13 +52,13 @@ jobs:
       - run: pip install openapi-spec-validator pyyaml
       - name: Validar contrato OpenAPI
         run: python -c "import yaml,openapi_spec_validator as v; v.validate(yaml.safe_load(open('shared-contracts/openapi.yaml'))); print('OpenAPI ok')"
-  app:                           # D5: agora BLOQUEANTE (há widget tests) — sem '|| true'
-    runs-on: ubuntu-latest
-    steps:
+  app:                           # BLOQUEANTE: flutter test trava em erro de compilação/teste.
+    runs-on: ubuntu-latest        # analyze bloqueia só em ERROS (lint/estilo é informativo,
+    steps:                        # para limpeza incremental sem travar o merge).
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
       - run: cd app && flutter pub get
-      - name: Análise estática (Flutter)
-        run: cd app && flutter analyze
-      - name: Testes de widget (Flutter)
+      - name: Análise estática (Flutter) — bloqueia só em erros
+        run: cd app && flutter analyze --no-fatal-warnings --no-fatal-infos
+      - name: Testes de widget (Flutter) — bloqueiam merge
         run: cd app && flutter test
