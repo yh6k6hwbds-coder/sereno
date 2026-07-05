@@ -12,8 +12,8 @@ jobs:
         run: ruff check backend || true
       - name: Migração (SQLite) — smoke test do Alembic
         run: cd backend && DATABASE_URL=sqlite:///./ci.db alembic upgrade head
-      - name: Testes do backend (bloqueiam merge)
-        run: cd backend && pytest -q
+      - name: Testes do backend + cobertura mínima (bloqueiam merge)
+        run: cd backend && pytest -q --cov=app --cov-report=term-missing --cov-fail-under=80
   backend-postgres:              # D3: valida a migração no Postgres REAL (JSONB/INET/CHECK que o SQLite ignora)
     runs-on: ubuntu-latest
     services:
@@ -52,9 +52,13 @@ jobs:
       - run: pip install openapi-spec-validator pyyaml
       - name: Validar contrato OpenAPI
         run: python -c "import yaml,openapi_spec_validator as v; v.validate(yaml.safe_load(open('shared-contracts/openapi.yaml'))); print('OpenAPI ok')"
-  app:
+  app:                           # D5: agora BLOQUEANTE (há widget tests) — sem '|| true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-      - run: cd app && flutter pub get && flutter analyze && flutter test || true
+      - run: cd app && flutter pub get
+      - name: Análise estática (Flutter)
+        run: cd app && flutter analyze
+      - name: Testes de widget (Flutter)
+        run: cd app && flutter test

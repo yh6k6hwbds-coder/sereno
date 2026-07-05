@@ -13,7 +13,7 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (139 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+- **Backend (142 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
   participante (OTP + **entrega por e-mail — D1/ADR-063**); **gestão de staff + MFA enrollment
   (C3/ADR-058)**; consentimento; **triagem/elegibilidade + funil (C2/ADR-057)**; linha de base
@@ -245,9 +245,13 @@ Endurecimento para dado real e para o CEP.
 - Exportar/eliminar dados de um participante; política de retenção; registro em auditoria.
 - **Pronto:** testes de export/delete respeitando append-only do audit. **ADR-066.**
 
-### D5 — Observabilidade sem PII + CI endurecido · P1 · `TODO`
+### D5 — Observabilidade sem PII + CI endurecido · P1 · `DONE`
 - Logs estruturados (sem PII/braço); métricas; tornar o job **Flutter** bloqueante quando
   houver widget tests; cobertura mínima. **ADR-067.**
+> **Concluída (2026-07-05, ADR-067):** logs JSON (`core/logging.py`) + middleware que registra
+> só método/caminho/status/latência (nunca corpo/PII/braço); CI com cobertura ≥80% (hoje 84,67%) e
+> job `app` (Flutter) **bloqueante** (sem `|| true`). 3 testes. **Atenção:** o gate Flutter passa a
+> depender dos widget tests de A2 (não rodados localmente) — 1º CI confirma. Métricas ficam pendentes.
 
 ---
 

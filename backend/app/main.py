@@ -7,10 +7,12 @@ Rodar: `uvicorn app.main:app --reload` (a partir de backend/).
 Aviso: ferramenta complementar de pesquisa; não substitui cuidado profissional.
 """
 from __future__ import annotations
-from fastapi import FastAPI
+import time
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.problem import install_problem_handlers
+from app.core.logging import setup_logging, request_logger
 
 # Roteadores por domínio (fronteiras explícitas do monólito modular).
 from app.modules.identity.router import router as identity_router
@@ -36,6 +38,7 @@ ALLOWED_ORIGINS = ["https://app.sereno.example"]
 
 
 def create_app() -> FastAPI:
+    setup_logging()
     app = FastAPI(
         title="Sereno API",
         version="1.0.0",
@@ -50,6 +53,17 @@ def create_app() -> FastAPI:
         allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
         allow_credentials=True,
     )
+
+    @app.middleware("http")
+    async def _log_requests(request: Request, call_next):
+        # Observabilidade SEM PII: só método/caminho/status/latência (nunca corpo nem braço).
+        start = time.perf_counter()
+        response = await call_next(request)
+        request_logger.info("request", extra={"extra_fields": {
+            "method": request.method, "path": request.url.path,
+            "status": response.status_code,
+            "duration_ms": round((time.perf_counter() - start) * 1000, 1)}})
+        return response
 
     install_problem_handlers(app)
 

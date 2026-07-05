@@ -13,5 +13,6 @@ rq
 numpy
 scipy
 pytest
+pytest-cov
 ruff
 httpx

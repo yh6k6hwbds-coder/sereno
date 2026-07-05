@@ -69,5 +69,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 063 | Entrega de e-mail (interface): OTP por e-mail (decifra C4) + alerta de EA, best-effort **[novo]** |
 | 064 | Rate limiting por IP (429) + denylist de token por `jti` (logout/revogação) **[novo]** |
 | 065 | Docker + compose (Postgres/Redis) + segredos por env; migração no deploy; CI Postgres **[novo]** |
+| 067 | Observabilidade (logs JSON sem PII/braço) + CI endurecido (cobertura ≥80%, Flutter bloqueante) **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.
