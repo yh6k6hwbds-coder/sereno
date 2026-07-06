@@ -1,0 +1,18 @@
+# Contexto de build enxuto (o Dockerfile só usa backend/). Evita mandar o app
+# Flutter, builds e caches para o daemon/Fly — build mais rápido e imagem menor.
+app/
+docs/
+audio-pipeline/
+shared-contracts/
+.git/
+.github/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.ruff_cache/
+**/.coverage
+backend/.venv/
+*.zip
+.env
+.env.*
+!.env.example

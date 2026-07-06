@@ -11,6 +11,12 @@ permissions:
   pages: write
   id-token: write
 
+# URL pública da API (backend na Fly.io). Definível sem editar este arquivo em
+# Settings > Secrets and variables > Actions > Variables (API_BASE_URL). O default
+# corresponde ao `app` do fly.toml. Sem isso o app cai no localhost e não conecta.
+env:
+  API_BASE_URL: ${{ vars.API_BASE_URL || 'https://sereno-piloto-api.fly.dev/v1' }}
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -22,7 +28,7 @@ jobs:
       - name: Gerar plataforma Android + dependencias
         run: cd app && flutter create --platforms=android --project-name sereno . && flutter pub get
       - name: Build do APK (release, para teste)
-        run: cd app && flutter build apk --release
+        run: cd app && flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"
       - name: Publicar o APK como artefato
         uses: actions/upload-artifact@v4
         with:
@@ -42,7 +48,7 @@ jobs:
       - name: Gerar plataforma Web + dependencias
         run: cd app && flutter create --platforms=web --project-name sereno . && flutter pub get
       - name: Build web (base-href = /<repo>/ para o GitHub Pages)
-        run: cd app && flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+        run: cd app && flutter build web --release --base-href "/${{ github.event.repository.name }}/" --dart-define=API_BASE_URL="$API_BASE_URL"
       - name: Empacotar para o Pages
         uses: actions/upload-pages-artifact@v3
         with:

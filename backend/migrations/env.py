@@ -8,15 +8,17 @@ from alembic import context
 # Torna o pacote `app` importável quando rodando de backend/
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from app.core.models import Base  # noqa: E402
+from app.core.db import normalize_database_url  # noqa: E402
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Prioriza DATABASE_URL do ambiente (dev: SQLite; prod: Postgres).
+# Prioriza DATABASE_URL do ambiente (dev: SQLite; prod: Postgres). Normaliza o
+# esquema para psycopg — provedores gerenciados injetam ``postgres://`` (ver db.py).
 db_url = os.getenv("DATABASE_URL")
 if db_url:
-    config.set_main_option("sqlalchemy.url", db_url)
+    config.set_main_option("sqlalchemy.url", normalize_database_url(db_url))
 
 target_metadata = Base.metadata
 

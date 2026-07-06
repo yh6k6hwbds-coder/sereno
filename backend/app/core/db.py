@@ -18,10 +18,26 @@ _engine = None
 _SessionLocal: sessionmaker | None = None
 
 
+def normalize_database_url(url: str) -> str:
+    """Normaliza o esquema da URL para o driver psycopg v3 (SQLAlchemy 2.0).
+
+    Provedores gerenciados (Fly, Heroku, Render) injetam ``DATABASE_URL`` como
+    ``postgres://...`` — esquema que o SQLAlchemy 2.0 recusa e que não seleciona
+    o driver psycopg usado aqui (ver requirements). Reescreve ``postgres://`` e
+    ``postgresql://`` (sem driver) para ``postgresql+psycopg://``. sqlite e URLs
+    que já trazem ``+driver`` ficam intactas.
+    """
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
+
+
 def _init() -> None:
     global _engine, _SessionLocal
     if _engine is None:
-        url = os.getenv("DATABASE_URL", DEFAULT_URL)
+        url = normalize_database_url(os.getenv("DATABASE_URL", DEFAULT_URL))
         connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
         _engine = create_engine(url, connect_args=connect_args, future=True)
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, expire_on_commit=False, class_=Session)

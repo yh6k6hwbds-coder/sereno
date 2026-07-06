@@ -1,0 +1,47 @@
+# fly.toml — deploy do backend do Sereno na Fly.io.
+# Região gru (São Paulo) para honrar a residência de dados no Brasil (decisão
+# inegociável #6 do CLAUDE.md; ver docs/decisoes/ADR-076-deploy-fly-residencia.md).
+#
+# Passo a passo em docs/deploy-fly.md. Resumo:
+#   fly apps create sereno-piloto-api
+#   fly postgres create --name sereno-piloto-db --region gru
+#   fly postgres attach sereno-piloto-db            # injeta DATABASE_URL
+#   fly secrets set JWT_SECRET=... PII_ENC_KEY=... ALLOCATION_SEED=...
+#   fly deploy
+#
+# Se mudar o nome do app aqui, atualize a variável API_BASE_URL no GitHub
+# (Settings > Secrets and variables > Actions > Variables) para <novo>/v1.
+
+app = "sereno-piloto-api"
+primary_region = "gru"
+
+[build]
+  dockerfile = "backend/Dockerfile"
+
+[env]
+  # Não-segredos. Segredos (JWT_SECRET, PII_ENC_KEY, ALLOCATION_SEED, DATABASE_URL)
+  # vão por `fly secrets set` / `fly postgres attach` — nunca neste arquivo.
+  ARM_CONDITION_MAP = "A:active,B:sham"
+  # Origem do app web no GitHub Pages (sem barra final). Ajuste se o repo mudar.
+  CORS_ORIGINS = "https://yh6k6hwbds-coder.github.io"
+  # TESTE: imprime o código do OTP no log (fly logs) porque ainda não há SMTP.
+  # Ao configurar SMTP real (SMTP_HOST/USER/PASSWORD via secrets), REMOVA esta linha.
+  EMAIL_DEV_CONSOLE = "1"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1        # evita cold-start no piloto; baixe p/ 0 se quiser economizar
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "15s"
+    method = "GET"
+    timeout = "3s"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"                # scipy/numpy no import do módulo de análise pedem folga
