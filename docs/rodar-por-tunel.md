@@ -19,7 +19,10 @@ App web publicado no GitHub Pages: https://yh6k6hwbds-coder.github.io/sereno/
 docker compose up -d --build
 docker compose exec -T backend python scripts/seed_demo.py   # cria o cenário DEMO
 
-# 2) Túnel (baixe cloudflared uma vez: https://github.com/cloudflare/cloudflared/releases)
+# 2a) Túnel — jeito fácil (Windows): sobe o túnel E imprime/copia o link pronto
+#     do app (com ?api=). Deixe a janela aberta; Ctrl+C encerra.
+#     powershell -ExecutionPolicy Bypass -File scripts\tunel.ps1
+# 2b) Manual (baixe cloudflared uma vez: github.com/cloudflare/cloudflared/releases)
 cloudflared tunnel --url http://localhost:8000
 #   → anote a URL https://<algo>.trycloudflare.com que aparece no log
 ```
