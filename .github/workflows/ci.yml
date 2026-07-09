@@ -4,8 +4,8 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with: { python-version: "3.11" }
       - run: pip install -r backend/requirements.txt
       - name: Lint
@@ -24,8 +24,8 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U sereno" --health-interval 5s --health-timeout 3s --health-retries 12
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with: { python-version: "3.11" }
       - run: pip install -r backend/requirements.txt
       - name: Migração no Postgres real (alembic upgrade head)
@@ -35,8 +35,8 @@ jobs:
   audio-fft:                     # decisão inegociável: o estímulo é validado por FFT
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with: { python-version: "3.11" }
       - run: pip install numpy scipy pytest      # sem matplotlib: o gate FFT não depende de plotagem
       - name: Bateria de validação de sinal (FFT) — falha o job se algum protocolo reprovar
@@ -46,8 +46,8 @@ jobs:
   contracts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with: { python-version: "3.11" }
       - run: pip install openapi-spec-validator pyyaml
       - name: Validar contrato OpenAPI
@@ -55,7 +55,7 @@ jobs:
   app:                           # BLOQUEANTE: flutter test trava em erro de compilação/teste.
     runs-on: ubuntu-latest        # analyze bloqueia só em ERROS (lint/estilo é informativo,
     steps:                        # para limpeza incremental sem travar o merge).
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
       - run: cd app && flutter pub get
       - name: Análise estática (Flutter) — bloqueia só em erros
