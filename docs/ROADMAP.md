@@ -318,16 +318,19 @@ modularidade para isso).
 - Consolidar `recommendation_log`/telemetria para pesquisa de modelos — **sempre offline**,
   sem decisão clínica ao vivo. **(ADR na criação.)**
 
-### E5 — i18n / acessibilidade avançada · P2 · `WIP`
+### E5 — i18n / acessibilidade avançada · P2 · `DONE`
 > **Fundação concluída (2026-07-09, ADR-070):** delegate de i18n MANUAL (pt-BR padrão + en, sem
 > code-gen), ligado ao `MaterialApp`; Home + disclaimer bilíngues; CTA com semântica de botão
 > rotulada; `BreathingWave` passa a respeitar **movimento reduzido** (`disableAnimations`) — o
 > ROADMAP supunha, erradamente, que já respeitava. 4 widget tests (pt/en, semântica, movimento
 > reduzido).
-> **Migração em andamento (2026-07-09):** OTP, consentimento, preparação de sessão, **player e
-> pós-sessão** já migrados (+3 widget tests pt/en). **Pendências:** telas de registro **B2–B6**
-> (linha de base, diário, seguimento, evento adverso); extrair p/ ARB/`intl` se internacionalizar
-> de fato; auditoria de contraste (AA) + leitor de tela.
+> **Migração concluída (2026-07-09):** TODAS as telas do app migradas — Home, OTP, consentimento,
+> preparo de sessão, player, pós-sessão e **B2–B6** (linha de base, diário, seguimento, evento
+> adverso), incluindo os componentes compartilhados (`PsqiSection`, prompts GAD-7/SUS/PSQI) e o
+> aviso persistente. Cliente **totalmente bilíngue** (pt-BR/en) via delegate manual; strings pt-BR
+> idênticas às originais (fallback preserva os testes legados). +4 widget tests en. **Pendências
+> (opcionais, fora do MVP):** extrair p/ ARB/`intl` se internacionalizar de fato; auditoria formal
+> de contraste (AA) + leitor de tela ponta a ponta.
 - Internacionalização e auditoria de acessibilidade (contraste, leitor de tela, movimento
   reduzido). **ADR-070.**
 

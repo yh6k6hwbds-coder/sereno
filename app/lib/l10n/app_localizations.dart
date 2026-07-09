@@ -92,6 +92,49 @@ class AppLocalizations {
       'surveyWouldRepeat': 'Repetiria esta sessão?',
       'surveyThanks': 'Obrigado pelo retorno!',
       'surveyAlready': 'Você já respondeu esta sessão.',
+      // B2 linha de base
+      'baselineTitle': 'Como você tem estado',
+      'baselineIntro': 'Algumas perguntas sobre as últimas semanas. Não há respostas certas ou '
+          'erradas — responda com sinceridade.',
+      'gad7GroupTitle': 'Nas últimas 2 semanas…',
+      'baselineSubmit': 'Enviar respostas',
+      'baselineThanks': 'Respostas registradas. Obrigado!',
+      'baselineAlready': 'Sua linha de base já foi registrada.',
+      // B4 diário de sono
+      'diaryTitle': 'Diário de sono',
+      'diaryAwakenings': 'Quantas vezes acordou',
+      'diaryDuration': 'Horas dormidas',
+      'diaryQuality': 'Como avalia a qualidade do sono? (0 muito ruim – 4 muito boa)',
+      'diarySubmit': 'Registrar',
+      'diaryThanks': 'Diário registrado. Bom descanso!',
+      'diaryAlready': 'O diário de hoje já foi registrado.',
+      // B5 seguimento
+      'susGroupTitle': 'Sobre o app (1 discordo totalmente – 5 concordo totalmente)',
+      'blindingQuestion': 'O estudo tem dois grupos de áudio (A e B). Qual você acha que recebeu?',
+      'groupA': 'Grupo A',
+      'groupB': 'Grupo B',
+      'dontKnow': 'Não sei',
+      'followupSubmit': 'Enviar seguimento',
+      'followupThanks': 'Seguimento registrado. Obrigado!',
+      'followupAlready': 'Seu seguimento já foi registrado.',
+      // B6 evento adverso
+      'adverseIntro': 'Conte o que aconteceu. Seu bem-estar vem primeiro.',
+      'adverseWhat': 'O que aconteceu?',
+      'severity': 'Gravidade',
+      'sevMild': 'Leve',
+      'sevModerate': 'Moderado',
+      'sevSevere': 'Grave',
+      'adverseAction': 'O que você fez? (opcional)',
+      'adverseUrgent': 'Procure atendimento o quanto antes. Em emergência, ligue 192. '
+          'Se houver sofrimento emocional, o CVV atende no 188.',
+      'adverseSubmit': 'Enviar relato',
+      'adverseThanks': 'Relato registrado. Cuide-se.',
+      // PSQI (compartilhado B2/B5)
+      'minutesToFallAsleep': 'Minutos para adormecer',
+      'psqiHeader': 'Seu sono no último mês',
+      'psqiHoursSlept': 'Horas realmente dormidas',
+      'psqiHoursInBed': 'Horas na cama',
+      'psqiDisturbHeader': 'Com que frequência seu sono foi perturbado por…',
     },
     'en': {
       'connectionError': 'Connection failed. Please try again.',
@@ -150,6 +193,44 @@ class AppLocalizations {
       'surveyWouldRepeat': 'Would you repeat this session?',
       'surveyThanks': 'Thanks for your feedback!',
       'surveyAlready': 'You have already answered this session.',
+      'baselineTitle': 'How you have been',
+      'baselineIntro': 'A few questions about the last weeks. There are no right or wrong answers — '
+          'answer honestly.',
+      'gad7GroupTitle': 'In the last 2 weeks…',
+      'baselineSubmit': 'Submit answers',
+      'baselineThanks': 'Answers recorded. Thank you!',
+      'baselineAlready': 'Your baseline has already been recorded.',
+      'diaryTitle': 'Sleep diary',
+      'diaryAwakenings': 'How many times you woke up',
+      'diaryDuration': 'Hours slept',
+      'diaryQuality': 'How do you rate your sleep quality? (0 very poor – 4 very good)',
+      'diarySubmit': 'Record',
+      'diaryThanks': 'Diary recorded. Rest well!',
+      'diaryAlready': "Today's diary has already been recorded.",
+      'susGroupTitle': 'About the app (1 strongly disagree – 5 strongly agree)',
+      'blindingQuestion': 'The study has two audio groups (A and B). Which do you think you received?',
+      'groupA': 'Group A',
+      'groupB': 'Group B',
+      'dontKnow': "I don't know",
+      'followupSubmit': 'Submit follow-up',
+      'followupThanks': 'Follow-up recorded. Thank you!',
+      'followupAlready': 'Your follow-up has already been recorded.',
+      'adverseIntro': 'Tell us what happened. Your well-being comes first.',
+      'adverseWhat': 'What happened?',
+      'severity': 'Severity',
+      'sevMild': 'Mild',
+      'sevModerate': 'Moderate',
+      'sevSevere': 'Severe',
+      'adverseAction': 'What did you do? (optional)',
+      'adverseUrgent': 'Seek care as soon as possible. In an emergency, call 192. '
+          'If there is emotional distress, CVV is available at 188.',
+      'adverseSubmit': 'Submit report',
+      'adverseThanks': 'Report recorded. Take care.',
+      'minutesToFallAsleep': 'Minutes to fall asleep',
+      'psqiHeader': 'Your sleep in the last month',
+      'psqiHoursSlept': 'Hours actually slept',
+      'psqiHoursInBed': 'Hours in bed',
+      'psqiDisturbHeader': 'How often was your sleep disturbed by…',
     },
   };
 
@@ -168,6 +249,84 @@ class AppLocalizations {
       'Your data is handled confidentially and pseudonymized (LGPD).',
       'Participation is voluntary; you may leave at any time, without penalty.',
     ],
+  };
+
+  static const Map<String, List<String>> _gad7 = {
+    'pt': [
+      'Sentiu-se nervoso(a), ansioso(a) ou muito tenso(a)?',
+      'Não conseguiu parar ou controlar as preocupações?',
+      'Preocupou-se demais com coisas diferentes?',
+      'Teve dificuldade para relaxar?',
+      'Ficou tão inquieto(a) que era difícil ficar parado(a)?',
+      'Irritou-se ou aborreceu-se com facilidade?',
+      'Sentiu medo, como se algo ruim fosse acontecer?',
+    ],
+    'en': [
+      'Felt nervous, anxious or very tense?',
+      "Couldn't stop or control worrying?",
+      'Worried too much about different things?',
+      'Had trouble relaxing?',
+      'Was so restless it was hard to sit still?',
+      'Became easily annoyed or irritable?',
+      'Felt afraid, as if something bad might happen?',
+    ],
+  };
+
+  static const Map<String, List<String>> _sus = {
+    'pt': [
+      'Gostaria de usar este app com frequência.',
+      'Achei o app desnecessariamente complexo.',
+      'Achei o app fácil de usar.',
+      'Precisaria de ajuda para conseguir usar o app.',
+      'As funções do app são bem integradas.',
+      'Há inconsistências demais no app.',
+      'A maioria aprenderia a usar o app rapidamente.',
+      'Achei o app trabalhoso de usar.',
+      'Senti-me confiante ao usar o app.',
+      'Precisei aprender muita coisa antes de usar.',
+    ],
+    'en': [
+      'I would like to use this app frequently.',
+      'I found the app unnecessarily complex.',
+      'I found the app easy to use.',
+      'I would need help to be able to use the app.',
+      'The app functions are well integrated.',
+      'There is too much inconsistency in the app.',
+      'Most people would learn to use the app quickly.',
+      'I found the app cumbersome to use.',
+      'I felt confident using the app.',
+      'I needed to learn a lot before I could use it.',
+    ],
+  };
+
+  static const Map<String, List<String>> _psqiDisturb = {
+    'pt': [
+      'acordou no meio da noite/de manhã cedo', 'precisou ir ao banheiro',
+      'não conseguiu respirar bem', 'tossiu ou roncou alto', 'sentiu muito frio',
+      'sentiu muito calor', 'teve sonhos ruins', 'sentiu dores', 'outro motivo',
+    ],
+    'en': [
+      'woke in the middle of the night/early morning', 'needed to use the bathroom',
+      'could not breathe well', 'coughed or snored loudly', 'felt too cold',
+      'felt too hot', 'had bad dreams', 'felt pain', 'another reason',
+    ],
+  };
+
+  static const Map<String, Map<String, String>> _psqiScale = {
+    'pt': {
+      'subjective_quality': 'No último mês, como avalia sua qualidade de sono? (0 muito boa – 3 muito ruim)',
+      'cannot_sleep_30min_freq': 'Com que frequência levou mais de 30 min para adormecer?',
+      'medication_freq': 'Com que frequência usou medicação para dormir?',
+      'stay_awake_freq': 'Com que frequência teve dificuldade de ficar acordado durante o dia?',
+      'enthusiasm_problem': 'Quanta dificuldade teve para manter o ânimo nas atividades?',
+    },
+    'en': {
+      'subjective_quality': 'In the last month, how do you rate your sleep quality? (0 very good – 3 very poor)',
+      'cannot_sleep_30min_freq': 'How often did it take more than 30 min to fall asleep?',
+      'medication_freq': 'How often did you use sleep medication?',
+      'stay_awake_freq': 'How often did you have trouble staying awake during the day?',
+      'enthusiasm_problem': 'How much trouble did you have keeping up enthusiasm for activities?',
+    },
   };
 
   String _t(String key) =>
@@ -237,6 +396,55 @@ class AppLocalizations {
   String get surveyWouldRepeat => _t('surveyWouldRepeat');
   String get surveyThanks => _t('surveyThanks');
   String get surveyAlready => _t('surveyAlready');
+  // B2 linha de base
+  String get baselineTitle => _t('baselineTitle');
+  String get baselineIntro => _t('baselineIntro');
+  String get gad7GroupTitle => _t('gad7GroupTitle');
+  String get baselineSubmit => _t('baselineSubmit');
+  String get baselineThanks => _t('baselineThanks');
+  String get baselineAlready => _t('baselineAlready');
+  List<String> get gad7Prompts => _gad7[locale.languageCode] ?? _gad7['pt']!;
+  // B4 diário
+  String get diaryTitle => _t('diaryTitle');
+  String get diaryAwakenings => _t('diaryAwakenings');
+  String get diaryDuration => _t('diaryDuration');
+  String get diaryQuality => _t('diaryQuality');
+  String get diarySubmit => _t('diarySubmit');
+  String get diaryThanks => _t('diaryThanks');
+  String get diaryAlready => _t('diaryAlready');
+  String diaryToday(String date) =>
+      locale.languageCode == 'en' ? "Today's entry ($date)." : 'Registro de hoje ($date).';
+  // B5 seguimento
+  String get susGroupTitle => _t('susGroupTitle');
+  String get blindingQuestion => _t('blindingQuestion');
+  String get groupA => _t('groupA');
+  String get groupB => _t('groupB');
+  String get dontKnow => _t('dontKnow');
+  String get followupSubmit => _t('followupSubmit');
+  String get followupThanks => _t('followupThanks');
+  String get followupAlready => _t('followupAlready');
+  List<String> get susPrompts => _sus[locale.languageCode] ?? _sus['pt']!;
+  // B6 evento adverso
+  String get adverseIntro => _t('adverseIntro');
+  String get adverseWhat => _t('adverseWhat');
+  String get severity => _t('severity');
+  String get sevMild => _t('sevMild');
+  String get sevModerate => _t('sevModerate');
+  String get sevSevere => _t('sevSevere');
+  String get adverseAction => _t('adverseAction');
+  String get adverseUrgent => _t('adverseUrgent');
+  String get adverseSubmit => _t('adverseSubmit');
+  String get adverseThanks => _t('adverseThanks');
+  // PSQI
+  String get minutesToFallAsleep => _t('minutesToFallAsleep');
+  String get psqiHeader => _t('psqiHeader');
+  String get psqiHoursSlept => _t('psqiHoursSlept');
+  String get psqiHoursInBed => _t('psqiHoursInBed');
+  String get psqiDisturbHeader => _t('psqiDisturbHeader');
+  List<String> get psqiDisturbPrompts =>
+      _psqiDisturb[locale.languageCode] ?? _psqiDisturb['pt']!;
+  Map<String, String> get psqiScalePrompts =>
+      _psqiScale[locale.languageCode] ?? _psqiScale['pt']!;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

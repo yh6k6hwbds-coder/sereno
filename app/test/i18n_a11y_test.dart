@@ -13,6 +13,10 @@ import 'package:sereno/features/home/home_screen.dart';
 import 'package:sereno/features/auth/otp_screen.dart';
 import 'package:sereno/features/consent/consent_screen.dart';
 import 'package:sereno/features/session/post_session_survey_screen.dart';
+import 'package:sereno/features/baseline/baseline_screen.dart';
+import 'package:sereno/features/diary/sleep_diary_screen.dart';
+import 'package:sereno/features/followup/followup_screen.dart';
+import 'package:sereno/features/adverse/adverse_event_screen.dart';
 import 'package:sereno/shared/breathing_wave.dart';
 
 /// E5/ADR-070 — i18n (pt-BR/en) + acessibilidade (semântica de botão, movimento reduzido).
@@ -96,6 +100,25 @@ void main() {
     // Itens do topo (o ListView é lazy: botão/últimos itens ficam abaixo da dobra).
     expect(find.text('How was the session'), findsOneWidget); // AppBar
     expect(find.textContaining('How do you feel now'), findsOneWidget); // 1º prompt (en)
+  });
+
+  testWidgets('B2–B6: títulos de AppBar em inglês', (t) async {
+    // Só os títulos (topo, sempre visíveis); o conteúdo fica em ListView lazy.
+    await t.pumpWidget(_app(BaselineScreen(repo: _orepo()), locale: const Locale('en')));
+    await t.pumpAndSettle();
+    expect(find.text('How you have been'), findsOneWidget);
+
+    await t.pumpWidget(_app(SleepDiaryScreen(repo: _orepo()), locale: const Locale('en')));
+    await t.pumpAndSettle();
+    expect(find.text('Sleep diary'), findsOneWidget);
+
+    await t.pumpWidget(_app(FollowupScreen(repo: _orepo()), locale: const Locale('en')));
+    await t.pumpAndSettle();
+    expect(find.text('Follow-up'), findsOneWidget);
+
+    await t.pumpWidget(_app(AdverseEventScreen(repo: _orepo()), locale: const Locale('en')));
+    await t.pumpAndSettle();
+    expect(find.text('Report a problem'), findsOneWidget);
   });
 
   testWidgets('BreathingWave respeita movimento reduzido (assenta, sem repetir)', (t) async {

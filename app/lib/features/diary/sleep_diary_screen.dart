@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/outcomes_repository.dart';
 import '../../shared/likert_question.dart';
 
@@ -42,12 +43,14 @@ class _SleepDiaryScreenState extends State<SleepDiaryScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Diário registrado. Bom descanso!')));
+          .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).diaryThanks)));
       Navigator.of(context).pop();
     } on ApiException catch (e) {
-      _snack(e.status == 409 ? 'O diário de hoje já foi registrado.' : e.toString());
+      _snack(e.status == 409
+          ? AppLocalizations.of(context).diaryAlready
+          : e.toString());
     } catch (_) {
-      _snack('Falha de conexão. Tente novamente.');
+      _snack(AppLocalizations.of(context).connectionError);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -66,30 +69,33 @@ class _SleepDiaryScreenState extends State<SleepDiaryScreen> {
       );
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Diário de sono')),
-        body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-            children: [
-              Text('Registro de hoje ($_today).', style: const TextStyle(height: 1.4)),
-              const SizedBox(height: 8),
-              _numField('Minutos para adormecer', _latency),
-              _numField('Quantas vezes acordou', _awakenings),
-              _numField('Horas dormidas', _duration, decimal: true),
-              LikertQuestion(
-                prompt: 'Como avalia a qualidade do sono? (0 muito ruim – 4 muito boa)',
-                min: 0, max: 4, value: _quality,
-                onChanged: (v) => setState(() => _quality = v)),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: _loading ? null : _submit,
-                child: _loading
-                    ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Registrar'),
-              ),
-            ],
-          ),
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(t.diaryTitle)),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          children: [
+            Text(t.diaryToday(_today), style: const TextStyle(height: 1.4)),
+            const SizedBox(height: 8),
+            _numField(t.minutesToFallAsleep, _latency),
+            _numField(t.diaryAwakenings, _awakenings),
+            _numField(t.diaryDuration, _duration, decimal: true),
+            LikertQuestion(
+              prompt: t.diaryQuality,
+              min: 0, max: 4, value: _quality,
+              onChanged: (v) => setState(() => _quality = v)),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: _loading ? null : _submit,
+              child: _loading
+                  ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(t.diarySubmit),
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }

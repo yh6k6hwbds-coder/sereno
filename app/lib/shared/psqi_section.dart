@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'likert_question.dart';
 
 /// Seção de sono (base do PSQI) — itens BRUTOS; o escore é calculado/versionado no
@@ -30,19 +31,6 @@ class _PsqiSectionState extends State<PsqiSection> {
   final _latency = TextEditingController();
   final _hoursSlept = TextEditingController();
   final _hoursInBed = TextEditingController();
-
-  static const _prompts = {
-    'subjective_quality': 'No último mês, como avalia sua qualidade de sono? (0 muito boa – 3 muito ruim)',
-    'cannot_sleep_30min_freq': 'Com que frequência levou mais de 30 min para adormecer?',
-    'medication_freq': 'Com que frequência usou medicação para dormir?',
-    'stay_awake_freq': 'Com que frequência teve dificuldade de ficar acordado durante o dia?',
-    'enthusiasm_problem': 'Quanta dificuldade teve para manter o ânimo nas atividades?',
-  };
-  static const _disturbPrompts = [
-    'acordou no meio da noite/de manhã cedo', 'precisou ir ao banheiro',
-    'não conseguiu respirar bem', 'tossiu ou roncou alto', 'sentiu muito frio',
-    'sentiu muito calor', 'teve sonhos ruins', 'sentiu dores', 'outro motivo',
-  ];
 
   @override
   void dispose() {
@@ -84,35 +72,38 @@ class _PsqiSectionState extends State<PsqiSection> {
       );
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Seu sono no último mês',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-          _numField('Minutos para adormecer', _latency),
-          _numField('Horas realmente dormidas', _hoursSlept),
-          _numField('Horas na cama', _hoursInBed),
-          for (final key in _scale.keys)
-            LikertQuestion(
-              prompt: _prompts[key]!,
-              value: _scale[key],
-              onChanged: (v) => setState(() {
-                _scale[key] = v;
-                _notify();
-              }),
-            ),
-          const SizedBox(height: 8),
-          const Text('Com que frequência seu sono foi perturbado por…',
-              style: TextStyle(fontWeight: FontWeight.w600)),
-          for (var i = 0; i < _disturb.length; i++)
-            LikertQuestion(
-              prompt: _disturbPrompts[i],
-              value: _disturb[i],
-              onChanged: (v) => setState(() {
-                _disturb[i] = v;
-                _notify();
-              }),
-            ),
-        ],
-      );
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final scalePrompts = t.psqiScalePrompts;
+    final disturbPrompts = t.psqiDisturbPrompts;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(t.psqiHeader, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        _numField(t.minutesToFallAsleep, _latency),
+        _numField(t.psqiHoursSlept, _hoursSlept),
+        _numField(t.psqiHoursInBed, _hoursInBed),
+        for (final key in _scale.keys)
+          LikertQuestion(
+            prompt: scalePrompts[key]!,
+            value: _scale[key],
+            onChanged: (v) => setState(() {
+              _scale[key] = v;
+              _notify();
+            }),
+          ),
+        const SizedBox(height: 8),
+        Text(t.psqiDisturbHeader, style: const TextStyle(fontWeight: FontWeight.w600)),
+        for (var i = 0; i < _disturb.length; i++)
+          LikertQuestion(
+            prompt: disturbPrompts[i],
+            value: _disturb[i],
+            onChanged: (v) => setState(() {
+              _disturb[i] = v;
+              _notify();
+            }),
+          ),
+      ],
+    );
+  }
 }
