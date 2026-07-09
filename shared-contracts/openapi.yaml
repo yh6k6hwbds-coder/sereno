@@ -98,6 +98,24 @@ paths:
         '201': { description: Registrado }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /recommendations:
+    post:
+      summary: Recomendar protocolo por regras (participante)
+      description: >
+        Motor POR REGRAS, transparente e versionado, restrito à biblioteca validada.
+        Os sinais de segurança (evento adverso recente, contraindicação) são resolvidos
+        no SERVIDOR — o cliente não os informa. Devolve um handle NEUTRO, idêntico nos dois
+        braços (nunca revela a condição). Cada chamada é registrada (recommendation_log) com
+        `feature_vector` para ML futuro. ML nunca decide ao vivo.
+      operationId: getRecommendation
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RecommendationRequest' } } }
+      responses:
+        '201': { description: Recomendação gerada, content: { application/json: { schema: { $ref: '#/components/schemas/Recommendation' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /participants/me/followup:
     post:
       summary: Enviar avaliação de seguimento (PSQI + GAD-7 + SUS + palpite de cegamento)
@@ -494,6 +512,32 @@ components:
         study_code: { type: string }
         code: { type: string, pattern: '^[0-9]{6}$' }
       required: [study_code, code]
+    RecommendationRequest:
+      type: object
+      description: Contexto AUTORRELATADO. Sinais de segurança são derivados no servidor, não aqui.
+      properties:
+        goal: { type: string, enum: [sleep, anxiety] }
+        sleep_issue: { type: [string, "null"], enum: [onset, maintenance, null] }
+        time_of_day: { type: string, enum: [day, evening, night], default: evening }
+      required: [goal]
+    Recommendation:
+      type: object
+      description: >
+        Handle de protocolo NEUTRO (nunca revela o braço). `suggested_protocol`/`band` são null
+        quando `action` = no_recommendation (guardrail de contraindicação). Sempre acompanha aviso
+        de ferramenta complementar e nota de evidência.
+      properties:
+        id: { type: string, format: uuid }
+        action: { type: string, enum: [recommend, no_recommendation] }
+        suggested_protocol: { type: [string, "null"] }
+        band: { type: [string, "null"] }
+        rule_id: { type: string }
+        ruleset_version: { type: string }
+        flag_review: { type: boolean }
+        rationale: { type: string }
+        evidence_note: { type: string }
+        disclaimer: { type: string }
+      required: [id, action, rule_id, ruleset_version, flag_review]
     DiaryIn:
       type: object
       properties:

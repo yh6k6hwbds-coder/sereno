@@ -219,7 +219,9 @@ class RecommendationLog(Base):
     inputs: Mapped[dict] = mapped_column(JSONB, nullable=False)
     rule_id: Mapped[str] = mapped_column(String(40), nullable=False)
     rule_version: Mapped[str] = mapped_column(String(20), nullable=False)
-    suggested_protocol: Mapped[str] = mapped_column(String(40), nullable=False)
+    # nullable: o guardrail de contraindicação produz `no_recommendation` (sem protocolo);
+    # esse evento de segurança é registrado fielmente com NULL (E1/ADR-068).
+    suggested_protocol: Mapped[str | None] = mapped_column(String(40), nullable=True)
     accepted: Mapped[bool] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[dt.datetime] = TS()
 

@@ -28,8 +28,8 @@
   **entrega de áudio bit-a-bit (A1/ADR-053)**; **auditoria append-only (C1/ADR-056)**;
   **captura de contato com PII cifrada (C4/ADR-059)**; desfechos (pós-sessão, diário); seguimento
   (PSQI+GAD-7+SUS+cegamento); evento adverso.
-- **Stubs restantes:** `recommender`.
-- **Sem endpoint ainda (tabelas existem):** `recommendation_log` (recomendador — Fase E).
+- **Stubs restantes:** — (o `recommender` foi ativado ao vivo em E1/ADR-068).
+- **`recommendation_log`:** já alimentado pelo endpoint `POST /recommendations` (E1).
 - **Flutter (não compilado no ambiente de planejamento):** fluxo do participante completo —
   **auto-login/refresh/logout (B1)** → OTP → consentimento → **Home com CTA de sessão + acesso às
   telas de registro (B2/B4/B5/B6)** → sessão com **áudio real bit-a-bit + telemetria offline (A2)**
@@ -289,7 +289,15 @@ Endurecimento para dado real e para o CEP.
 Fora do caminho crítico do piloto; preparam integrações futuras (o `CLAUDE.md` já pede
 modularidade para isso).
 
-### E1 — Recomendador ao vivo (regras) · P2 · `TODO`
+### E1 — Recomendador ao vivo (regras) · P2 · `DONE`
+> **Concluída (2026-07-09, ADR-068):** `POST /v1/recommendations` (participante, `recommend:read`)
+> liga o motor de regras: recebe contexto autorrelatado, **resolve os sinais de segurança no
+> servidor** (evento adverso recente → de-escalona; triagem inelegível → `no_recommendation`),
+> devolve **handle neutro** da biblioteca validada e registra tudo em `recommendation_log`
+> (`feature_vector` p/ ML futuro; `no_recommendation` gravado com protocolo NULL — migração
+> `b2c3d4e5f6a7`). 8 testes (objetivo→banda, guardrails, não-vazamento, negações); suíte 169→177,
+> cobertura 87,2%. **Pendências:** captura de aceite/coerência; janela temporal do EA; guardrail de
+> tolerabilidade ao vivo (última pós-sessão).
 - Ativar o `recommender` (Etapa 6): seleciona **handle neutro/banda** dentro da biblioteca
   validada, registra `feature_vector` em `recommendation_log`. **ML nunca decide ao vivo.**
 - **Inegociável:** só regras decidem; ML apenas registra para o futuro. **ADR-068.**
