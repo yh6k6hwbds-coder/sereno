@@ -7,6 +7,9 @@
 #   fly postgres create --name sereno-piloto-db --region gru
 #   fly postgres attach sereno-piloto-db            # injeta DATABASE_URL
 #   fly secrets set JWT_SECRET=... PII_ENC_KEY=... ALLOCATION_SEED=...
+#   fly secrets set ARM_CONDITION_MAP="A:sham,B:active"   # CHAVE SELADA — sorteio custodiado,
+#                                                         # NUNCA versionada (ver ADR-077)
+#   fly secrets set SMTP_HOST=... SMTP_USER=... SMTP_PASSWORD=... SMTP_FROM=...  # OTP real
 #   fly deploy
 #
 # Se mudar o nome do app aqui, atualize a variável API_BASE_URL no GitHub
@@ -19,14 +22,23 @@ primary_region = "gru"
   dockerfile = "backend/Dockerfile"
 
 [env]
-  # Não-segredos. Segredos (JWT_SECRET, PII_ENC_KEY, ALLOCATION_SEED, DATABASE_URL)
-  # vão por `fly secrets set` / `fly postgres attach` — nunca neste arquivo.
-  ARM_CONDITION_MAP = "A:active,B:sham"
+  # Apenas NÃO-segredos. Segredos (JWT_SECRET, PII_ENC_KEY, ALLOCATION_SEED, DATABASE_URL,
+  # ARM_CONDITION_MAP, SMTP_*) vão por `fly secrets set` / `fly postgres attach` — nunca aqui.
+  #
+  # Produção: liga o guard de startup (app/core/config.py). Recusa subir se a chave selada
+  # A/B→condição cair no default público (inegociável #2) ou se EMAIL_DEV_CONSOLE estiver
+  # ligado (OTP em log, inegociável #6). Ver ADR-077.
+  APP_ENV = "production"
   # Origem do app web no GitHub Pages (sem barra final). Ajuste se o repo mudar.
   CORS_ORIGINS = "https://yh6k6hwbds-coder.github.io"
-  # TESTE: imprime o código do OTP no log (fly logs) porque ainda não há SMTP.
-  # Ao configurar SMTP real (SMTP_HOST/USER/PASSWORD via secrets), REMOVA esta linha.
-  EMAIL_DEV_CONSOLE = "1"
+  #
+  # ATENÇÃO — a chave selada NÃO fica aqui. Configure-a como secret com um sorteio
+  # custodiado (ex.: `fly secrets set ARM_CONDITION_MAP="A:sham,B:active"`), conhecido só
+  # pelo custodiante e aberto no data lock. Enquanto não estiver setada, o deploy recusa subir.
+  #
+  # OTP real: configure SMTP_* como secrets. Sem SMTP em produção, o OTP não é entregue
+  # (NullEmailSender — não vaza o código, mas o participante não recebe). NÃO use
+  # EMAIL_DEV_CONSOLE em produção (o guard recusa).
 
 [http_service]
   internal_port = 8000

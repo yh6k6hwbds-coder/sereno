@@ -12,13 +12,24 @@ import threading
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
+from app.core.config import is_production, InsecureConfigError, DEV_ARM_CONDITION_MAP
 from app.core.models import AudioProtocol
 from app.modules.sessions import audio_render
 
 
 def _sealed_map() -> dict[str, str]:
-    """Mapa selado A/B → ativo/sham. Em produção: segredo em cofre, custodiado."""
-    raw = os.getenv("ARM_CONDITION_MAP", "A:active,B:sham")
+    """Mapa selado A/B → ativo/sham. Em produção: secret custodiado, JAMAIS o default.
+
+    Defesa em profundidade: mesmo que o guard de startup (``config.validate_runtime_config``)
+    seja contornado, aqui recusamos resolver a condição com o default público em produção —
+    isso revelaria ativo/sham a partir do braço codificado A/B (inegociável #2)."""
+    raw = os.getenv("ARM_CONDITION_MAP")
+    if raw is None:
+        if is_production():
+            raise InsecureConfigError(
+                "ARM_CONDITION_MAP ausente em produção: recuso resolver a condição com o "
+                "default público (quebraria o cegamento — inegociável #2).")
+        raw = DEV_ARM_CONDITION_MAP
     m: dict[str, str] = {}
     for pair in raw.split(","):
         if ":" in pair:

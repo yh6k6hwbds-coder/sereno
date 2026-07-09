@@ -46,11 +46,16 @@ fly secrets set `
   JWT_SECRET="<cole>" `
   PII_ENC_KEY="<cole>" `
   ALLOCATION_SEED="<cole>" `
+  ARM_CONDITION_MAP="A:sham,B:active" `
   --app sereno-piloto-api
 ```
 
-> `ARM_CONDITION_MAP`, `CORS_ORIGINS` e `EMAIL_DEV_CONSOLE=1` (OTP no log, só teste)
-> já vêm do `fly.toml`. Não coloque segredos no `fly.toml`.
+> **Chave selada (`ARM_CONDITION_MAP`) — obrigatória.** É o mapa braço→condição. `fly.toml`
+> liga `APP_ENV=production`, e o **guard de startup recusa subir** se ela não estiver setada
+> (senão o braço codificado A/B, que sai no export, revelaria ativo/sham — inegociável #2).
+> O valor é um **sorteio** decidido e custodiado por fora (tipicamente a orientadora):
+> `A:sham,B:active` **ou** `A:active,B:sham`. Anote-o offline; só se abre no *data lock*.
+> `CORS_ORIGINS` e `APP_ENV` (não-segredos) vêm do `fly.toml`. Não coloque segredos no `fly.toml`.
 
 ## 3. Deploy e verificação
 
@@ -64,8 +69,14 @@ Semear dados de demo para testar o login (opcional, dados sintéticos):
 
 ```powershell
 fly ssh console --app sereno-piloto-api -C "python scripts/seed_demo.py"
-# Código de estudo = DEMO. O OTP aparece em: fly logs --app sereno-piloto-api
+# Código de estudo = DEMO.
 ```
+
+> **OTP em produção não sai no log.** Com `APP_ENV=production` o guard proíbe
+> `EMAIL_DEV_CONSOLE`; sem SMTP configurado o código não é entregue (`NullEmailSender` —
+> não vaza, mas ninguém recebe). Para smoke-test rápido com OTP-no-console, rode **local**
+> (`docker compose`, `APP_ENV=dev`, `EMAIL_DEV_CONSOLE=1`) ou pelo túnel — não na Fly de
+> produção. Para testar o login na Fly, configure o SMTP real (seção "Antes de participantes").
 
 ## 4. Reconstruir o app apontando para a API pública
 
@@ -84,12 +95,16 @@ gh workflow run "Build & Deploy (app)"
 # ou simplesmente faça um push para master.
 ```
 
-Ao terminar: abra a URL do GitHub Pages (Settings > Pages) no celular, use o código
-**DEMO**, pegue o OTP em `fly logs` e navegue. O APK fica em Actions > run > Artifacts.
+Ao terminar: abra a URL do GitHub Pages (Settings > Pages) no celular. O login com **DEMO**
+na Fly exige SMTP configurado (abaixo); sem ele, teste o login localmente/por túnel em dev.
+O APK fica em Actions > run > Artifacts.
 
 ## Antes de participantes reais (não pular)
 
-- Configurar SMTP real (`fly secrets set SMTP_HOST=... SMTP_USER=... SMTP_PASSWORD=...`)
-  e **remover** `EMAIL_DEV_CONSOLE` do `fly.toml` — senão o OTP não chega por e-mail.
+- **SMTP real** (obrigatório p/ o OTP chegar): `fly secrets set SMTP_HOST=... SMTP_USER=...
+  SMTP_PASSWORD=... SMTP_FROM=...`. Porta **587** usa STARTTLS (default); **465** usa SSL
+  implícito (autodetectado; ou force `SMTP_USE_SSL=1`). Opção grátis p/ N≈40: Gmail com
+  *app password* (587). `EMAIL_DEV_CONSOLE` **não** funciona em produção (o guard recusa).
 - Validar com orientador/NIT a adequação LGPD/residência (ver ADR-076).
-- Definir backups/retenção do Postgres e custódia da chave A/B→condição.
+- Definir backups/retenção do Postgres e **custódia da chave selada A/B→condição** (ADR-077):
+  quem sabe o sorteio, onde está anotado, e que só se abre no *data lock*.

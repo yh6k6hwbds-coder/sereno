@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.problem import install_problem_handlers
 from app.core.logging import setup_logging, request_logger
+from app.core.config import validate_runtime_config
 
 # Roteadores por domínio (fronteiras explícitas do monólito modular).
 from app.modules.identity.router import router as identity_router
@@ -44,6 +45,9 @@ CORS_ORIGIN_REGEX = os.getenv("CORS_ALLOW_ORIGIN_REGEX") or None
 
 def create_app() -> FastAPI:
     setup_logging()
+    # Fail-fast: em produção, recusa subir com config que quebre uma decisão inegociável
+    # (chave selada no default público; OTP em log). No-op em dev/teste.
+    validate_runtime_config()
     app = FastAPI(
         title="Sereno API",
         version="1.0.0",

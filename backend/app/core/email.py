@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from email.message import EmailMessage as _MimeMessage
 from typing import Protocol
 
+from app.core.config import env_truthy
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,12 +60,19 @@ class ConsoleEmailSender:
 
 
 class SmtpEmailSender:
-    """Envio real por SMTP, com retries e backoff. Não loga o corpo/código."""
+    """Envio real por SMTP, com retries e backoff. Não loga o corpo/código.
+
+    Suporta os dois modos comuns de provedor: ``STARTTLS`` (porta 587, upgrade da conexão
+    em claro) e ``SSL`` implícito/SMTPS (porta 465, TLS desde o handshake). Escolher errado
+    trava o envio — e como o disparo do OTP é best-effort, o participante ficaria sem código
+    e sem sinal; por isso o modo é explícito (ver ``_build_from_env``)."""
     def __init__(self, host: str, port: int, user: str | None, password: str | None,
-                 sender: str, *, use_tls: bool = True, retries: int = 3) -> None:
+                 sender: str, *, use_tls: bool = True, use_ssl: bool = False,
+                 retries: int = 3) -> None:
         self._host, self._port = host, port
         self._user, self._password = user, password
-        self._sender, self._use_tls, self._retries = sender, use_tls, max(retries, 1)
+        self._sender, self._use_tls, self._use_ssl = sender, use_tls, use_ssl
+        self._retries = max(retries, 1)
 
     def send(self, msg: EmailMessage) -> None:
         last: Exception | None = None
@@ -85,12 +94,20 @@ class SmtpEmailSender:
         mime["To"] = msg.to
         mime["Subject"] = msg.subject
         mime.set_content(msg.body)
-        with smtplib.SMTP(self._host, self._port, timeout=10) as s:
-            if self._use_tls:
-                s.starttls()
-            if self._user:
-                s.login(self._user, self._password or "")
-            s.send_message(mime)
+        if self._use_ssl:
+            # SMTPS: TLS desde o handshake (não fazer STARTTLS por cima).
+            with smtplib.SMTP_SSL(self._host, self._port, timeout=10) as s:
+                self._deliver(s, mime)
+        else:
+            with smtplib.SMTP(self._host, self._port, timeout=10) as s:
+                if self._use_tls:
+                    s.starttls()
+                self._deliver(s, mime)
+
+    def _deliver(self, s: smtplib.SMTP, mime: _MimeMessage) -> None:
+        if self._user:
+            s.login(self._user, self._password or "")
+        s.send_message(mime)
 
 
 _sender: EmailSender | None = None
@@ -99,10 +116,15 @@ _sender: EmailSender | None = None
 def _build_from_env() -> EmailSender:
     host = os.getenv("SMTP_HOST")
     if host:
+        port = int(os.getenv("SMTP_PORT", "587"))
+        # SSL implícito (SMTPS) se pedido explicitamente OU pela porta canônica 465;
+        # senão, STARTTLS (587). Não misturar os dois.
+        use_ssl = env_truthy(os.getenv("SMTP_USE_SSL")) or port == 465
         return SmtpEmailSender(
-            host, int(os.getenv("SMTP_PORT", "587")),
+            host, port,
             os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"),
             os.getenv("SMTP_FROM", "no-reply@sereno.example"),
+            use_tls=not use_ssl, use_ssl=use_ssl,
         )
     if os.getenv("EMAIL_DEV_CONSOLE"):
         return ConsoleEmailSender()
