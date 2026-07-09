@@ -17,7 +17,8 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.security import require, current_participant
-from app.modules.recommender.service import create_recommendation
+from app.core.problem import ProblemException
+from app.modules.recommender.service import create_recommendation, get_owned_recommendation
 
 router = APIRouter(prefix="/recommendations", tags=["recommender"])
 
@@ -26,6 +27,10 @@ class RecommendationRequest(BaseModel):
     goal: Literal["sleep", "anxiety"]
     sleep_issue: Optional[Literal["onset", "maintenance"]] = None
     time_of_day: Literal["day", "evening", "night"] = "evening"
+
+
+class AcceptRequest(BaseModel):
+    accepted: bool
 
 
 @router.post("", status_code=201)
@@ -53,3 +58,24 @@ async def get_recommendation(
         "evidence_note": rec["evidence_note"],
         "disclaimer": rec["disclaimer"],
     }
+
+
+@router.post("/{rec_id}/accept")
+async def accept_recommendation(
+    rec_id: uuid.UUID,
+    body: AcceptRequest,
+    db: Session = Depends(get_db),
+    participant_id: uuid.UUID = Depends(current_participant),
+    _user: dict = Depends(require("recommend:read")),
+):
+    """Registra o aceite/recusa da própria recomendação (fecha o loop p/ coerência)."""
+    row = get_owned_recommendation(db, participant_id, rec_id)
+    if row is None:                                    # inexistente ou de outro participante (IDOR)
+        raise ProblemException(404, "Recomendação não encontrada",
+                               "Nenhuma recomendação sua com esse identificador.")
+    if row.accepted is not None:
+        raise ProblemException(409, "Aceite já registrado",
+                               "Esta recomendação já teve o aceite/recusa registrado.")
+    row.accepted = body.accepted
+    db.flush()
+    return {"id": str(row.id), "accepted": row.accepted}

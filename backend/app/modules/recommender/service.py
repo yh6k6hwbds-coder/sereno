@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.models import AdverseEvent, Screening, RecommendationLog
-from app.modules.recommender.recommender import recommend, RecommendationInput
+from app.modules.recommender.recommender import recommend, RecommendationInput, coherence_report, LIBRARY
 
 
 def _recent_adverse_severity(db: Session, participant_id: uuid.UUID) -> Optional[str]:
@@ -72,3 +72,35 @@ def create_recommendation(db: Session, participant_id: uuid.UUID, *, goal: str,
     db.add(row)
     db.flush()
     return row, rec
+
+
+def get_owned_recommendation(db: Session, participant_id: uuid.UUID,
+                             rec_id: uuid.UUID) -> Optional[RecommendationLog]:
+    """Recupera uma recomendação SOMENTE se pertencer ao participante (rede anti-IDOR)."""
+    return db.scalar(
+        select(RecommendationLog).where(
+            RecommendationLog.id == rec_id,
+            RecommendationLog.participant_id == participant_id,
+        )
+    )
+
+
+def coherence(db: Session) -> dict:
+    """Relatório de COERÊNCIA (exploratório, CEGO) sobre todo o `recommendation_log`.
+
+    Reúsa `coherence_report` do motor: alinhamento objetivo→banda e taxa de aceitação.
+    As médias de relaxamento dependem de um vínculo recomendação→sessão ainda não modelado,
+    logo saem como null (pendência honesta). Não há braço envolvido — o relatório é cego.
+    """
+    events = []
+    for row in db.scalars(select(RecommendationLog)).all():
+        proto = row.suggested_protocol
+        events.append({
+            "rec": {
+                "action": "recommend" if proto else "no_recommendation",
+                "band": LIBRARY.get(proto, {}).get("band") if proto else None,
+                "input_snapshot": (row.inputs or {}).get("snapshot", {}),
+            },
+            "accepted": row.accepted,
+        })
+    return coherence_report(events)

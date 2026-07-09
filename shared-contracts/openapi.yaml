@@ -116,6 +116,35 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /recommendations/{rec_id}/accept:
+    post:
+      summary: Registrar aceite/recusa da própria recomendação (participante)
+      description: >
+        Fecha o loop do recomendador para o relatório de coerência. Decisão única
+        (409 se já registrada); recomendação de outro participante retorna 404 (anti-IDOR).
+      operationId: acceptRecommendation
+      parameters:
+        - { name: rec_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AcceptRecommendationIn' } } }
+      responses:
+        '200': { description: Registrado, content: { application/json: { schema: { $ref: '#/components/schemas/AcceptRecommendationOut' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /research/recommendation-coherence:
+    get:
+      summary: Coerência do recomendador (exploratório, cego)
+      description: >
+        Relatório CEGO (sem braço) sobre `recommendation_log`: alinhamento objetivo→banda
+        e taxa de aceitação. Médias de relaxamento pendem de vínculo recomendação→sessão.
+      operationId: getRecommendationCoherence
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/RecommendationCoherence' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /participants/me/followup:
     post:
       summary: Enviar avaliação de seguimento (PSQI + GAD-7 + SUS + palpite de cegamento)
@@ -538,6 +567,28 @@ components:
         evidence_note: { type: string }
         disclaimer: { type: string }
       required: [id, action, rule_id, ruleset_version, flag_review]
+    AcceptRecommendationIn:
+      type: object
+      properties: { accepted: { type: boolean } }
+      required: [accepted]
+    AcceptRecommendationOut:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        accepted: { type: boolean }
+      required: [id, accepted]
+    RecommendationCoherence:
+      type: object
+      description: >
+        Relatório exploratório e CEGO (sem braço). `n`=0 quando não há recomendações efetivas.
+        Médias de relaxamento são null até existir vínculo recomendação→sessão.
+      properties:
+        n: { type: integer }
+        goal_alignment_rate: { type: [number, "null"] }
+        acceptance_rate: { type: [number, "null"] }
+        mean_relaxation_accepted: { type: [number, "null"] }
+        mean_relaxation_rejected: { type: [number, "null"] }
+      required: [n]
     DiaryIn:
       type: object
       properties:

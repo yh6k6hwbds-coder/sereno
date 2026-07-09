@@ -10,6 +10,7 @@ from app.core.problem import ProblemException
 from app.modules.audit.service import list_events, record_event
 from app.modules.research.export_service import build_export_csv_from_db, get_job_store
 from app.modules.research.analysis_service import build_report
+from app.modules.recommender.service import coherence as recommendation_coherence
 
 router = APIRouter(prefix="/research", tags=["research"])
 
@@ -30,6 +31,13 @@ async def get_analysis(db: Session = Depends(get_db),
                        _user: dict = Depends(require("research:read"))):
     """Relatório reprodutível e CEGO (por braço A/B). Exploratório; não decide eficácia."""
     return build_report(db)
+
+
+@router.get("/recommendation-coherence")
+async def get_recommendation_coherence(db: Session = Depends(get_db),
+                                       _user: dict = Depends(require("research:read"))):
+    """Coerência do recomendador (exploratório, CEGO): alinhamento objetivo→banda e aceitação."""
+    return recommendation_coherence(db)
 
 
 def _serialize_event(e) -> dict:

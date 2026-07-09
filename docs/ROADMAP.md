@@ -296,26 +296,28 @@ modularidade para isso).
 > devolve **handle neutro** da biblioteca validada e registra tudo em `recommendation_log`
 > (`feature_vector` p/ ML futuro; `no_recommendation` gravado com protocolo NULL — migração
 > `b2c3d4e5f6a7`). 8 testes (objetivo→banda, guardrails, não-vazamento, negações); suíte 169→177,
-> cobertura 87,2%. **Pendências:** captura de aceite/coerência; janela temporal do EA; guardrail de
-> tolerabilidade ao vivo (última pós-sessão).
+> cobertura 87,2%. **Pendências:** ~~captura de aceite/coerência~~ (feita, ADR-069: aceite em
+> `POST /recommendations/{id}/accept` + coerência cega em `GET /research/recommendation-coherence`;
+> suíte 177→185); janela temporal do EA; guardrail de tolerabilidade ao vivo (última pós-sessão);
+> vínculo recomendação→sessão para as médias de relaxamento da coerência.
 - Ativar o `recommender` (Etapa 6): seleciona **handle neutro/banda** dentro da biblioteca
   validada, registra `feature_vector` em `recommendation_log`. **ML nunca decide ao vivo.**
 - **Inegociável:** só regras decidem; ML apenas registra para o futuro. **ADR-068.**
 
 ### E2 — Ingestão de vestíveis (adapter) · P2 · `TODO`
-- Porta de entrada para FC/sono de wearables via **adaptador** desacoplado. **ADR-069.**
+- Porta de entrada para FC/sono de wearables via **adaptador** desacoplado. **ADR-070.**
 
 ### E3 — Cloud storage para áudio · P2 · `TODO`
 - Migrar a materialização/entrega de áudio (A1) para armazenamento em nuvem (URLs
-  assinadas, sem vazar condição). **ADR-070.**
+  assinadas, sem vazar condição). **ADR-071.**
 
 ### E4 — Pipeline de features para ML (offline) · P2 · `TODO`
 - Consolidar `recommendation_log`/telemetria para pesquisa de modelos — **sempre offline**,
-  sem decisão clínica ao vivo. **ADR-071.**
+  sem decisão clínica ao vivo. **ADR-072.**
 
 ### E5 — i18n / acessibilidade avançada · P2 · `TODO`
 - Internacionalização e auditoria de acessibilidade (contraste, leitor de tela, movimento
-  reduzido — já respeitado na visualização). **ADR-072.**
+  reduzido — já respeitado na visualização). **ADR-078.**
 
 ---
 
