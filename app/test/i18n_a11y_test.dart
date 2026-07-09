@@ -8,9 +8,11 @@ import 'package:sereno/l10n/app_localizations.dart';
 import 'package:sereno/core/api_client.dart';
 import 'package:sereno/services/session_store.dart';
 import 'package:sereno/services/participant_repository.dart';
+import 'package:sereno/services/outcomes_repository.dart';
 import 'package:sereno/features/home/home_screen.dart';
 import 'package:sereno/features/auth/otp_screen.dart';
 import 'package:sereno/features/consent/consent_screen.dart';
+import 'package:sereno/features/session/post_session_survey_screen.dart';
 import 'package:sereno/shared/breathing_wave.dart';
 
 /// E5/ADR-070 — i18n (pt-BR/en) + acessibilidade (semântica de botão, movimento reduzido).
@@ -37,6 +39,9 @@ class _Store extends SessionStore {
 
 ParticipantRepository _prepo() => ParticipantRepository(
     ApiClient(_Store(), client: MockClient((r) async => http.Response('{}', 200))), _Store());
+
+OutcomesRepository _orepo() => OutcomesRepository(
+    ApiClient(_Store(), client: MockClient((r) async => http.Response('{}', 201))));
 
 void main() {
   testWidgets('Home em pt-BR (idioma padrão do piloto)', (t) async {
@@ -82,6 +87,15 @@ void main() {
     expect(find.text('Consent Form'), findsOneWidget);
     expect(find.text('Agree and continue'), findsOneWidget);
     expect(find.textContaining('binaural beats'), findsOneWidget); // resumo traduzido
+  });
+
+  testWidgets('Pós-sessão em inglês', (t) async {
+    await t.pumpWidget(_app(
+        PostSessionSurveyScreen(repo: _orepo(), sessionId: 's1'), locale: const Locale('en')));
+    await t.pumpAndSettle();
+    expect(find.text('How was the session'), findsOneWidget);
+    expect(find.text('Would you repeat this session?'), findsOneWidget);
+    expect(find.text('Send'), findsOneWidget);
   });
 
   testWidgets('BreathingWave respeita movimento reduzido (assenta, sem repetir)', (t) async {

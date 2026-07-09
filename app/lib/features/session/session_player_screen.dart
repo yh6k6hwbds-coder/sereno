@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/session_repository.dart';
 import '../../services/outcomes_repository.dart';
 import '../../services/audio_player_port.dart';
@@ -60,7 +61,7 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
   bool _paused = false;
   bool _finishing = false;
   bool _loading = true; // baixando/carregando o áudio
-  String? _error;
+  bool _error = false;  // falha ao baixar/carregar o áudio (texto vem do locale)
 
   @override
   void initState() {
@@ -86,7 +87,7 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Não foi possível carregar o áudio. Verifique a conexão e tente novamente.';
+        _error = true;
       });
     }
   }
@@ -123,14 +124,13 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
       interruptions: _interruptions,
     ));
     if (!mounted) return;
+    final t = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) => AlertDialog(
-        title: const Text('Sessão concluída'),
-        content: Text(auto
-            ? 'Sessão finalizada. Como foi para você?'
-            : 'Sessão encerrada. Registramos o tempo efetivo.'),
+        title: Text(t.playerDoneTitle),
+        content: Text(auto ? t.playerDoneAuto : t.playerDoneManual),
         actions: [
           TextButton(
             onPressed: () {
@@ -142,11 +142,11 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
                       repo: OutcomesRepository(widget.repo.api),
                       sessionId: widget.session.sessionId)));
             },
-            child: const Text('Responder rápido'),
+            child: Text(t.playerAnswerQuick),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogCtx)..pop()..pop(),
-            child: const Text('Voltar ao início'),
+            child: Text(t.playerBackHome),
           ),
         ],
       ),
@@ -172,26 +172,31 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
-            child: _error != null ? _errorView() : _playerView(),
+            child: _error ? _errorView() : _playerView(),
           ),
         ),
       );
 
-  Widget _errorView() => Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.wifi_off_rounded, color: SerenoColors.alert, size: 56),
-          const SizedBox(height: 16),
-          Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Voltar'),
-          ),
-        ],
-      );
+  Widget _errorView() {
+    final t = AppLocalizations.of(context);
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.wifi_off_rounded, color: SerenoColors.alert, size: 56),
+        const SizedBox(height: 16),
+        Text(t.playerLoadError, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(t.back),
+        ),
+      ],
+    );
+  }
 
-  Widget _playerView() => Column(children: [
+  Widget _playerView() {
+    final t = AppLocalizations.of(context);
+    return Column(children: [
         const Spacer(),
         // Visualização NÃO reativa ao áudio (só tempo) — não recebe sinal de áudio.
         const BreathingWave(height: 180),
@@ -199,13 +204,13 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
         if (_loading) ...[
           const CircularProgressIndicator(color: SerenoColors.tealLight),
           const SizedBox(height: 16),
-          const Text('Preparando o áudio…', style: TextStyle(color: SerenoColors.tealLight)),
+          Text(t.playerPreparing, style: const TextStyle(color: SerenoColors.tealLight)),
         ] else ...[
           Text(_clock,
               style: const TextStyle(
                   fontFamily: 'IBM Plex Mono', fontSize: 52, color: Colors.white, letterSpacing: 2)),
           const SizedBox(height: 8),
-          Text(_paused ? 'Pausado' : 'Em sessão',
+          Text(_paused ? t.playerPaused : t.playerInSession,
               style: const TextStyle(color: SerenoColors.tealLight, letterSpacing: 1)),
         ],
         const Spacer(),
@@ -227,7 +232,8 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
           ),
         ]),
         const SizedBox(height: 14),
-        const Text('Feche os olhos e respire com calma.',
-            style: TextStyle(color: Color(0xFF9DB2BD), fontSize: 13)),
+        Text(t.playerBreathe,
+            style: const TextStyle(color: Color(0xFF9DB2BD), fontSize: 13)),
       ]);
+  }
 }

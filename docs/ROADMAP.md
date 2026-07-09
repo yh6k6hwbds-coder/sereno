@@ -324,9 +324,10 @@ modularidade para isso).
 > rotulada; `BreathingWave` passa a respeitar **movimento reduzido** (`disableAnimations`) — o
 > ROADMAP supunha, erradamente, que já respeitava. 4 widget tests (pt/en, semântica, movimento
 > reduzido).
-> **Migração em andamento (2026-07-09):** OTP, consentimento e preparação de sessão (fones) já
-> migrados (+2 widget tests pt/en). **Pendências:** telas de sessão (player/pós-sessão) e B2–B6;
-> extrair p/ ARB/`intl` se internacionalizar de fato; auditoria de contraste (AA) + leitor de tela.
+> **Migração em andamento (2026-07-09):** OTP, consentimento, preparação de sessão, **player e
+> pós-sessão** já migrados (+3 widget tests pt/en). **Pendências:** telas de registro **B2–B6**
+> (linha de base, diário, seguimento, evento adverso); extrair p/ ARB/`intl` se internacionalizar
+> de fato; auditoria de contraste (AA) + leitor de tela.
 - Internacionalização e auditoria de acessibilidade (contraste, leitor de tela, movimento
   reduzido). **ADR-070.**
 
