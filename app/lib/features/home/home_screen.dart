@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/participant_repository.dart';
 import '../../services/session_repository.dart';
 import '../../services/outcomes_repository.dart';
@@ -48,57 +49,65 @@ class HomeScreen extends StatelessWidget {
       );
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          actions: [
-            IconButton(
-              tooltip: 'Sair',
-              icon: const Icon(Icons.logout_rounded),
-              onPressed: () => _logout(context),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            children: [
-              const Text('Boa noite,', style: TextStyle(color: SerenoColors.muted)),
-              Text('tudo pronto', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 20),
-              InkWell(
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: t.logout,
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () => _logout(context),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          children: [
+            Text(t.greeting, style: const TextStyle(color: SerenoColors.muted)),
+            Text(t.ready, style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 20),
+            // CTA primário: semântica explícita de botão rotulado (acessibilidade).
+            Semantics(
+              button: true,
+              label: t.startSession,
+              child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 onTap: () => _open(context, HeadphoneCheckScreen(repo: _sessionRepo())),
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(color: SerenoColors.teal, borderRadius: BorderRadius.circular(16)),
-                  child: const Row(children: [
-                    Icon(Icons.play_circle_fill, color: Colors.white, size: 40),
-                    SizedBox(width: 14),
+                  child: Row(children: [
+                    const Icon(Icons.play_circle_fill, color: Colors.white, size: 40),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Iniciar sessão',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
-                        Text('~20 min · use fones', style: TextStyle(color: Color(0xFFDCEFF2))),
+                        Text(t.startSession,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                        Text(t.sessionMeta, style: const TextStyle(color: Color(0xFFDCEFF2))),
                       ]),
                     ),
-                    Icon(Icons.chevron_right, color: Colors.white),
+                    const Icon(Icons.chevron_right, color: Colors.white),
                   ]),
                 ),
               ),
-              const SizedBox(height: 24),
-              const Text('Registros', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-              const SizedBox(height: 10),
-              _navTile(context, Icons.assignment_outlined, 'Linha de base', BaselineScreen(repo: _outcomesRepo())),
-              _navTile(context, Icons.nightlight_outlined, 'Diário de sono', SleepDiaryScreen(repo: _outcomesRepo())),
-              _navTile(context, Icons.event_available_outlined, 'Seguimento', FollowupScreen(repo: _outcomesRepo())),
-              _navTile(context, Icons.report_gmailerrorred_outlined, 'Relatar um problema',
-                  AdverseEventScreen(repo: _outcomesRepo())),
-              const SizedBox(height: 16),
-              const DisclaimerBanner(),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+            Text(t.records, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            const SizedBox(height: 10),
+            _navTile(context, Icons.assignment_outlined, t.baseline, BaselineScreen(repo: _outcomesRepo())),
+            _navTile(context, Icons.nightlight_outlined, t.sleepDiary, SleepDiaryScreen(repo: _outcomesRepo())),
+            _navTile(context, Icons.event_available_outlined, t.followup, FollowupScreen(repo: _outcomesRepo())),
+            _navTile(context, Icons.report_gmailerrorred_outlined, t.reportProblem,
+                AdverseEventScreen(repo: _outcomesRepo())),
+            const SizedBox(height: 16),
+            const DisclaimerBanner(),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }

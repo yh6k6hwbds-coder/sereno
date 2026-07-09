@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/api_client.dart';
 import 'core/theme.dart';
+import 'l10n/app_localizations.dart';
 import 'services/participant_repository.dart';
 import 'services/session_store.dart';
 import 'features/auth/otp_screen.dart';
@@ -20,6 +22,13 @@ class SerenoApp extends StatelessWidget {
       title: 'Sereno',
       debugShowCheckedModeBanner: false,
       theme: buildSerenoTheme(),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: AuthGate(store: store, repo: repo),
     );
   }

@@ -308,19 +308,25 @@ modularidade para isso).
 - **Inegociável:** só regras decidem; ML apenas registra para o futuro. **ADR-068.**
 
 ### E2 — Ingestão de vestíveis (adapter) · P2 · `TODO`
-- Porta de entrada para FC/sono de wearables via **adaptador** desacoplado. **ADR-070.**
+- Porta de entrada para FC/sono de wearables via **adaptador** desacoplado. **(ADR na criação.)**
 
 ### E3 — Cloud storage para áudio · P2 · `TODO`
 - Migrar a materialização/entrega de áudio (A1) para armazenamento em nuvem (URLs
-  assinadas, sem vazar condição). **ADR-071.**
+  assinadas, sem vazar condição). **(ADR na criação.)**
 
 ### E4 — Pipeline de features para ML (offline) · P2 · `TODO`
 - Consolidar `recommendation_log`/telemetria para pesquisa de modelos — **sempre offline**,
-  sem decisão clínica ao vivo. **ADR-072.**
+  sem decisão clínica ao vivo. **(ADR na criação.)**
 
-### E5 — i18n / acessibilidade avançada · P2 · `TODO`
+### E5 — i18n / acessibilidade avançada · P2 · `WIP`
+> **Fundação concluída (2026-07-09, ADR-070):** delegate de i18n MANUAL (pt-BR padrão + en, sem
+> code-gen), ligado ao `MaterialApp`; Home + disclaimer bilíngues; CTA com semântica de botão
+> rotulada; `BreathingWave` passa a respeitar **movimento reduzido** (`disableAnimations`) — o
+> ROADMAP supunha, erradamente, que já respeitava. 4 widget tests (pt/en, semântica, movimento
+> reduzido). **Pendências:** migrar as telas restantes (OTP, consentimento, sessão, B2–B6);
+> extrair p/ ARB/`intl` se internacionalizar de fato; auditoria de contraste (AA) + leitor de tela.
 - Internacionalização e auditoria de acessibilidade (contraste, leitor de tela, movimento
-  reduzido — já respeitado na visualização). **ADR-078.**
+  reduzido). **ADR-070.**
 
 ---
 

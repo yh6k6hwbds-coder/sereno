@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import '../l10n/app_localizations.dart';
 
 /// Aviso persistente de escopo (ferramenta complementar). Presente em todo o fluxo.
 class DisclaimerBanner extends StatelessWidget {
@@ -18,8 +19,8 @@ class DisclaimerBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Ferramenta complementar. Não substitui avaliação ou tratamento profissional.',
-              style: TextStyle(fontSize: 12, color: SerenoColors.muted, height: 1.3),
+              AppLocalizations.of(context).disclaimer,
+              style: const TextStyle(fontSize: 12, color: SerenoColors.muted, height: 1.3),
             ),
           ),
         ]),

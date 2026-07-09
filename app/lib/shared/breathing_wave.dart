@@ -15,7 +15,21 @@ class BreathingWave extends StatefulWidget {
 
 class _BreathingWaveState extends State<BreathingWave> with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat();
+      AnimationController(vsync: this, duration: const Duration(seconds: 8));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Acessibilidade: respeita "movimento reduzido" do SO. Com a animação desligada,
+    // mostra um quadro estático (não pisca, não repete) — e continua NÃO reativa ao áudio.
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion) {
+      if (_c.isAnimating) _c.stop();
+      _c.value = 0.25; // quadro representativo, fixo
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
 
   @override
   void dispose() {

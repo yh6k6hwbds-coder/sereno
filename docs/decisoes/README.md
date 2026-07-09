@@ -74,6 +74,7 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 067 | Observabilidade (logs JSON sem PII/braço) + CI endurecido (cobertura ≥80%, Flutter bloqueante) **[novo]** |
 | 068 | Recomendador por regras ao vivo: `POST /recommendations` (handle neutro), sinais de segurança no servidor, registro + `feature_vector` **[novo]** |
 | 069 | Fecho do loop do recomendador: aceite (`POST /recommendations/{id}/accept`) + coerência cega (`GET /research/recommendation-coherence`) **[novo]** |
+| 070 | i18n (delegate manual pt-BR/en) + acessibilidade (semântica de botão, movimento reduzido) — fundação na Home **[novo]** |
 | 073 | Telas de captura de desfechos (B2–B6): componentes Likert/PSQI reutilizáveis + OutcomesRepository **[novo]** |
 | 074 | MFA obrigatório para staff: login sem 2º fator dá só token de cadastro restrito (sem escopo) **[novo]** |
 | 075 | Desbloqueio em duas pessoas: pedido (não revela) → aprovação por 2º admin distinto (revela) **[novo]** |
