@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 import 'package:sereno/l10n/app_localizations.dart';
+import 'package:sereno/core/api_client.dart';
+import 'package:sereno/services/session_store.dart';
+import 'package:sereno/services/participant_repository.dart';
 import 'package:sereno/features/home/home_screen.dart';
+import 'package:sereno/features/auth/otp_screen.dart';
+import 'package:sereno/features/consent/consent_screen.dart';
 import 'package:sereno/shared/breathing_wave.dart';
 
 /// E5/ADR-070 — i18n (pt-BR/en) + acessibilidade (semântica de botão, movimento reduzido).
@@ -19,6 +26,17 @@ Widget _app(Widget home, {Locale? locale}) => MaterialApp(
       supportedLocales: AppLocalizations.supportedLocales,
       home: home,
     );
+
+/// Store em memória (o flutter_secure_storage usa platform channels) + repo com MockClient.
+class _Store extends SessionStore {
+  @override
+  Future<String?> accessToken() async => 'tok';
+  @override
+  Future<String?> refreshToken() async => null;
+}
+
+ParticipantRepository _prepo() => ParticipantRepository(
+    ApiClient(_Store(), client: MockClient((r) async => http.Response('{}', 200))), _Store());
 
 void main() {
   testWidgets('Home em pt-BR (idioma padrão do piloto)', (t) async {
@@ -44,6 +62,26 @@ void main() {
     // basta que a semântica do botão CONTENHA o rótulo do CTA.
     expect(find.bySemanticsLabel(RegExp('Iniciar sessão')), findsAtLeastNWidgets(1));
     handle.dispose();
+  });
+
+  testWidgets('OTP: pt-BR por padrão, en quando locale=en', (t) async {
+    await t.pumpWidget(_app(OtpScreen(repo: _prepo()), locale: const Locale('pt')));
+    await t.pumpAndSettle();
+    expect(find.text('Enviar código'), findsOneWidget);
+
+    await t.pumpWidget(_app(OtpScreen(repo: _prepo()), locale: const Locale('en')));
+    await t.pumpAndSettle();
+    expect(find.text('Send code'), findsOneWidget);
+    expect(find.text('Study code'), findsOneWidget);
+    expect(find.text('Enviar código'), findsNothing);
+  });
+
+  testWidgets('Consentimento em inglês', (t) async {
+    await t.pumpWidget(_app(ConsentScreen(repo: _prepo()), locale: const Locale('en')));
+    await t.pumpAndSettle();
+    expect(find.text('Consent Form'), findsOneWidget);
+    expect(find.text('Agree and continue'), findsOneWidget);
+    expect(find.textContaining('binaural beats'), findsOneWidget); // resumo traduzido
   });
 
   testWidgets('BreathingWave respeita movimento reduzido (assenta, sem repetir)', (t) async {

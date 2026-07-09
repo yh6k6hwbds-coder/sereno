@@ -323,7 +323,9 @@ modularidade para isso).
 > code-gen), ligado ao `MaterialApp`; Home + disclaimer bilíngues; CTA com semântica de botão
 > rotulada; `BreathingWave` passa a respeitar **movimento reduzido** (`disableAnimations`) — o
 > ROADMAP supunha, erradamente, que já respeitava. 4 widget tests (pt/en, semântica, movimento
-> reduzido). **Pendências:** migrar as telas restantes (OTP, consentimento, sessão, B2–B6);
+> reduzido).
+> **Migração em andamento (2026-07-09):** OTP, consentimento e preparação de sessão (fones) já
+> migrados (+2 widget tests pt/en). **Pendências:** telas de sessão (player/pós-sessão) e B2–B6;
 > extrair p/ ARB/`intl` se internacionalizar de fato; auditoria de contraste (AA) + leitor de tela.
 - Internacionalização e auditoria de acessibilidade (contraste, leitor de tela, movimento
   reduzido). **ADR-070.**

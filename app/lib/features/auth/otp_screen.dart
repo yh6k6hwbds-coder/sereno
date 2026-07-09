@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/participant_repository.dart';
 import '../../shared/disclaimer_banner.dart';
 import '../../shared/wave_mark.dart';
@@ -30,7 +31,7 @@ class _OtpScreenState extends State<OtpScreen> {
     } on ApiException catch (e) {
       _snack(e.toString());
     } catch (_) {
-      _snack('Falha de conexão. Tente novamente.');
+      _snack(AppLocalizations.of(context).connectionError);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -42,7 +43,7 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _requestOtp() => _run(() async {
         await widget.repo.requestOtp(_studyCode.text.trim());
         setState(() => _step = _Step.verify);
-        _snack('Se o código de estudo existir, enviamos um código ao seu e-mail.');
+        _snack(AppLocalizations.of(context).otpSent);
       });
 
   Future<void> _verify() => _run(() async {
@@ -54,6 +55,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final isRequest = _step == _Step.request;
     return Scaffold(
       body: SafeArea(
@@ -65,9 +67,7 @@ class _OtpScreenState extends State<OtpScreen> {
             Text('Sereno', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 8),
             Text(
-              isRequest
-                  ? 'Entre com o seu código de estudo para receber um código de acesso.'
-                  : 'Digite o código de 6 dígitos enviado ao seu e-mail.',
+              isRequest ? t.otpRequestPrompt : t.otpVerifyPrompt,
               style: const TextStyle(color: SerenoColors.muted, height: 1.4),
             ),
             const SizedBox(height: 24),
@@ -75,7 +75,7 @@ class _OtpScreenState extends State<OtpScreen> {
               TextField(
                 controller: _studyCode,
                 textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: 'Código de estudo'),
+                decoration: InputDecoration(labelText: t.otpStudyCodeLabel),
               )
             else
               TextField(
@@ -84,19 +84,19 @@ class _OtpScreenState extends State<OtpScreen> {
                 maxLength: 6,
                 style: const TextStyle(fontFamily: 'IBM Plex Mono', fontSize: 22, letterSpacing: 8),
                 textAlign: TextAlign.center,
-                decoration: const InputDecoration(labelText: 'Código', counterText: ''),
+                decoration: InputDecoration(labelText: t.otpCodeLabel, counterText: ''),
               ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _loading ? null : (isRequest ? _requestOtp : _verify),
               child: _loading
                   ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(isRequest ? 'Enviar código' : 'Entrar'),
+                  : Text(isRequest ? t.otpSendCode : t.otpEnter),
             ),
             if (!isRequest)
               TextButton(
                 onPressed: _loading ? null : () => setState(() => _step = _Step.request),
-                child: const Text('Voltar'),
+                child: Text(t.otpBack),
               ),
             const Spacer(),
             const DisclaimerBanner(),
