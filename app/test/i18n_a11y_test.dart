@@ -40,7 +40,9 @@ void main() {
     final handle = t.ensureSemantics();
     await t.pumpWidget(_app(const HomeScreen(), locale: const Locale('pt')));
     await t.pumpAndSettle();
-    expect(find.bySemanticsLabel('Iniciar sessão'), findsAtLeastNWidgets(1));
+    // RegExp: o label do botão combina o CTA com o subtítulo ("~20 min · use fones");
+    // basta que a semântica do botão CONTENHA o rótulo do CTA.
+    expect(find.bySemanticsLabel(RegExp('Iniciar sessão')), findsAtLeastNWidgets(1));
     handle.dispose();
   });
 
