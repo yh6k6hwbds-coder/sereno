@@ -42,9 +42,18 @@ não podia ser calculado sobre dados reais.
   rec→sessão existir — é uma lacuna **explícita**, não um erro silencioso. A taxa de aceitação conta
   como "aceito" apenas `accepted = true` (recusa e indecisão contam como não-aceito), coerente com
   "taxa de aceitação explícita".
-- **Pendências:** vínculo recomendação→sessão para habilitar as médias de relaxamento; janela
-  temporal do EA (herdada do ADR-068); guardrail de tolerabilidade ao vivo a partir da última
-  pós-sessão.
+- **Pendências:** ~~vínculo recomendação→sessão para habilitar as médias de relaxamento~~ (feito —
+  ver Complemento); janela temporal do EA (herdada do ADR-068); guardrail de tolerabilidade ao vivo
+  a partir da última pós-sessão.
+
+## Complemento (2026-07-09) — vínculo recomendação→sessão
+Fecha a lacuna acima **sem migração** (a coluna `recommendation_log.session_id` já existia). `POST
+/v1/sessions` passa a aceitar `recommendation_id` opcional; ao iniciar a sessão, `link_session`
+vincula a recomendação **best-effort** — só se for do participante e ainda não vinculada; um id
+inválido é ignorado (nunca falha a sessão, nunca vincula à sessão alheia). O relatório de coerência
+passa a computar as **médias de relaxamento** (aceitas vs recusadas) via `PostSessionSurvey.relaxation`
+da sessão vinculada. +2 testes (média de relaxamento pelo vínculo; vínculo alheio ignorado); suíte
+185 → **187**, cobertura 87,9%. A pós-sessão continua opcional — sem vínculo, a média sai `null`.
 
 ## Conformidade
 CI verde exige `tests/test_recommender_loop.py`: aceite grava a decisão (true/false); segundo aceite

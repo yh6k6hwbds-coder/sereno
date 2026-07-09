@@ -689,6 +689,10 @@ components:
         protocol_handle: { type: string, description: "handle neutro — não revela o braço" }
         headphones_ok: { type: boolean }
         device_info: { type: object, additionalProperties: true }
+        recommendation_id:
+          type: [string, "null"]
+          format: uuid
+          description: "recomendação que originou a sessão (opcional; vincula p/ o relatório de coerência)"
       required: [protocol_handle, headphones_ok]
     SessionOut:
       type: object

@@ -298,8 +298,9 @@ modularidade para isso).
 > `b2c3d4e5f6a7`). 8 testes (objetivo→banda, guardrails, não-vazamento, negações); suíte 169→177,
 > cobertura 87,2%. **Pendências:** ~~captura de aceite/coerência~~ (feita, ADR-069: aceite em
 > `POST /recommendations/{id}/accept` + coerência cega em `GET /research/recommendation-coherence`;
-> suíte 177→185); janela temporal do EA; guardrail de tolerabilidade ao vivo (última pós-sessão);
-> vínculo recomendação→sessão para as médias de relaxamento da coerência.
+> suíte 177→185); ~~vínculo recomendação→sessão para as médias de relaxamento da coerência~~ (feito,
+> ADR-069 Complemento: `recommendation_id` opcional no start de sessão + `PostSessionSurvey.relaxation`;
+> suíte 185→187); janela temporal do EA; guardrail de tolerabilidade ao vivo (última pós-sessão).
 - Ativar o `recommender` (Etapa 6): seleciona **handle neutro/banda** dentro da biblioteca
   validada, registra `feature_vector` em `recommendation_log`. **ML nunca decide ao vivo.**
 - **Inegociável:** só regras decidem; ML apenas registra para o futuro. **ADR-068.**

@@ -22,6 +22,7 @@ from app.core.problem import ProblemException
 from app.core.models import Session as SessionModel, PostSessionSurvey, AudioProtocol
 from app.modules.allocation.service import resolve_arm
 from app.modules.sessions.service import condition_for_arm, resolve_protocol, materialize_audio
+from app.modules.recommender.service import link_session
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -30,6 +31,8 @@ class SessionStartIn(BaseModel):
     protocol_handle: str = Field(..., description="banda/handle NEUTRO quanto ao braço (ex.: 'alpha')")
     headphones_ok: bool
     device_info: dict | None = None
+    recommendation_id: uuid.UUID | None = Field(
+        default=None, description="recomendação que originou esta sessão (opcional; p/ coerência)")
 
 
 class SessionStartOut(BaseModel):
@@ -80,6 +83,9 @@ async def start_session(body: SessionStartIn, db: DbSession = Depends(get_db),
     )
     db.add(s)
     db.flush()
+    # Vínculo best-effort com a recomendação que originou a sessão (p/ o relatório de coerência).
+    if body.recommendation_id is not None:
+        link_session(db, participant_id, body.recommendation_id, s.id)
     # Resposta NEUTRA: handle da banda (igual nos dois braços) + hash opaco.
     return SessionStartOut(session_id=s.id, protocol_handle=body.protocol_handle,
                            content_hash=proto.content_hash, started_at=s.started_at)

@@ -13,7 +13,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.models import AdverseEvent, Screening, RecommendationLog
+from app.core.models import AdverseEvent, Screening, RecommendationLog, PostSessionSurvey
 from app.modules.recommender.recommender import recommend, RecommendationInput, coherence_report, LIBRARY
 
 
@@ -85,22 +85,57 @@ def get_owned_recommendation(db: Session, participant_id: uuid.UUID,
     )
 
 
+def link_session(db: Session, participant_id: uuid.UUID, rec_id: uuid.UUID,
+                 session_id: uuid.UUID) -> bool:
+    """Vincula (best-effort) a recomendação à sessão que a seguiu, p/ a coerência.
+
+    Só vincula se a recomendação for do participante e ainda não estiver vinculada — nunca
+    falha o fluxo de sessão (um id inválido é simplesmente ignorado). Devolve se vinculou.
+    """
+    row = db.scalar(
+        select(RecommendationLog).where(
+            RecommendationLog.id == rec_id,
+            RecommendationLog.participant_id == participant_id,
+            RecommendationLog.session_id.is_(None),
+        )
+    )
+    if row is None:
+        return False
+    row.session_id = session_id
+    db.flush()
+    return True
+
+
 def coherence(db: Session) -> dict:
     """Relatório de COERÊNCIA (exploratório, CEGO) sobre todo o `recommendation_log`.
 
-    Reúsa `coherence_report` do motor: alinhamento objetivo→banda e taxa de aceitação.
-    As médias de relaxamento dependem de um vínculo recomendação→sessão ainda não modelado,
-    logo saem como null (pendência honesta). Não há braço envolvido — o relatório é cego.
+    Reúsa `coherence_report` do motor: alinhamento objetivo→banda, taxa de aceitação e, quando
+    há vínculo recomendação→sessão, a média de **relaxamento** pós-sessão (aceitas vs recusadas).
+    Não há braço envolvido — o relatório é cego.
     """
+    rows = db.scalars(select(RecommendationLog)).all()
+    # Relaxamento pós-sessão (0–4) por sessão vinculada — para as médias exploratórias.
+    linked = [r.session_id for r in rows if r.session_id is not None]
+    relax: dict = {}
+    if linked:
+        relax = {
+            sid: rlx for sid, rlx in db.execute(
+                select(PostSessionSurvey.session_id, PostSessionSurvey.relaxation)
+                .where(PostSessionSurvey.session_id.in_(linked))
+            ).all()
+        }
     events = []
-    for row in db.scalars(select(RecommendationLog)).all():
+    for row in rows:
         proto = row.suggested_protocol
-        events.append({
+        ev = {
             "rec": {
                 "action": "recommend" if proto else "no_recommendation",
                 "band": LIBRARY.get(proto, {}).get("band") if proto else None,
                 "input_snapshot": (row.inputs or {}).get("snapshot", {}),
             },
             "accepted": row.accepted,
-        })
+        }
+        if row.session_id in relax and relax[row.session_id] is not None:
+            ev["reported_relaxation"] = relax[row.session_id]
+        events.append(ev)
     return coherence_report(events)
