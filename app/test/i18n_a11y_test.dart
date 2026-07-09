@@ -93,9 +93,9 @@ void main() {
     await t.pumpWidget(_app(
         PostSessionSurveyScreen(repo: _orepo(), sessionId: 's1'), locale: const Locale('en')));
     await t.pumpAndSettle();
-    expect(find.text('How was the session'), findsOneWidget);
-    expect(find.text('Would you repeat this session?'), findsOneWidget);
-    expect(find.text('Send'), findsOneWidget);
+    // Itens do topo (o ListView é lazy: botão/últimos itens ficam abaixo da dobra).
+    expect(find.text('How was the session'), findsOneWidget); // AppBar
+    expect(find.textContaining('How do you feel now'), findsOneWidget); // 1º prompt (en)
   });
 
   testWidgets('BreathingWave respeita movimento reduzido (assenta, sem repetir)', (t) async {
