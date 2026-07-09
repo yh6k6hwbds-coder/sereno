@@ -13,7 +13,12 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
-- **Backend (147 testes verdes):** `problem+json`; banco/migração portáveis (3 migrações);
+> **Marco (2026-07-09): caminho crítico do piloto (Fases A–D) `DONE` e verde.** CI do HEAD
+> (`e2f768e`) com 5/5 jobs verdes (backend, backend-postgres, `app`/Flutter bloqueante, contracts,
+> audio-fft); reprodução local: 169 testes de backend a 85,0% de cobertura, 4 migrações Alembic,
+> bateria FFT aprovada em todos os protocolos. **Só resta a Fase E (expansão pós-piloto, P2)** —
+> travada por escopo no `CLAUDE.md` (não implementar sem decisão explícita do mantenedor).
+- **Backend (169 testes verdes):** `problem+json`; banco/migração portáveis (4 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
   participante (OTP + **entrega por e-mail — D1/ADR-063**); **gestão de staff + MFA enrollment
   (C3/ADR-058)**; consentimento; **triagem/elegibilidade + funil (C2/ADR-057)**; linha de base
@@ -29,7 +34,7 @@
   e visualização não reativa → **pós-sessão (B3) encaixado ao fim da sessão**. Telas B2–B6 ligadas
   à navegação. (Testes Flutter escritos, não executados aqui — sem SDK local; o job `app` do CI,
   **bloqueante** em erros, valida.)
-- **ADRs:** 041–052.
+- **ADRs:** 041–067 e 073–077 (índice em `docs/decisoes/`).
 
 ---
 
@@ -70,13 +75,14 @@ validação por FFT (que já roda no CI) ao que o participante ouve, **sem vazar
 - **Riscos/decisões:** onde materializar o WAV (disco local agora; **cloud storage** é Fase E);
   tamanho do arquivo (streaming/Range); cache no cliente sem persistir em claro.
 
-### A2 — Reprodução real + fila de telemetria offline (Flutter) · P0 · `WIP`
+### A2 — Reprodução real + fila de telemetria offline (Flutter) · P0 · `DONE`
 > **Código completo (2026-07-04, ADR-054):** download com verificação bit-a-bit (sha256==ETag),
 > reprodução via porta `AudioPlayerPort` (just_audio isolado; fonte em memória, sem DSP, sem cache
 > em claro), visualização mantida **não reativa**, e fila de telemetria offline (`TelemetrySender`
-> + `FileTelemetryQueue`) com reenvio. Testes em `app/test/` (widget + unit). **Falta:** rodar
-> `flutter analyze && flutter test` (sem SDK Flutter no ambiente de dev) — validação depende do job
-> `app` do CI, hoje não-bloqueante. Fecha de vez quando a fatia **D5** tornar esse job bloqueante.
+> + `FileTelemetryQueue`) com reenvio. Testes em `app/test/` (widget + unit).
+> **Fechada (2026-07-09):** D5 tornou o job `app` do CI **bloqueante**; o CI do HEAD (`e2f768e`)
+> passou verde com `flutter analyze` + `flutter test` — condição de fechamento satisfeita. Não há
+> SDK Flutter no ambiente de dev; a validação é o job `app` do CI (verde).
 - **Objetivo:** o player toca o WAV baixado (A1) de forma **gapless/bit-exata**; a telemetria
   (duração efetiva, interrupções) é enfileirada e reenviada se a rede cair.
 - **Depende de:** A1.
