@@ -52,10 +52,20 @@ inegociáveis da Etapa 6.
     `__main__` não são exercidos pela API — são utilitários **offline** (não entram no caminho ao vivo).
   - A associação banda↔estado é **convenção** da literatura, não eficácia comprovada — a resposta
     sempre carrega `evidence_note` + `disclaimer` (sem overclaim).
-- **Pendências:** captura de **aceite/coerência** (`accepted` + `POST .../accept`) para alimentar o
-  `coherence_report`; janela temporal do EA; `last_liked`/`last_intensity` a partir da última
-  pós-sessão (habilitaria o guardrail de tolerabilidade ao vivo); consolidação offline do
-  `recommendation_log` (fatia E4).
+- **Pendências:** ~~captura de aceite/coerência~~ (ADR-069); ~~janela temporal do EA~~ e
+  ~~`last_liked`/`last_intensity` da última pós-sessão~~ (feito — ver Complemento); consolidação
+  offline do `recommendation_log` (fatia E4).
+
+## Complemento (2026-07-09) — sinais vivos: janela do EA + tolerabilidade
+Fecha dois refinamentos de segurança, **sem migração nem mudança de contrato** (só derivação no
+servidor, em `build_input`):
+1. **Janela do evento adverso** (`ADVERSE_WINDOW_DAYS = 14`): EAs mais antigos que a janela não
+   de-escalonam mais (evita ficar preso para sempre num EA remoto).
+2. **Guardrail de tolerabilidade ao vivo:** `last_liked`/`last_intensity` passam a vir da
+   **pós-sessão mais recente** do participante (`liked` 0–4 → booleano por `LIKED_THRESHOLD = 2`).
+   Sessão anterior intensa (≥4) e não tolerada → de-escalona (G2) + `flag_review`.
++3 testes (EA fora da janela não de-escalona; baixa tolerabilidade de-escalona; sessão tolerada
+segue a regra normal); suíte 187 → **190**, cobertura 87,9%. Continua tudo no servidor, sem vazar o braço.
 
 ## Conformidade
 CI verde exige `tests/test_recommender_api.py`: objetivo→banda (ansiedade→alfa, sono/onset→teta);

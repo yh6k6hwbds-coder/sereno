@@ -149,6 +149,34 @@ def test_coherence_relaxation_mean_via_session_link(api):
     assert b["mean_relaxation_accepted"] == 4.0
 
 
+def test_low_tolerability_from_last_survey_deescalates(api):
+    client, TestSession = api
+    _seed_library(TestSession)
+    _pid, hdr = _participant_allocated(TestSession, "P-TOL")
+    # Sessão anterior: intensa (4) e NÃO gostou (liked=0).
+    sid = client.post(SESS, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": True}).json()["session_id"]
+    client.post(f"{SESS}/{sid}/complete", headers=hdr, json={"effective_seconds": 500})
+    client.post(f"{SESS}/{sid}/survey", headers=hdr, json={
+        "feeling": 1, "relaxation": 1, "liked": 0, "intensity": 4, "would_repeat": False})
+    # Sono/adormecer normalmente iria p/ teta; a baixa tolerabilidade de-escalona (guardrail).
+    b = client.post(REC, headers=hdr, json={"goal": "sleep", "sleep_issue": "onset"}).json()
+    assert b["rule_id"] == "G2-safety-deescalate" and b["suggested_protocol"] == "alpha-10"
+    assert b["flag_review"] is True
+
+
+def test_tolerated_last_survey_does_not_deescalate(api):
+    client, TestSession = api
+    _seed_library(TestSession)
+    _pid, hdr = _participant_allocated(TestSession, "P-OKTOL")
+    # Sessão anterior tolerada (gostou, intensidade moderada) → não de-escalona.
+    sid = client.post(SESS, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": True}).json()["session_id"]
+    client.post(f"{SESS}/{sid}/complete", headers=hdr, json={"effective_seconds": 500})
+    client.post(f"{SESS}/{sid}/survey", headers=hdr, json={
+        "feeling": 3, "relaxation": 3, "liked": 4, "intensity": 2, "would_repeat": True})
+    b = client.post(REC, headers=hdr, json={"goal": "sleep", "sleep_issue": "onset"}).json()
+    assert b["rule_id"] == "R2-sleep-onset" and b["suggested_protocol"] == "theta-6"
+
+
 def test_link_ignores_foreign_recommendation(api):
     client, TestSession = api
     _seed_library(TestSession)

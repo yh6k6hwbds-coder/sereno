@@ -81,6 +81,20 @@ def test_contraindicated_screening_yields_no_recommendation(api):
         assert row.suggested_protocol is None and row.rule_id == "G1-contraindication"
 
 
+def test_old_adverse_event_outside_window_does_not_deescalate(api):
+    client, TestSession = api
+    pid, hdr = _participant(TestSession, "P-OLD-AE")
+    with TestSession() as s:
+        s.add(AdverseEvent(participant_id=pid, type="headache", severity="severe",
+                           occurred_at=dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=30)))
+        s.commit()
+    # EA de 30 dias atrás está FORA da janela → segue a regra normal (sono/adormecer → teta).
+    r = client.post(URL, headers=hdr, json={"goal": "sleep", "sleep_issue": "onset"})
+    assert r.status_code == 201
+    b = r.json()
+    assert b["rule_id"] == "R2-sleep-onset" and b["suggested_protocol"] == "theta-6"
+
+
 def test_arm_never_leaks_same_shape_both_arms(api):
     client, TestSession = api
     _pa, ha = _participant(TestSession, "P-ARM-A", arm="A")   # braços opostos

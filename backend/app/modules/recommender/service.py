@@ -7,28 +7,57 @@ Persiste cada recomendação em `recommendation_log` (entrada→regra→saída +
 para um ML FUTURO). Opera sobre handles NEUTROS e não olha a alocação — logo não vaza o braço.
 """
 from __future__ import annotations
+import datetime as dt
 import uuid
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.models import AdverseEvent, Screening, RecommendationLog, PostSessionSurvey
+from app.core.models import (AdverseEvent, Screening, RecommendationLog, PostSessionSurvey,
+                             Session as SessionModel)
 from app.modules.recommender.recommender import recommend, RecommendationInput, coherence_report, LIBRARY
+
+# Janela do evento adverso: EAs mais antigos que isso não de-escalonam (evita ficar preso
+# para sempre num EA remoto). Conservador, mas com validade — refinável por política do estudo.
+ADVERSE_WINDOW_DAYS = 14
+# Limiar de "não gostou": nota `liked` (0–4) abaixo disso conta como não-tolerado.
+LIKED_THRESHOLD = 2
 
 
 def _recent_adverse_severity(db: Session, participant_id: uuid.UUID) -> Optional[str]:
-    """Gravidade do evento adverso mais recente do participante (autoritativo no servidor).
+    """Gravidade do EA mais recente do participante DENTRO da janela (autoritativo no servidor).
 
     Conservador por segurança: qualquer EA recente pesa; o motor decide se de-escalona
-    (só moderate/severe disparam o guardrail). Janela temporal fica como refinamento futuro.
+    (só moderate/severe disparam o guardrail). EAs fora da janela não pesam.
     """
+    cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=ADVERSE_WINDOW_DAYS)
     return db.scalar(
         select(AdverseEvent.severity)
-        .where(AdverseEvent.participant_id == participant_id)
+        .where(AdverseEvent.participant_id == participant_id,
+               AdverseEvent.occurred_at >= cutoff)
         .order_by(AdverseEvent.occurred_at.desc())
         .limit(1)
     )
+
+
+def _last_session_signals(db: Session, participant_id: uuid.UUID) -> tuple[Optional[bool], Optional[int]]:
+    """(last_liked, last_intensity) da pós-sessão mais recente do participante.
+
+    Alimenta o guardrail de tolerabilidade: sessão anterior intensa demais e não tolerada
+    → de-escalonar. `liked` (0–4) vira booleano por `LIKED_THRESHOLD`. Nada no cliente.
+    """
+    row = db.execute(
+        select(PostSessionSurvey.liked, PostSessionSurvey.intensity)
+        .join(SessionModel, PostSessionSurvey.session_id == SessionModel.id)
+        .where(SessionModel.participant_id == participant_id)
+        .order_by(PostSessionSurvey.answered_at.desc())
+        .limit(1)
+    ).first()
+    if row is None:
+        return None, None
+    liked, intensity = row
+    return (liked >= LIKED_THRESHOLD if liked is not None else None), intensity
 
 
 def _contraindicated(db: Session, participant_id: uuid.UUID) -> bool:
@@ -45,12 +74,15 @@ def _contraindicated(db: Session, participant_id: uuid.UUID) -> bool:
 def build_input(db: Session, participant_id: uuid.UUID, *, goal: str,
                 sleep_issue: Optional[str], time_of_day: str) -> RecommendationInput:
     """Monta a entrada do motor: contexto autorrelatado + sinais de segurança do servidor."""
+    last_liked, last_intensity = _last_session_signals(db, participant_id)
     return RecommendationInput(
         goal=goal,
         sleep_issue=sleep_issue,
         time_of_day=time_of_day,
         recent_adverse_severity=_recent_adverse_severity(db, participant_id),
         contraindicated=_contraindicated(db, participant_id),
+        last_liked=last_liked,
+        last_intensity=last_intensity,
     )
 
 

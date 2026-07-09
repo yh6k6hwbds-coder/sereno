@@ -300,7 +300,9 @@ modularidade para isso).
 > `POST /recommendations/{id}/accept` + coerência cega em `GET /research/recommendation-coherence`;
 > suíte 177→185); ~~vínculo recomendação→sessão para as médias de relaxamento da coerência~~ (feito,
 > ADR-069 Complemento: `recommendation_id` opcional no start de sessão + `PostSessionSurvey.relaxation`;
-> suíte 185→187); janela temporal do EA; guardrail de tolerabilidade ao vivo (última pós-sessão).
+> suíte 185→187); ~~janela temporal do EA~~ e ~~guardrail de tolerabilidade ao vivo (última
+> pós-sessão)~~ (feitos, ADR-068 Complemento; suíte 187→190). **Recomendador completo** — só resta
+> consolidação offline do `recommendation_log` (fatia E4).
 - Ativar o `recommender` (Etapa 6): seleciona **handle neutro/banda** dentro da biblioteca
   validada, registra `feature_vector` em `recommendation_log`. **ML nunca decide ao vivo.**
 - **Inegociável:** só regras decidem; ML apenas registra para o futuro. **ADR-068.**
