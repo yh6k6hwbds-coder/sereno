@@ -14,10 +14,12 @@
 
 ## Estado atual (baseline deste roadmap)
 > **Marco (2026-07-09): caminho crítico do piloto (Fases A–D) `DONE` e verde.** CI do HEAD
-> (`e2f768e`) com 5/5 jobs verdes (backend, backend-postgres, `app`/Flutter bloqueante, contracts,
+> (`f78db58`) com 5/5 jobs verdes (backend, backend-postgres, `app`/Flutter bloqueante, contracts,
 > audio-fft); reprodução local: 169 testes de backend a 85,0% de cobertura, 4 migrações Alembic,
 > bateria FFT aprovada em todos os protocolos. **Só resta a Fase E (expansão pós-piloto, P2)** —
 > travada por escopo no `CLAUDE.md` (não implementar sem decisão explícita do mantenedor).
+> **Higiene de CI (2026-07-09):** actions atualizadas para o runtime Node 24
+> (`actions/checkout@v7`, `actions/setup-python@v6`), eliminando o aviso de deprecação do Node 20.
 - **Backend (169 testes verdes):** `problem+json`; banco/migração portáveis (4 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
   participante (OTP + **entrega por e-mail — D1/ADR-063**); **gestão de staff + MFA enrollment
