@@ -13,6 +13,7 @@ from typing import Protocol
 
 from fastapi import Request
 
+from app.core.client_ip import client_ip
 from app.core.problem import ProblemException
 
 
@@ -84,7 +85,7 @@ def enforce(request: Request, *, bucket: str, default_limit: int, window_s: int 
 
     Os limites são configuráveis por ambiente: ``<BUCKET>_RATE_LIMIT`` e
     ``<BUCKET>_RATE_WINDOW_S`` (ex.: ``LOGIN_RATE_LIMIT``)."""
-    ip = request.client.host if request and request.client else "unknown"
+    ip = client_ip(request)
     limit = int(os.getenv(f"{bucket.upper()}_RATE_LIMIT", str(default_limit)))
     window = int(os.getenv(f"{bucket.upper()}_RATE_WINDOW_S", str(window_s)))
     if not get_rate_limiter().hit(f"{bucket}:{ip}", limit=limit, window_s=window):

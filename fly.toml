@@ -31,6 +31,10 @@ primary_region = "gru"
   APP_ENV = "production"
   # Origem do app web no GitHub Pages (sem barra final). Ajuste se o repo mudar.
   CORS_ORIGINS = "https://yh6k6hwbds-coder.github.io"
+  # IP real do cliente atrás da borda da Fly. A Fly injeta e SOBRESCREVE Fly-Client-IP
+  # (à prova de spoof); sem isto o rate limit por IP viraria um bucket global da borda
+  # (ADR-064/ADR-078). Se trocar de plataforma, use TRUSTED_PROXY_HOPS no lugar.
+  CLIENT_IP_HEADER = "Fly-Client-IP"
   #
   # ATENÇÃO — a chave selada NÃO fica aqui. Configure-a como secret com um sorteio
   # custodiado (ex.: `fly secrets set ARM_CONDITION_MAP="A:sham,B:active"`), conhecido só

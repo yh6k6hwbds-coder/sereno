@@ -255,7 +255,11 @@ Endurecimento para dado real e para o CEP.
 > **Concluída (2026-07-04, ADR-064):** rate limit por IP (429, configurável) em `request-otp` e
 > `login`; denylist por `jti` com `POST /auth/logout` (revoga access + refresh) e enforcement em
 > `current_user`/`refresh`. Portas in-memory (teste) / Redis (prod via `REDIS_URL`). 6 testes.
-> **Pendências:** confiança de proxy p/ IP real (`X-Forwarded-For`); política de falha do Redis.
+> **Endurecimento (2026-07-14, ADR-078):** ~~confiança de proxy p/ IP real~~ fechada — resolução
+> central `core/client_ip.py` (`CLIENT_IP_HEADER=Fly-Client-IP` na Fly / `TRUSTED_PROXY_HOPS`
+> genérico; padrão = peer direto), à prova de spoof; o rate limit passa a valer por cliente real e
+> não pela borda; consumida também pelo `ip_address` do consentimento. Suíte 190→200.
+> **Pendências:** política de falha do Redis (fail-open vs fail-closed).
 
 ### D3 — Docker + compose (Postgres/Redis) + segredos · P0 · `DONE`
 - `docker-compose` para ambiente prod-like; migrações no deploy; config por ambiente/cofre.

@@ -105,6 +105,10 @@ O APK fica em Actions > run > Artifacts.
   SMTP_PASSWORD=... SMTP_FROM=...`. Porta **587** usa STARTTLS (default); **465** usa SSL
   implícito (autodetectado; ou force `SMTP_USE_SSL=1`). Opção grátis p/ N≈40: Gmail com
   *app password* (587). `EMAIL_DEV_CONSOLE` **não** funciona em produção (o guard recusa).
+- **Rate limit por IP real (já configurado):** o `fly.toml` liga `CLIENT_IP_HEADER=Fly-Client-IP`.
+  A Fly injeta/sobrescreve esse cabeçalho com o IP real do participante (à prova de spoof), então
+  o limite de OTP/login vale **por cliente** e não por IP da borda (senão viraria um bucket global —
+  ADR-064/ADR-078). Se um dia sair da Fly, troque por `TRUSTED_PROXY_HOPS=<nº de proxies>`.
 - Validar com orientador/NIT a adequação LGPD/residência (ver ADR-076).
 - Definir backups/retenção do Postgres e **custódia da chave selada A/B→condição** (ADR-077):
   quem sabe o sorteio, onde está anotado, e que só se abre no *data lock*.
