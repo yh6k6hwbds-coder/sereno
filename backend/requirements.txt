@@ -10,6 +10,7 @@ pyjwt
 pyotp
 redis
 rq
+prometheus-client
 numpy
 scipy
 pytest

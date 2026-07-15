@@ -9,12 +9,13 @@ Aviso: ferramenta complementar de pesquisa; não substitui cuidado profissional.
 from __future__ import annotations
 import os
 import time
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.problem import install_problem_handlers
+from app.core.problem import install_problem_handlers, ProblemException
 from app.core.logging import setup_logging, request_logger
 from app.core.config import validate_runtime_config
+from app.core import metrics
 
 # Roteadores por domínio (fronteiras explícitas do monólito modular).
 from app.modules.identity.router import router as identity_router
@@ -65,14 +66,20 @@ def create_app() -> FastAPI:
     )
 
     @app.middleware("http")
-    async def _log_requests(request: Request, call_next):
+    async def _observe_requests(request: Request, call_next):
         # Observabilidade SEM PII: só método/caminho/status/latência (nunca corpo nem braço).
         start = time.perf_counter()
         response = await call_next(request)
+        elapsed = time.perf_counter() - start
+        # Log: caminho CONCRETO (pode ter UUID pseudônimo — útil p/ depurar; ver ADR-067).
         request_logger.info("request", extra={"extra_fields": {
             "method": request.method, "path": request.url.path,
             "status": response.status_code,
-            "duration_ms": round((time.perf_counter() - start) * 1000, 1)}})
+            "duration_ms": round(elapsed * 1000, 1)}})
+        # Métrica: TEMPLATE da rota (baixa cardinalidade); o próprio /metrics não se mede.
+        if request.url.path != "/metrics":
+            metrics.observe(method=request.method, path=metrics.route_template(request),
+                            status=response.status_code, duration_s=elapsed)
         return response
 
     install_problem_handlers(app)
@@ -85,6 +92,16 @@ def create_app() -> FastAPI:
     async def ready():
         # TODO: checar conexões (DB, Redis) antes de reportar pronto.
         return {"status": "ready"}
+
+    @app.get("/metrics", tags=["infra"])
+    async def prometheus_metrics(request: Request):
+        # Só agregados (sem PII/braço). Guard opcional: se METRICS_TOKEN estiver setado,
+        # exige `Authorization: Bearer <token>` (defesa em profundidade). Ver ADR-080.
+        token = os.getenv("METRICS_TOKEN")
+        if token and request.headers.get("authorization") != f"Bearer {token}":
+            raise ProblemException(401, "Não autorizado", "Métricas exigem token.")
+        body, content_type = metrics.render()
+        return Response(content=body, media_type=content_type)
 
     for r in (identity_router, consent_router, screening_router, allocation_router,
               sessions_router, instruments_router, recommender_router, research_router,

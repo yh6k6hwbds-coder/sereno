@@ -255,7 +255,14 @@ Endurecimento para dado real e para o CEP.
 > **Concluída (2026-07-04, ADR-064):** rate limit por IP (429, configurável) em `request-otp` e
 > `login`; denylist por `jti` com `POST /auth/logout` (revoga access + refresh) e enforcement em
 > `current_user`/`refresh`. Portas in-memory (teste) / Redis (prod via `REDIS_URL`). 6 testes.
-> **Pendências:** confiança de proxy p/ IP real (`X-Forwarded-For`); política de falha do Redis.
+> **Endurecimento (2026-07-14, ADR-078):** ~~confiança de proxy p/ IP real~~ fechada — resolução
+> central `core/client_ip.py` (`CLIENT_IP_HEADER=Fly-Client-IP` na Fly / `TRUSTED_PROXY_HOPS`
+> genérico; padrão = peer direto), à prova de spoof; o rate limit passa a valer por cliente real e
+> não pela borda; consumida também pelo `ip_address` do consentimento. Suíte 190→200.
+> **Endurecimento (2026-07-14, ADR-079):** ~~política de falha do Redis~~ fechada — postura única
+> `SECURITY_FAIL_OPEN` (padrão fail-open: Redis fora não derruba login/OTP/auth; `=0` fail-closed
+> prioriza defesa), `revoke()` best-effort, degradação com log de aviso sem PII. Suíte 200→206.
+> **Pendências:** — (D2 concluída).
 
 ### D3 — Docker + compose (Postgres/Redis) + segredos · P0 · `DONE`
 - `docker-compose` para ambiente prod-like; migrações no deploy; config por ambiente/cofre.
@@ -281,7 +288,12 @@ Endurecimento para dado real e para o CEP.
 > **Concluída (2026-07-05, ADR-067):** logs JSON (`core/logging.py`) + middleware que registra
 > só método/caminho/status/latência (nunca corpo/PII/braço); CI com cobertura ≥80% (hoje 84,67%) e
 > job `app` (Flutter) **bloqueante** (sem `|| true`). 3 testes. **Atenção:** o gate Flutter passa a
-> depender dos widget tests de A2 (não rodados localmente) — 1º CI confirma. Métricas ficam pendentes.
+> depender dos widget tests de A2 (não rodados localmente) — 1º CI confirma.
+> **Endurecimento (2026-07-14, ADR-080):** ~~métricas~~ fechada — `GET /metrics` (Prometheus) via
+> `core/metrics.py`, instrumentado no mesmo middleware; `http_requests_total` + `http_request_duration_seconds`
+> com rótulo por **template de rota** (baixa cardinalidade, sem PII/braço; 404 → `<unmatched>`);
+> guard opcional `METRICS_TOKEN`; `fly.toml` liga `[metrics]` p/ o scraping nativo da Fly. +7 testes
+> (suíte 206→213). **Pendências:** métricas de negócio + alertas (quando o piloto pedir); `/ready` real.
 
 ---
 

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.core.client_ip import client_ip
 from app.core.db import get_db
 from app.core.security import require, current_participant
 from app.core.problem import ProblemException
@@ -68,7 +69,7 @@ async def record_consent(
         accepted=body.accepted,
         accepted_at=now,
         content_hash=content_hash,
-        ip_address=(request.client.host if request.client else None),
+        ip_address=client_ip(request),
     )
     db.add(record)
     db.flush()   # obtem o id; o commit ocorre em get_db

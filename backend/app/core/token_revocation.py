@@ -7,9 +7,14 @@ Em memória para dev/teste; em produção defina ``REDIS_URL`` (SET jti EX ttl) 
 entre workers.
 """
 from __future__ import annotations
+import logging
 import os
 import time
 from typing import Protocol
+
+from app.core.config import security_fail_open
+
+logger = logging.getLogger("sereno.security")
 
 
 class TokenDenylist(Protocol):
@@ -45,10 +50,24 @@ class RedisDenylist:
         self._r = client
 
     def revoke(self, jti: str, ttl_s: int) -> None:
-        self._r.set(self._PREFIX + jti, "1", ex=max(ttl_s, 1))
+        # Best-effort: se o Redis cair, o logout não deve dar 500 — o token ainda expira por TTL.
+        try:
+            self._r.set(self._PREFIX + jti, "1", ex=max(ttl_s, 1))
+        except Exception as exc:
+            logger.warning("token revoke failed (backend unavailable)",
+                           extra={"extra_fields": {"error": type(exc).__name__}})
 
     def is_revoked(self, jti: str) -> bool:
-        return bool(self._r.exists(self._PREFIX + jti))
+        try:
+            return bool(self._r.exists(self._PREFIX + jti))
+        except Exception as exc:  # Redis indisponível: degrada conforme a postura configurada
+            revoked = not security_fail_open()  # fail-open → trata como NÃO revogado (deixa passar)
+            logger.warning(
+                "denylist backend unavailable (fail-%s)",
+                "open" if not revoked else "closed",
+                extra={"extra_fields": {"error": type(exc).__name__, "fail_open": not revoked}},
+            )
+            return revoked
 
     def reset(self) -> None:
         pass

@@ -80,5 +80,8 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 075 | Desbloqueio em duas pessoas: pedido (não revela) → aprovação por 2º admin distinto (revela) **[novo]** |
 | 076 | Deploy do backend na Fly.io (região gru/São Paulo) + residência de dados no Brasil **[novo]** |
 | 077 | Selagem real da chave A/B→condição + guard de config de produção (fail-fast) **[inegociável]** |
+| 078 | IP real do cliente atrás de proxy (`CLIENT_IP_HEADER`/`TRUSTED_PROXY_HOPS`): rate limit por cliente, não pela borda **[novo]** |
+| 079 | Política de falha do Redis (rate limit/denylist): fail-open por padrão, configurável (`SECURITY_FAIL_OPEN`) **[novo]** |
+| 080 | Métricas Prometheus (`GET /metrics`) sem PII/braço, rótulo por template de rota (baixa cardinalidade); guard `METRICS_TOKEN` **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.
