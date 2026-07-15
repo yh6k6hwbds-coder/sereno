@@ -58,6 +58,14 @@ primary_region = "gru"
     timeout = "3s"
     path = "/health"
 
+[metrics]
+  # Prometheus gerenciado da Fly raspa /metrics pela rede privada (ADR-080). São só
+  # agregados (método/template de rota/status), sem PII nem braço. Para trancar o acesso
+  # público pela borda, sete o secret METRICS_TOKEN (o guard exige Bearer) — nesse caso o
+  # scraper nativo da Fly não autentica; use um coletor autenticado no lugar.
+  port = 8000
+  path = "/metrics"
+
 [[vm]]
   size = "shared-cpu-1x"
   memory = "512mb"                # scipy/numpy no import do módulo de análise pedem folga

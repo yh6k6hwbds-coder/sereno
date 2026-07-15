@@ -82,5 +82,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 077 | Selagem real da chave A/B→condição + guard de config de produção (fail-fast) **[inegociável]** |
 | 078 | IP real do cliente atrás de proxy (`CLIENT_IP_HEADER`/`TRUSTED_PROXY_HOPS`): rate limit por cliente, não pela borda **[novo]** |
 | 079 | Política de falha do Redis (rate limit/denylist): fail-open por padrão, configurável (`SECURITY_FAIL_OPEN`) **[novo]** |
+| 080 | Métricas Prometheus (`GET /metrics`) sem PII/braço, rótulo por template de rota (baixa cardinalidade); guard `METRICS_TOKEN` **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

@@ -288,7 +288,12 @@ Endurecimento para dado real e para o CEP.
 > **Concluída (2026-07-05, ADR-067):** logs JSON (`core/logging.py`) + middleware que registra
 > só método/caminho/status/latência (nunca corpo/PII/braço); CI com cobertura ≥80% (hoje 84,67%) e
 > job `app` (Flutter) **bloqueante** (sem `|| true`). 3 testes. **Atenção:** o gate Flutter passa a
-> depender dos widget tests de A2 (não rodados localmente) — 1º CI confirma. Métricas ficam pendentes.
+> depender dos widget tests de A2 (não rodados localmente) — 1º CI confirma.
+> **Endurecimento (2026-07-14, ADR-080):** ~~métricas~~ fechada — `GET /metrics` (Prometheus) via
+> `core/metrics.py`, instrumentado no mesmo middleware; `http_requests_total` + `http_request_duration_seconds`
+> com rótulo por **template de rota** (baixa cardinalidade, sem PII/braço; 404 → `<unmatched>`);
+> guard opcional `METRICS_TOKEN`; `fly.toml` liga `[metrics]` p/ o scraping nativo da Fly. +7 testes
+> (suíte 206→213). **Pendências:** métricas de negócio + alertas (quando o piloto pedir); `/ready` real.
 
 ---
 
