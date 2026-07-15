@@ -7,6 +7,7 @@ múltiplos workers, defina ``REDIS_URL`` para usar Redis (INCR + EXPIRE) — só
 vale entre processos. Janela fixa (simples e suficiente para o piloto).
 """
 from __future__ import annotations
+import logging
 import os
 import time
 from typing import Protocol
@@ -14,7 +15,10 @@ from typing import Protocol
 from fastapi import Request
 
 from app.core.client_ip import client_ip
+from app.core.config import security_fail_open
 from app.core.problem import ProblemException
+
+logger = logging.getLogger("sereno.security")
 
 
 class RateLimiter(Protocol):
@@ -46,10 +50,19 @@ class RedisRateLimiter:
         self._r = client
 
     def hit(self, key: str, *, limit: int, window_s: int) -> bool:
-        n = int(self._r.incr(key))
-        if n == 1:
-            self._r.expire(key, window_s)
-        return n <= limit
+        try:
+            n = int(self._r.incr(key))
+            if n == 1:
+                self._r.expire(key, window_s)
+            return n <= limit
+        except Exception as exc:  # Redis indisponível: degrada conforme a postura configurada
+            allow = security_fail_open()
+            logger.warning(
+                "rate_limit backend unavailable (fail-%s)",
+                "open" if allow else "closed",
+                extra={"extra_fields": {"error": type(exc).__name__, "fail_open": allow}},
+            )
+            return allow
 
     def reset(self) -> None:
         pass  # não se limpa o Redis inteiro em produção (no-op deliberado)

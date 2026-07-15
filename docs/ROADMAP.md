@@ -259,7 +259,10 @@ Endurecimento para dado real e para o CEP.
 > central `core/client_ip.py` (`CLIENT_IP_HEADER=Fly-Client-IP` na Fly / `TRUSTED_PROXY_HOPS`
 > genérico; padrão = peer direto), à prova de spoof; o rate limit passa a valer por cliente real e
 > não pela borda; consumida também pelo `ip_address` do consentimento. Suíte 190→200.
-> **Pendências:** política de falha do Redis (fail-open vs fail-closed).
+> **Endurecimento (2026-07-14, ADR-079):** ~~política de falha do Redis~~ fechada — postura única
+> `SECURITY_FAIL_OPEN` (padrão fail-open: Redis fora não derruba login/OTP/auth; `=0` fail-closed
+> prioriza defesa), `revoke()` best-effort, degradação com log de aviso sem PII. Suíte 200→206.
+> **Pendências:** — (D2 concluída).
 
 ### D3 — Docker + compose (Postgres/Redis) + segredos · P0 · `DONE`
 - `docker-compose` para ambiente prod-like; migrações no deploy; config por ambiente/cofre.

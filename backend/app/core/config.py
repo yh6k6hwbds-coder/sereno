@@ -39,6 +39,17 @@ def env_truthy(v: str | None) -> bool:
     return bool(v) and v.strip().lower() not in ("0", "false", "no", "off")
 
 
+def security_fail_open() -> bool:
+    """Postura quando o backend de rate limit/denylist (Redis) está indisponível.
+
+    ``True`` (padrão) = **fail-open**: prioriza disponibilidade — uma queda do Redis NÃO
+    derruba login/OTP nem toda rota autenticada. O rate limit deixa passar e a denylist
+    trata o token como não-revogado (a defesa fica best-effort durante a falha; tokens de
+    acesso têm TTL curto). ``False`` = **fail-closed**: prioriza a defesa (429/401) ao custo
+    de disponibilidade. Configurável por ``SECURITY_FAIL_OPEN``. Ver ADR-079."""
+    return env_truthy(os.getenv("SECURITY_FAIL_OPEN", "1"))
+
+
 def validate_runtime_config() -> None:
     """Falha rápido se a config de produção violar uma decisão inegociável.
 
