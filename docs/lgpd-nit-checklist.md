@@ -84,7 +84,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 | G1 | Encarregado (DPO) designado e publicado | ⬜ | **Decisão do NIT/UNINTA.** |
 | G2 | Relatório de Impacto à Proteção de Dados (RIPD/DPIA) | ⬜ | **Recomendado** para dado sensível de saúde. Este checklist + os ADRs servem de insumo técnico. |
 | G3 | Registro das operações de tratamento (Art. 37) | 🟡 | Insumo técnico existe (ADRs, este doc, auditoria); **falta** consolidar no registro formal da instituição. |
-| G4 | Plano de resposta a incidentes + notificação à ANPD (Art. 48) | ⬜ | **Decisão do NIT.** Definir fluxo de detecção/notificação. |
+| G4 | Plano de resposta a incidentes + notificação à ANPD (Art. 48) | ⬜ | **Rascunho técnico pronto** (`docs/plano-resposta-incidentes.md`): fases, severidade, playbook de contenção ancorado nos mecanismos existentes, notificação. **Falta** o NIT/DPO definir contatos/plantão, confirmar prazos e **aprovar**; alertas automáticos sobre métricas seguem pendência. |
 | G5 | Aprovação do CEP/CONEP (ética em pesquisa) | 🟡 | Submissão em preparação (`docs/Roteiro_Submissao_CEP.docx`, anexos por etapa); a LGPD caminha junto do parecer ético. |
 | G6 | Aplicabilidade SaMD/ANVISA (se houver claim clínico) | ⬜ | **Decisão do NIT/assessoria.** Copy mantém "ferramenta complementar, experimental" (postura científica do `CLAUDE.md`), o que reduz risco de enquadramento — mas confirmar. |
 
