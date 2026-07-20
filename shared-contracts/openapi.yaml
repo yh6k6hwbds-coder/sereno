@@ -232,6 +232,8 @@ paths:
         para retomada. ETag = sha256 do corpo (integridade bit-a-bit) — distinto do
         content_hash, que é a identidade OPACA do protocolo. Cache-Control: private,
         no-store (o cliente não persiste o áudio em claro).
+        Se a entrega por URL assinada estiver ligada (AUDIO_DELIVERY=signed-url), responde
+        302 com Location para uma URL de curta duração em /audio/{content_hash} (E3/ADR-082).
       parameters:
         - { $ref: '#/components/parameters/PathId' }
         - name: Range
@@ -256,9 +258,61 @@ paths:
             Accept-Ranges: { schema: { type: string } }
           content:
             audio/wav: { schema: { type: string, format: binary } }
+        '302':
+          description: >
+            Redireciona para uma URL assinada de curta duração (entrega por URL, E3).
+            Só quando AUDIO_DELIVERY=signed-url; caso contrário devolve 200/206.
+          headers:
+            Location: { description: "URL assinada em /audio/{content_hash}", schema: { type: string } }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '416': { $ref: '#/components/responses/Problem' }
+  /audio/{content_hash}:
+    get:
+      summary: Baixar áudio por URL assinada (capability, sem Authorization)
+      operationId: getSignedAudio
+      description: >
+        Entrega o WAV por URL ASSINADA (E3/ADR-082) — a capability é a própria assinatura,
+        não há Authorization. A chave é o content_hash OPACO (já conhecido do cliente; não
+        revela ativo/sham). Assinatura/validade inválidas → 403 genérico (sem oráculo).
+        Resposta bit-a-bit idêntica à do caminho autenticado; suporta Range. Prepara o
+        offload para storage em nuvem (um presign de S3 encaixa nesta mesma forma).
+      parameters:
+        - name: content_hash
+          in: path
+          required: true
+          schema: { type: string }
+          description: Identidade OPACA do protocolo (sha256 hex) — não revela a condição.
+        - name: exp
+          in: query
+          required: true
+          schema: { type: integer }
+          description: Expiração (unix epoch) coberta pela assinatura.
+        - name: sig
+          in: query
+          required: true
+          schema: { type: string }
+          description: HMAC-SHA256 hex de content_hash|exp.
+        - name: Range
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Áudio completo (WAV PCM 16-bit, estéreo)
+          headers:
+            ETag: { schema: { type: string } }
+            Accept-Ranges: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
+          content:
+            audio/wav: { schema: { type: string, format: binary } }
+        '206':
+          description: Conteúdo parcial (resposta a Range)
+          content:
+            audio/wav: { schema: { type: string, format: binary } }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
         '416': { $ref: '#/components/responses/Problem' }
   /adverse-events:
     post:

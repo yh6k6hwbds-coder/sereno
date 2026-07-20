@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 from fastapi import APIRouter, Depends, Request, Response
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
@@ -22,9 +23,12 @@ from app.core.problem import ProblemException
 from app.core.models import Session as SessionModel, PostSessionSurvey, AudioProtocol
 from app.modules.allocation.service import resolve_arm
 from app.modules.sessions.service import condition_for_arm, resolve_protocol, materialize_audio
+from app.modules.sessions import storage
 from app.modules.recommender.service import link_session
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+# Entrega por URL ASSINADA (E3): endpoint público-mas-assinado, fora do prefixo /sessions.
+audio_router = APIRouter(prefix="/audio", tags=["audio"])
 
 
 class SessionStartIn(BaseModel):
@@ -138,16 +142,44 @@ def _parse_range(header: str, total: int) -> tuple[int, int] | None:
     return (start, end)
 
 
+def _stream_audio(proto: AudioProtocol, request: Request) -> Response:
+    """Materializa e transmite o WAV do protocolo, bit-a-bit, com headers NEUTROS.
+
+    Forma da resposta IDÊNTICA entre braços — só os bytes (opacos) diferem. ``ETag`` =
+    sha256 do corpo (integridade). Suporta um único Range (206) ou 416 se insatisfazível.
+    Reusado pela entrega autenticada e pela entrega por URL assinada (E3)."""
+    rendered = materialize_audio(proto)
+    body = rendered.wav_bytes
+    total = len(body)
+    headers = {
+        "ETag": f'"{rendered.sha256}"',
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "private, no-store",
+    }
+    range_header = request.headers.get("range")
+    if range_header:
+        rng = _parse_range(range_header, total)
+        if rng is None:
+            raise ProblemException(416, "Faixa inválida",
+                                   "O intervalo solicitado não pode ser satisfeito.")
+        start, end = rng
+        headers["Content-Range"] = f"bytes {start}-{end}/{total}"
+        return Response(content=body[start:end + 1], status_code=206,
+                        media_type="audio/wav", headers=headers)
+    return Response(content=body, status_code=200, media_type="audio/wav", headers=headers)
+
+
 @router.get("/{session_id}/audio")
 async def get_session_audio(session_id: uuid.UUID, request: Request,
                             db: DbSession = Depends(get_db),
                             participant_id: uuid.UUID = Depends(current_participant),
                             _user: dict = Depends(require("session:write"))):
-    """Transmite o WAV da PRÓPRIA sessão, bit-a-bit, sem revelar o braço.
+    """Entrega o WAV da PRÓPRIA sessão, sem revelar o braço.
 
     O protocolo já foi resolvido e congelado na sessão (``protocol_uuid``); aqui não se
-    re-resolve nem se decide condição. Headers e forma da resposta são IDÊNTICOS entre
-    braços — só os bytes (opacos) diferem. ``ETag`` = sha256 do corpo (integridade)."""
+    re-resolve nem se decide condição. Por padrão transmite os bytes inline. Com
+    ``AUDIO_DELIVERY=signed-url`` (E3), responde **302** para uma URL assinada de curta
+    duração (chave = ``content_hash`` opaco) — a transferência sai do caminho autenticado."""
     # IDOR: a sessão precisa pertencer ao participante autenticado (404 não vaza existência).
     s = db.scalar(select(SessionModel).where(
         SessionModel.id == session_id, SessionModel.participant_id == participant_id))
@@ -157,29 +189,26 @@ async def get_session_audio(session_id: uuid.UUID, request: Request,
     if proto is None:
         raise ProblemException(409, "Protocolo indisponível",
                                "O áudio desta sessão não está disponível na biblioteca.")
+    if storage.signed_delivery_enabled():
+        # Location NEUTRO: só content_hash opaco + exp + assinatura (nada do braço).
+        return RedirectResponse(storage.build_signed_path(proto.content_hash), status_code=302)
+    return _stream_audio(proto, request)
 
-    rendered = materialize_audio(proto)
-    body = rendered.wav_bytes
-    total = len(body)
-    # Headers NEUTROS (iguais nos dois braços). ETag identifica os BYTES (não a condição).
-    headers = {
-        "ETag": f'"{rendered.sha256}"',
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "private, no-store",
-    }
 
-    range_header = request.headers.get("range")
-    if range_header:
-        rng = _parse_range(range_header, total)
-        if rng is None:
-            raise ProblemException(416, "Faixa inválida",
-                                   "O intervalo solicitado não pode ser satisfeito.")
-        start, end = rng
-        chunk = body[start:end + 1]
-        headers["Content-Range"] = f"bytes {start}-{end}/{total}"
-        return Response(content=chunk, status_code=206, media_type="audio/wav", headers=headers)
-
-    return Response(content=body, status_code=200, media_type="audio/wav", headers=headers)
+@audio_router.get("/{content_hash}")
+async def get_signed_audio(content_hash: str, request: Request,
+                           exp: str | None = None, sig: str | None = None,
+                           db: DbSession = Depends(get_db)):
+    """Entrega o WAV por URL ASSINADA (E3), sem ``Authorization``: a capability é a própria
+    assinatura — exatamente como um signed URL de nuvem. A chave é o ``content_hash``
+    **opaco** (já conhecido do cliente; não revela ativo/sham). Assinatura/validade
+    inválidas → 403 genérico (sem oráculo). É a mesma resposta bit-a-bit do caminho autenticado."""
+    if not storage.verify_signed(content_hash, exp, sig):
+        raise ProblemException(403, "Assinatura inválida", "URL de áudio inválida ou expirada.")
+    proto = db.scalar(select(AudioProtocol).where(AudioProtocol.content_hash == content_hash))
+    if proto is None:
+        raise ProblemException(404, "Áudio não encontrado", "Áudio inexistente na biblioteca.")
+    return _stream_audio(proto, request)
 
 
 class SurveyIn(BaseModel):

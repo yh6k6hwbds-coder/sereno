@@ -330,9 +330,21 @@ modularidade para isso).
 ### E2 — Ingestão de vestíveis (adapter) · P2 · `TODO`
 - Porta de entrada para FC/sono de wearables via **adaptador** desacoplado. **(ADR na criação.)**
 
-### E3 — Cloud storage para áudio · P2 · `TODO`
+### E3 — Cloud storage para áudio · P2 · `PARCIAL`
 - Migrar a materialização/entrega de áudio (A1) para armazenamento em nuvem (URLs
-  assinadas, sem vazar condição). **(ADR na criação.)**
+  assinadas, sem vazar condição). **ADR-082.**
+> **Seam concluído (2026-07-20, ADR-082):** porta de entrega `AudioStorage`
+> (`modules/sessions/storage.py`) escolhida por `AUDIO_DELIVERY`. Padrão `inline` = A1
+> **inalterado**; `signed-url` faz `GET /sessions/{id}/audio` responder **302** para
+> `GET /v1/audio/{content_hash}` — endpoint **público-mas-assinado** (capability = HMAC-SHA256
+> sobre `content_hash|exp`, subchave dedicada, TTL curto), sem `Authorization`, como um signed
+> URL de nuvem. Chave = `content_hash` **opaco** (não revela braço; já conhecido do cliente);
+> mesma resposta **bit-a-bit** (ETag, Range) e headers neutros; 403 genérico p/ assinatura
+> inválida/expirada. +10 testes (suíte 224→234, cobertura 89%); A1 segue verde sem mudança.
+> **Pendências (a "construção" da E3):** adaptador de storage em nuvem real (presign S3/GCS +
+> upload do cache) — encaixa na mesma porta; rate limit no endpoint público; rotação da chave
+> de assinatura. Enquanto isso, o WAV ainda é servido pelo próprio backend (preparação, não
+> offload completo — condizente com "escalabilidade preparada, não construída" do CLAUDE.md).
 
 ### E4 — Pipeline de features para ML (offline) · P2 · `TODO`
 - Consolidar `recommendation_log`/telemetria para pesquisa de modelos — **sempre offline**,

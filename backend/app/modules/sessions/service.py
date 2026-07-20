@@ -59,8 +59,9 @@ _MATERIALIZE_LOCK = threading.Lock()
 def audio_cache_dir() -> str:
     """Diretório de cache dos WAV materializados (configurável; nunca versionado).
 
-    Padrão: ``<backend>/.audio_cache`` (coberto por ``*.wav`` no .gitignore). Em produção,
-    a entrega migra para armazenamento em nuvem (Fase E / ADR-070)."""
+    Padrão: ``<backend>/.audio_cache`` (coberto por ``*.wav`` no .gitignore). A entrega por
+    URL assinada (E3/ADR-082) já sai deste cache; o offload para nuvem encaixa na porta
+    ``AudioStorage`` (``modules/sessions/storage.py``)."""
     default = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
         ".audio_cache",

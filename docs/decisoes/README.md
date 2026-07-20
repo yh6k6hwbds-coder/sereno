@@ -84,5 +84,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 079 | Política de falha do Redis (rate limit/denylist): fail-open por padrão, configurável (`SECURITY_FAIL_OPEN`) **[novo]** |
 | 080 | Métricas Prometheus (`GET /metrics`) sem PII/braço, rótulo por template de rota (baixa cardinalidade); guard `METRICS_TOKEN` **[novo]** |
 | 081 | Lifecycle de staff: `is_active` (desativar suspende o token já emitido; RBAC confere no banco), listar time, rotação da própria senha **[novo]** |
+| 082 | Entrega de áudio por URL assinada (porta `AudioStorage`; chave = content_hash opaco; HMAC + TTL; A1 inline por padrão) **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.
