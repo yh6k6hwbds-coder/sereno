@@ -3,10 +3,11 @@ modules/audit/service.py — Trilha de auditoria append-only (transversal).
 
 Registra ações sensíveis (consentimento, alocação e, quando implementados, pedido de
 exportação e desbloqueio) em ``audit_log``. Invariantes inegociáveis:
-  - **APPEND-ONLY:** nunca UPDATE/DELETE. Em produção isso é garantido por GRANT no
-    Postgres (REVOKE UPDATE, DELETE em ``audit_log``); aqui, adicionalmente, um guard no
-    ORM recusa qualquer tentativa de modificar/excluir uma linha de ``AuditLog`` em
-    qualquer sessão (vale também nos testes/SQLite).
+  - **APPEND-ONLY:** nunca UPDATE/DELETE. Em duas camadas: (1) um guard no ORM recusa
+    qualquer tentativa de modificar/excluir ``AuditLog`` via *sessão*; (2) um **trigger no
+    banco** (``core/audit_ddl.py``, ADR-056/085) aborta UPDATE/DELETE mesmo por SQL cru —
+    inclusive contornando o dono da tabela no Postgres, que ignora o ``REVOKE``. Vale também
+    no SQLite (testes/CI-espelho), então a invariante é exercida na suíte.
   - **SEM PII em claro e SEM o braço (ativo/sham):** o chamador é responsável por passar
     apenas identificadores pseudonimizados (UUID) e metadados neutros.
 """
@@ -19,6 +20,7 @@ from sqlalchemy import and_, event, or_, select
 from sqlalchemy.orm import Session as OrmSession
 
 from app.core.models import AuditLog
+from app.core import audit_ddl
 
 
 class AuditAppendOnlyError(Exception):
@@ -27,13 +29,20 @@ class AuditAppendOnlyError(Exception):
 
 @event.listens_for(OrmSession, "before_flush")
 def _enforce_audit_append_only(session: OrmSession, flush_context, instances) -> None:
-    """Guard de invariante: barra UPDATE/DELETE de ``AuditLog`` antes de qualquer flush."""
+    """Camada 1 (ORM): barra UPDATE/DELETE de ``AuditLog`` antes de qualquer flush."""
     for obj in session.dirty:
         if isinstance(obj, AuditLog) and session.is_modified(obj, include_collections=False):
             raise AuditAppendOnlyError("audit_log é append-only: UPDATE não é permitido.")
     for obj in session.deleted:
         if isinstance(obj, AuditLog):
             raise AuditAppendOnlyError("audit_log é append-only: DELETE não é permitido.")
+
+
+@event.listens_for(AuditLog.__table__, "after_create")
+def _install_db_guard(target, connection, **kw) -> None:
+    """Camada 2 (banco): instala o trigger append-only quando o schema é criado por
+    ``create_all`` (testes/SQLite). Em produção a migração faz o mesmo no Postgres."""
+    audit_ddl.install(connection)
 
 
 def record_event(db: OrmSession, *, action: str, resource_type: str, actor_type: str,

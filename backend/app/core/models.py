@@ -241,7 +241,7 @@ class StaffUser(Base):                          # pesquisador/admin — RBAC + M
     __table_args__ = (CheckConstraint("role in ('researcher','admin')", name="ck_staff_role"),)
 
 
-class AuditLog(Base):                           # append-only (revogar UPDATE/DELETE por GRANT)
+class AuditLog(Base):                           # append-only (guard ORM + trigger no banco; ADR-086)
     __tablename__ = "audit_log"
     id: Mapped[uuid.UUID] = UUID_PK()
     actor_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=True)
