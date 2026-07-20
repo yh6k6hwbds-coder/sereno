@@ -65,8 +65,8 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 
 | # | Item | Status | Evidência / Ação |
 |---|------|--------|------------------|
-| E1 | Política de retenção/descarte com **prazos** definidos | ⬜ | **Decisão do NIT/CEP.** Não há política de prazos formalizada (o "retenção" no código é métrica do estudo, não ciclo de vida do dado). Definir prazo de guarda pós‑estudo e descarte. |
-| E2 | Expurgo agendado ao fim do prazo | ⬜ | Não implementado (pendência registrada no ADR‑066). Depende de E1. |
+| E1 | Política de retenção/descarte com **prazos** definidos | ⬜ | **Rascunho técnico pronto** (`docs/politica-retencao-descarte.md`) com inventário de dados e prazos **propostos** ancorados nos mecanismos existentes; **falta** a **aprovação institucional** (CEP/assessoria) dos prazos — é o que E1 mede. |
+| E2 | Expurgo agendado ao fim do prazo | ⬜ | Não implementado (pendência do ADR‑066 e da política, §6). Job/rotina depende dos prazos de E1. |
 | E3 | Marcação de status do titular (ativo/retirado/concluído) | ✅ | `Participant.status` com CHECK (`active`/`withdrawn`/`completed`). |
 
 ## F. Operadores e transferência internacional (Art. 33)
