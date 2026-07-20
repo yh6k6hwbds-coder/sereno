@@ -346,9 +346,18 @@ modularidade para isso).
 > de assinatura. Enquanto isso, o WAV ainda é servido pelo próprio backend (preparação, não
 > offload completo — condizente com "escalabilidade preparada, não construída" do CLAUDE.md).
 
-### E4 — Pipeline de features para ML (offline) · P2 · `TODO`
+### E4 — Pipeline de features para ML (offline) · P2 · `DONE`
 - Consolidar `recommendation_log`/telemetria para pesquisa de modelos — **sempre offline**,
-  sem decisão clínica ao vivo. **(ADR na criação.)**
+  sem decisão clínica ao vivo. **ADR-083.**
+> **Concluída (2026-07-20, ADR-083):** `GET /v1/research/ml-features` (staff `export:request`)
+> achata o `recommendation_log` + telemetria de sessão/pós-sessão num **CSV** — uma linha por
+> recomendação (inclui `no_recommendation` dos guardrails e recomendações sem sessão). **Offline**
+> (inegociável #5): só consolida o já registrado, **não decide** nem cria recomendação (teste
+> guarda a invariância da contagem). **Pseudonimizado** (só `study_code`; índice ordinal, sem hora
+> de parede) e **cego** (só braço CODIFICADO A/B; `protocolo_sugerido` = handle neutro de banda;
+> nunca ativo/sham). Auditado (`features.exported`, só nº de linhas). Sem migração. +7 testes
+> (suíte 234→241, cobertura 89%). **Pendências:** consolidação por job offline (RQ)+storage;
+> features derivadas/agregadas; versionar o schema do dataset quando a modelagem começar.
 
 ### E5 — i18n / acessibilidade avançada · P2 · `DONE`
 > **Fundação concluída (2026-07-09, ADR-070):** delegate de i18n MANUAL (pt-BR padrão + en, sem

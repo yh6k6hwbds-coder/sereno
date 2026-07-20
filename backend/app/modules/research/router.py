@@ -9,6 +9,7 @@ from app.core.security import require
 from app.core.problem import ProblemException
 from app.modules.audit.service import list_events, record_event
 from app.modules.research.export_service import build_export_csv_from_db, get_job_store
+from app.modules.research.features_service import build_features_csv_from_db
 from app.modules.research.analysis_service import build_report
 from app.modules.recommender.service import coherence as recommendation_coherence
 
@@ -38,6 +39,28 @@ async def get_recommendation_coherence(db: Session = Depends(get_db),
                                        _user: dict = Depends(require("research:read"))):
     """Coerência do recomendador (exploratório, CEGO): alinhamento objetivo→banda e aceitação."""
     return recommendation_coherence(db)
+
+
+@router.get("/ml-features")
+async def get_ml_features(db: Session = Depends(get_db),
+                         user: dict = Depends(require("export:request"))):
+    """Dataset OFFLINE de features p/ ML (E4): CSV pseudonimizado e CEGO (braço codificado).
+
+    Consolida o `recommendation_log` + telemetria já registrados — **nada decide aqui** (o
+    recomendador segue por regras, inegociável #5). Sem PII, sem condição. Auditado."""
+    csv_body = build_features_csv_from_db(db)
+    actor_id = None
+    try:
+        actor_id = uuid.UUID(str(user["id"]))
+    except (KeyError, ValueError, TypeError):
+        pass
+    # Auditoria SEM PII/braço: só o fato do export de features (nº de linhas, sem conteúdo).
+    record_event(db, action="features.exported", resource_type="ml_feature_dataset",
+                 actor_type="staff", actor_id=actor_id,
+                 meta={"rows": max(csv_body.count("\n") - 1, 0)})
+    return Response(content=csv_body, media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="sereno_ml_features.csv"',
+                             "Cache-Control": "private, no-store"})
 
 
 def _serialize_event(e) -> dict:

@@ -476,6 +476,25 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+  /research/ml-features:
+    get:
+      summary: Dataset OFFLINE de features p/ ML (pseudonimizado, cego) — RBAC
+      operationId: getMlFeatures
+      description: >
+        Consolida o recommendation_log + telemetria de sessão num CSV de features para
+        pesquisa de modelos FUTURA (E4). Sempre OFFLINE — nada aqui decide; o recomendador
+        segue por regras (inegociável #5). Sem PII (só o study_code pseudônimo; índice
+        ordinal, não hora de parede) e SEM a condição (ativo/sham) — só o braço CODIFICADO
+        A/B; o protocolo_sugerido é handle neutro de banda. Auditado. RBAC `export:request`.
+      responses:
+        '200':
+          description: CSV de features (uma linha por recomendação)
+          headers:
+            Cache-Control: { schema: { type: string } }
+          content:
+            text/csv: { schema: { type: string } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /research/audit:
     get:
       summary: Ler o log de auditoria (admin) — append-only, sem PII nem braço
