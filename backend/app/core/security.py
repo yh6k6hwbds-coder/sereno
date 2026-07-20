@@ -22,7 +22,7 @@ from app.core.token_revocation import get_denylist
 # Matriz mínima de permissões (espelha a Etapa 5).
 RBAC: dict[str, set[str]] = {
     "participant": {"consent:write", "session:write", "assessment:write", "diary:write", "ae:write",
-                    "recommend:read"},
+                    "recommend:read", "wearable:write"},
     "researcher": {"research:read", "export:request", "enroll:write"},
     "admin": {"research:read", "export:request", "enroll:write", "user:manage",
               "unblind:request", "audit:read"},

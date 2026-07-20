@@ -612,6 +612,24 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /wearables/readings:
+    post:
+      summary: Ingerir leituras de vestível (FC/sono) — seam desacoplado
+      operationId: ingestWearableReadings
+      description: >
+        Recebe um lote de leituras de FC/sono JÁ normalizadas no device (HealthKit/Google Fit)
+        e as encaminha a um adaptador desacoplado (WearableSink). No padrão (NullSink) nada é
+        persistido — é o seam preparado, não a integração construída (E2/ADR-084). As leituras
+        NÃO alimentam o recomendador ao vivo (inegociável #5) e nenhum valor entra em log
+        (inegociável #6). Participante, RBAC `wearable:write`. Auditado (só a contagem).
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/WearableReadingsIn' } } }
+      responses:
+        '202': { description: Recebido, content: { application/json: { schema: { $ref: '#/components/schemas/WearableIngestResult' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -1042,6 +1060,27 @@ components:
         job_id: { type: string, format: uuid }
         status: { type: string, enum: [queued, running, done, failed] }
       required: [job_id, status]
+    WearableReading:
+      type: object
+      description: "Leitura canônica de vestível, já normalizada no device. Sem PII direta."
+      properties:
+        kind: { type: string, enum: [heart_rate, sleep] }
+        taken_at: { type: string, format: date-time }
+        value: { type: number, minimum: 0, maximum: 100000 }
+        unit: { type: string, minLength: 1, maxLength: 16 }
+        source: { type: string, minLength: 1, maxLength: 32, description: "rótulo do provedor (healthkit/googlefit/manual)" }
+      required: [kind, taken_at, value, unit, source]
+    WearableReadingsIn:
+      type: object
+      properties:
+        readings: { type: array, minItems: 1, maxItems: 500, items: { $ref: '#/components/schemas/WearableReading' } }
+      required: [readings]
+    WearableIngestResult:
+      type: object
+      description: "Contagem aceita. No NullSink (padrão) as leituras não são persistidas."
+      properties:
+        accepted: { type: integer, minimum: 0 }
+      required: [accepted]
     AnalysisReport:
       type: object
       description: >

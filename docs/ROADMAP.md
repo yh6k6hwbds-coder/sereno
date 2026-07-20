@@ -327,8 +327,19 @@ modularidade para isso).
   validada, registra `feature_vector` em `recommendation_log`. **ML nunca decide ao vivo.**
 - **Inegociável:** só regras decidem; ML apenas registra para o futuro. **ADR-068.**
 
-### E2 — Ingestão de vestíveis (adapter) · P2 · `TODO`
-- Porta de entrada para FC/sono de wearables via **adaptador** desacoplado. **(ADR na criação.)**
+### E2 — Ingestão de vestíveis (adapter) · P2 · `PARCIAL`
+- Porta de entrada para FC/sono de wearables via **adaptador** desacoplado. **ADR-084.**
+> **Seam concluído (2026-07-20, ADR-084) — escopo MÍNIMO, com sign-off (fora do MVP):**
+> `POST /v1/wearables/readings` (participante, `wearable:write`) recebe leituras canônicas de
+> FC/sono já normalizadas no device e as encaminha à porta **`WearableSink`** desacoplada
+> (`Null` padrão = **descarta**, `Memory` = teste; selecionável por `WEARABLE_SINK`), no mesmo
+> padrão de `EmailSender`/`AudioStorage`. Responde **202** (recebido); **sem persistência e sem
+> migração** (preparação, não construção). **Não alimenta o recomendador ao vivo** (inegociável
+> #5 — teste guarda que ingerir não cria recomendação e o `feature_vector` não ganha campo de
+> vestível); auditoria **sem valores de saúde** (só contagem, inegociável #6). +8 testes
+> (suíte 241→249, cobertura 89%). **Pendências (construção):** adaptador de persistência (tabela
+> + migração + **cifra/separação** do dado sensível), consulta p/ pesquisa (offline/cego),
+> mapeadores por provedor (payload cru→canônico) quando um device real for integrado.
 
 ### E3 — Cloud storage para áudio · P2 · `PARCIAL`
 - Migrar a materialização/entrega de áudio (A1) para armazenamento em nuvem (URLs

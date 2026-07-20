@@ -86,5 +86,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 081 | Lifecycle de staff: `is_active` (desativar suspende o token já emitido; RBAC confere no banco), listar time, rotação da própria senha **[novo]** |
 | 082 | Entrega de áudio por URL assinada (porta `AudioStorage`; chave = content_hash opaco; HMAC + TTL; A1 inline por padrão) **[novo]** |
 | 083 | Pipeline de features p/ ML **offline e cego**: consolida `recommendation_log`+telemetria em CSV pseudonimizado; ML não decide ao vivo **[novo]** |
+| 084 | Ingestão de vestíveis: **seam** desacoplado (porta `WearableSink` Null/Memory; sem device, sem persistência); não alimenta a decisão ao vivo **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

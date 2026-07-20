@@ -29,14 +29,17 @@ def _reset_throttles():
     from app.core.token_revocation import set_denylist, InMemoryDenylist
     from app.core.email import set_email_sender
     from app.modules.research.export_service import get_job_store
+    from app.modules.wearables.sink import set_wearable_sink
     set_rate_limiter(InMemoryRateLimiter())
     set_denylist(InMemoryDenylist())
     get_job_store().reset()
     set_email_sender(None)   # próxima chamada reconstrói a partir do ambiente
+    set_wearable_sink(None)  # próxima chamada reconstrói a partir do ambiente
     yield
     set_rate_limiter(None)   # próxima chamada reconstrói a partir do ambiente
     set_denylist(None)
     set_email_sender(None)
+    set_wearable_sink(None)
 
 
 @pytest.fixture
