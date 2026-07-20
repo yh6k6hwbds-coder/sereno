@@ -18,7 +18,7 @@ from app.core.problem import ProblemException
 from app.core.models import Participant, OtpChallenge, ContactInfo
 from app.core import otp, auth, pii_crypto
 from app.core.rate_limit import enforce as rate_limit
-from app.core.email import get_email_sender, EmailMessage
+from app.core.email import get_email_delivery, EmailMessage
 
 router = APIRouter(prefix="/auth/participant", tags=["participant-auth"])
 
@@ -35,22 +35,23 @@ class VerifyOtpIn(BaseModel):
 def deliver_otp(participant: Participant, code: str, db: Session) -> None:
     """Envia o OTP ao e-mail do participante (cifrado em repouso → decifrado aqui).
 
-    Best-effort e SEM logar o código: se não houver contato/chave ou o envio falhar, apenas
-    não envia — o código já foi gravado e a resposta ao cliente é genérica de qualquer modo."""
+    Best-effort e SEM logar o código: se não houver contato/chave, apenas não envia. A
+    entrega em si é desacoplada do request (porta `EmailDelivery`, ADR-085) e nunca propaga —
+    o código já foi gravado e a resposta ao cliente é genérica de qualquer modo."""
     contact = db.scalar(select(ContactInfo).where(ContactInfo.participant_id == participant.id))
     if contact is None:
         return
     try:
         email_addr = pii_crypto.decrypt(contact.enc_email,
                                         aad=pii_crypto.aad_for(participant.id, "email"))
-        get_email_sender().send(EmailMessage(
-            to=email_addr,
-            subject="Seu código de acesso — Sereno",
-            body=(f"Use este código de uso único para entrar no Sereno: {code}\n"
-                  "Ele expira em alguns minutos. Se você não solicitou, ignore este e-mail."),
-        ))
-    except Exception:  # noqa: BLE001 — envio é best-effort; não pode derrubar o request
+    except Exception:  # noqa: BLE001 — sem chave/contato válido não há como enviar; não derruba o request
         return
+    get_email_delivery().deliver(EmailMessage(
+        to=email_addr,
+        subject="Seu código de acesso — Sereno",
+        body=(f"Use este código de uso único para entrar no Sereno: {code}\n"
+              "Ele expira em alguns minutos. Se você não solicitou, ignore este e-mail."),
+    ))
 
 
 @router.post("/request-otp")

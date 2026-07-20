@@ -17,6 +17,7 @@ import logging
 import os
 import smtplib
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from email.message import EmailMessage as _MimeMessage
 from typing import Protocol
@@ -142,3 +143,79 @@ def set_email_sender(sender: EmailSender | None) -> None:
     """Injeta um provedor (testes) ou força reconstrução na próxima chamada (None)."""
     global _sender
     _sender = sender
+
+
+# ---------------------------------------------------------------------------
+# Entrega (porta): desacopla o ENVIO do caminho da requisição (ADR-085).
+# ---------------------------------------------------------------------------
+# O envio SMTP é I/O de rede com retries+timeouts: feito no thread do request, um provedor
+# lento/fora bloqueia `request-otp` (público, alvo de abuso) e o relato de evento adverso (P0).
+# A entrega é uma porta: `inline` (padrão — envia já; determinístico p/ dev/teste) ou
+# `background` (thread pool; o request retorna na hora). Uma fila RQ/Redis é o próximo
+# adaptador desta mesma porta (a "construção", ADR-031). O DESFECHO é sempre observado
+# (métrica), nunca o corpo/código — assim uma falha após retries deixa de ser silenciosa.
+
+def _send_and_observe(msg: EmailMessage) -> None:
+    """Envia pelo provedor atual e conta o desfecho. Nunca propaga (best-effort) nem loga o corpo."""
+    from app.core import metrics  # import tardio: evita ciclo e mantém metrics opcional
+    try:
+        get_email_sender().send(msg)
+        metrics.observe_email("sent")
+    except Exception:  # noqa: BLE001 — entrega é best-effort; não pode derrubar o request/worker
+        metrics.observe_email("failed")
+        logger.warning("Entrega de e-mail para %s (%s) falhou após retries.", msg.to, msg.subject)
+
+
+class EmailDelivery(Protocol):
+    def deliver(self, msg: EmailMessage) -> None: ...
+    def shutdown(self) -> None: ...
+
+
+class InlineDelivery:
+    """Envia de forma SÍNCRONA (padrão). Comportamento de dev/teste inalterado."""
+    def deliver(self, msg: EmailMessage) -> None:
+        _send_and_observe(msg)
+
+    def shutdown(self) -> None:
+        pass
+
+
+class BackgroundDelivery:
+    """Envia num thread pool: o request retorna na hora, sem esperar o SMTP (prod single-instance)."""
+    def __init__(self, workers: int = 2) -> None:
+        self._pool = ThreadPoolExecutor(max_workers=max(workers, 1),
+                                        thread_name_prefix="email")
+
+    def deliver(self, msg: EmailMessage) -> None:
+        self._pool.submit(_send_and_observe, msg)
+
+    def shutdown(self) -> None:
+        self._pool.shutdown(wait=True)
+
+
+_delivery: EmailDelivery | None = None
+
+
+def get_email_delivery() -> EmailDelivery:
+    """Entrega atual. Reconstrói do ambiente (`EMAIL_DELIVERY`) — padrão `inline`."""
+    global _delivery
+    if _delivery is None:
+        mode = os.getenv("EMAIL_DELIVERY", "inline").strip().lower()
+        if mode in ("background", "async", "thread"):
+            _delivery = BackgroundDelivery(int(os.getenv("EMAIL_WORKERS", "2")))
+        else:
+            _delivery = InlineDelivery()
+    return _delivery
+
+
+def set_email_delivery(delivery: EmailDelivery | None) -> None:
+    """Injeta uma entrega (teste) ou força reconstrução na próxima chamada (None).
+
+    Encerra a entrega anterior (drena o pool do BackgroundDelivery) para não vazar threads."""
+    global _delivery
+    if _delivery is not None and _delivery is not delivery:
+        try:
+            _delivery.shutdown()
+        except Exception:  # noqa: BLE001 — shutdown best-effort
+            pass
+    _delivery = delivery

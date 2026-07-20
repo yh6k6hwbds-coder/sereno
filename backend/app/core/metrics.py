@@ -40,6 +40,19 @@ LATENCY = Histogram(
     ["method", "path"],
     registry=REGISTRY,
 )
+# Entrega de e-mail (OTP/alerta): só o DESFECHO agregado — nunca destinatário, assunto ou
+# corpo (o código OTP jamais é observado). Torna visível a perda silenciosa de entrega (ADR-085).
+EMAILS = Counter(
+    "emails_total",
+    "Total de tentativas de entrega de e-mail por desfecho (sent|failed).",
+    ["outcome"],
+    registry=REGISTRY,
+)
+
+
+def observe_email(outcome: str) -> None:
+    """Conta uma entrega de e-mail por desfecho ('sent'|'failed'). Sem PII/corpo."""
+    EMAILS.labels(outcome=outcome).inc()
 
 
 def route_template(request: Request) -> str:

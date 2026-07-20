@@ -255,7 +255,13 @@ Endurecimento para dado real e para o CEP.
 > **Concluída (2026-07-04, ADR-063):** interface `EmailSender` (SMTP prod c/ retries; Null seguro;
 > Console dev; Memory teste). `request-otp` envia o OTP ao e-mail **decifrado de C4** (best-effort,
 > sem logar o código); `notify_team` alerta a equipe (sem PII) em EA moderate/severe. 5 testes.
-> **Pendências:** fila assíncrona (RQ/ADR-031); segredo SMTP em cofre; bounces.
+> **Desacoplamento concluído (2026-07-20, ADR-085):** ~~fila assíncrona~~ fechada no essencial —
+> porta **`EmailDelivery`** separa enfileirar de enviar: `inline` (padrão, síncrono) ou
+> `background` (thread pool; o request retorna na hora, sem esperar o SMTP — tira o bloqueio do
+> `request-otp` público e do EA/P0). O desfecho vira **métrica** `emails_total{outcome=sent|failed}`
+> (ADR-080), acabando com a perda silenciosa; entrega **nunca propaga**; código nunca em log/métrica.
+> +8 testes (suíte 249→257). **Pendências:** adaptador **RQ/Redis** (durabilidade/escala) — a
+> "construção"; **bounces**; alerta quando `failed` subir; segredo SMTP em **cofre/KMS** (ops).
 
 ### D2 — Rate limiting + denylist de `jti` · P1 · `DONE`
 - Limite por IP no `request-otp` e no `login`; revogação de token por `jti` (Redis).

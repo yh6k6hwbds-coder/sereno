@@ -21,7 +21,7 @@ from app.core.db import get_db
 from app.core.security import require, current_participant
 from app.core.problem import ProblemException
 from app.core.models import AdverseEvent, Session as SessionModel
-from app.core.email import get_email_sender, EmailMessage
+from app.core.email import get_email_delivery, EmailMessage
 
 router = APIRouter(prefix="/adverse-events", tags=["adverse-events"])
 
@@ -45,15 +45,13 @@ def notify_team(event_id: uuid.UUID, severity: str) -> None:
     to = os.getenv("TEAM_NOTIFY_EMAIL")
     if not to:
         return
-    try:
-        get_email_sender().send(EmailMessage(
-            to=to,
-            subject=f"[Sereno] Evento adverso ({severity})",
-            body=(f"Um evento adverso de gravidade '{severity}' foi registrado "
-                  f"(id {event_id}). Acesse o painel de pesquisa para os detalhes."),
-        ))
-    except Exception:  # noqa: BLE001 — alerta é best-effort; não pode derrubar o request
-        return
+    # Entrega desacoplada do request (porta `EmailDelivery`, ADR-085); nunca propaga.
+    get_email_delivery().deliver(EmailMessage(
+        to=to,
+        subject=f"[Sereno] Evento adverso ({severity})",
+        body=(f"Um evento adverso de gravidade '{severity}' foi registrado "
+              f"(id {event_id}). Acesse o painel de pesquisa para os detalhes."),
+    ))
 
 
 @router.post("", status_code=201)
