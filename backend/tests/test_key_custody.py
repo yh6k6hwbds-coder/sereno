@@ -38,7 +38,7 @@ def test_roundtrip_embeds_active_key_id(monkeypatch):
     monkeypatch.setenv("PII_ENC_KEY", _KA)
     monkeypatch.setenv("PII_ENC_KEY_ID", "k1")
     token = pii_crypto.encrypt("segredo", aad=_AAD)
-    assert token[0] == 0x01                                   # byte de versão
+    assert token[0] == 0x02                                   # byte de versão (envelope, ADR-088)
     kid_len = token[1]
     assert token[2:2 + kid_len].decode() == "k1"             # id da chave viaja no token
     assert pii_crypto.decrypt(token, aad=_AAD) == "segredo"
@@ -74,17 +74,27 @@ def test_unknown_key_id_fails_explicitly(monkeypatch):
 
 
 class _FakeKmsProvider:
-    """Simula um KmsKeyProvider: a KEK viria do KMS/Vault. Mesma porta (active/by_id)."""
+    """Simula um KmsKeyProvider: a KEK viria do KMS/Vault e o wrap/unwrap seria uma chamada
+    à API do KMS. Aqui embrulha localmente, mas prova que a cifra passa pela porta."""
     def __init__(self):
-        self._key = b"K" * 32
-        self.calls = 0
+        self._kek = b"K" * 32
+        self.wraps = 0
+        self.unwraps = 0
     def active(self):
-        self.calls += 1
-        return "kms-1", self._key
+        return "kms-1", self._kek
     def by_id(self, key_id):
         if key_id != "kms-1":
             raise KeyMissing(key_id)
-        return self._key
+        return self._kek
+    def wrap(self, dek, *, aad):
+        self.wraps += 1
+        n = os.urandom(12)
+        return "kms-1", n + AESGCM(self._kek).encrypt(n, dek, aad)
+    def unwrap(self, key_id, blob, *, aad):
+        self.unwraps += 1
+        if key_id != "kms-1":
+            raise KeyMissing(key_id)
+        return AESGCM(self._kek).decrypt(blob[:12], blob[12:], aad)
 
 
 def test_kms_provider_is_a_drop_in_seam(monkeypatch):
@@ -94,7 +104,8 @@ def test_kms_provider_is_a_drop_in_seam(monkeypatch):
     token = pii_crypto.encrypt("via-kms", aad=_AAD)
     assert token[2:2 + token[1]].decode() == "kms-1"
     assert pii_crypto.decrypt(token, aad=_AAD) == "via-kms"
-    assert fake.calls >= 1                                   # a cifra passou pelo provedor
+    # A cifra/decifra passou pelo wrap/unwrap do provedor (é o seam do KMS).
+    assert fake.wraps == 1 and fake.unwraps == 1
 
 
 def test_legacy_format_still_decrypts(monkeypatch):

@@ -21,6 +21,8 @@ import base64
 import os
 from typing import Protocol
 
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
 DEFAULT_KEY_ID = "env1"
 _ACTIVE_ENV = "PII_ENC_KEY"
 _ACTIVE_ID_ENV = "PII_ENC_KEY_ID"
@@ -42,12 +44,19 @@ def _decode(raw: str, label: str) -> bytes:
 
 
 class KeyProvider(Protocol):
-    def active(self) -> tuple[str, bytes]: ...   # (key_id, KEK de 32 bytes) para NOVA cifra
-    def by_id(self, key_id: str) -> bytes: ...    # resolve uma chave para DECIFRAR (rotação)
+    def active(self) -> tuple[str, bytes]: ...   # (key_id, KEK de 32 bytes) — v1/legado
+    def by_id(self, key_id: str) -> bytes: ...    # resolve a KEK p/ decifrar v1/legado
+    # Envelope (ADR-088): a KEK **embrulha/desembrulha** a DEK; o blob é OPACO ao chamador.
+    # Num KMS real é aqui que a app chama wrap/unwrap — a KEK nunca sai do HSM.
+    def wrap(self, dek: bytes, *, aad: bytes) -> tuple[str, bytes]: ...     # -> (key_id, blob)
+    def unwrap(self, key_id: str, blob: bytes, *, aad: bytes) -> bytes: ...  # -> dek
 
 
 class EnvKeyProvider:
-    """Chaves via ambiente/secret. Lê o ambiente a cada chamada (rotação sem reiniciar)."""
+    """Chaves via ambiente/secret. Lê o ambiente a cada chamada (rotação sem reiniciar).
+
+    O envelope é feito **localmente** (AES-GCM com a KEK do ambiente). Um KmsKeyProvider
+    faria o mesmo chamando o KMS — a KEK nunca exposta à aplicação."""
 
     def active(self) -> tuple[str, bytes]:
         raw = os.getenv(_ACTIVE_ENV)
@@ -69,6 +78,18 @@ class EnvKeyProvider:
                 return _decode(b64.strip(), f"{_RETIRED_ENV}[{key_id}]")
         raise KeyMissing(
             f"chave de id '{key_id}' indisponível (rotação: verifique {_RETIRED_ENV}).")
+
+    def wrap(self, dek: bytes, *, aad: bytes) -> tuple[str, bytes]:
+        """Embrulha a DEK com a KEK ativa. Blob = ``nonce(12) || dek_cifrada+tag`` (opaco)."""
+        key_id, kek = self.active()
+        nonce = os.urandom(12)
+        return key_id, nonce + AESGCM(kek).encrypt(nonce, dek, aad)
+
+    def unwrap(self, key_id: str, blob: bytes, *, aad: bytes) -> bytes:
+        """Desembrulha a DEK com a KEK de ``key_id`` (rotação: pode ser uma aposentada)."""
+        kek = self.by_id(key_id)
+        nonce, wrapped = blob[:12], blob[12:]
+        return AESGCM(kek).decrypt(nonce, wrapped, aad)
 
 
 _provider: KeyProvider | None = None
