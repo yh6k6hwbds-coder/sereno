@@ -77,10 +77,14 @@ def test_metric_exposes_no_body():
     fake = MemoryEmailSender(); set_email_sender(fake)
     InlineDelivery().deliver(EmailMessage(to="e@x.com", subject="assunto", body="segredo 999888"))
     body, _ = metrics.render()
-    text = body.decode()
-    assert "emails_total" in text
-    # a métrica agrega por desfecho; nunca o destinatário, assunto ou código.
-    assert "999888" not in text and "e@x.com" not in text and "assunto" not in text
+    # Inspeciona SÓ as linhas de `emails_total` (onde um vazamento apareceria) — checar o dump
+    # inteiro é frágil: um float de latência qualquer pode conter a sequência por acaso.
+    email_lines = [ln for ln in body.decode().splitlines() if ln.startswith("emails_total")]
+    assert email_lines                                   # a métrica existe
+    blob = "\n".join(email_lines)
+    # emails_total agrega só por desfecho; nunca destinatário, assunto ou código.
+    assert "999888" not in blob and "e@x.com" not in blob and "assunto" not in blob
+    assert all("outcome=" in ln for ln in email_lines)
 
 
 def test_set_delivery_shuts_down_previous_pool():
