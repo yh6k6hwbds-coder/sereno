@@ -49,7 +49,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 | C8 | Trilha de auditoria **append‑only**, sem PII/braço | ✅ | **Duas camadas:** guard no ORM (`audit/service.py`, ADR‑056) **e** trigger no banco que aborta UPDATE/DELETE — mesmo por SQL cru e mesmo do dono da tabela (`core/audit_ddl.py`, migração `d4e5f6a7b8c9`, ADR‑086); testado (`test_audit_append_only_db.py`). Ações sensíveis auditadas (consentimento, alocação, export, erase, desbloqueio, staff). |
 | C9 | Fail‑safe de configuração de produção | ✅ | Guard recusa subir sem a chave selada / com OTP‑no‑console (ADR‑077); postura de falha do Redis configurável (ADR‑079). |
 | C10 | Observabilidade sem PII (logs/métricas) | ✅ | Logs JSON e métricas Prometheus só com método/rota/status; entrega de e‑mail observável sem corpo/código (ADR‑067/080/085). |
-| C11 | Custódia de chaves em KMS/cofre gerenciado | 🟡 | Hoje as chaves (`PII_ENC_KEY`, `JWT_SECRET`, chave selada A/B) vêm de env/secret e são gitignored; **evoluir** para envelope/KMS em produção (ADR‑059/065). |
+| C11 | Custódia de chaves em KMS/cofre gerenciado | 🟡 | **Seam pronto:** a chave de PII fica atrás da porta `KeyProvider` e o ciphertext carrega o **id da chave**, habilitando **rotação** incremental (`core/keyring.py`, ADR‑087; testado). **Falta** o adaptador **KMS/Vault** real (a custódia hoje segue em env/secret gitignored) — quando existir, implementa a mesma porta sem tocar na cripto. `JWT_SECRET`/chave selada A/B seguem em env/secret. |
 | C12 | Teste de intrusão / revisão de segurança independente | ⬜ | **Recomendado antes do piloto.** Há `/security-review` no fluxo de dev, mas um pentest externo é decisão do NIT. |
 
 ## D. Direitos do titular (Art. 18)

@@ -28,6 +28,7 @@ def _reset_throttles():
     from app.core.rate_limit import set_rate_limiter, InMemoryRateLimiter
     from app.core.token_revocation import set_denylist, InMemoryDenylist
     from app.core.email import set_email_sender, set_email_delivery
+    from app.core.keyring import set_key_provider
     from app.modules.research.export_service import get_job_store
     from app.modules.wearables.sink import set_wearable_sink
     set_rate_limiter(InMemoryRateLimiter())
@@ -36,12 +37,14 @@ def _reset_throttles():
     set_email_sender(None)     # próxima chamada reconstrói a partir do ambiente
     set_email_delivery(None)   # idem — e drena o pool de um BackgroundDelivery anterior
     set_wearable_sink(None)    # próxima chamada reconstrói a partir do ambiente
+    set_key_provider(None)     # idem — provedor de chave de PII (env por padrão)
     yield
     set_rate_limiter(None)     # próxima chamada reconstrói a partir do ambiente
     set_denylist(None)
     set_email_sender(None)
     set_email_delivery(None)
     set_wearable_sink(None)
+    set_key_provider(None)
 
 
 @pytest.fixture

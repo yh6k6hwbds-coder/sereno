@@ -89,5 +89,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 084 | Ingestão de vestíveis: **seam** desacoplado (porta `WearableSink` Null/Memory; sem device, sem persistência); não alimenta a decisão ao vivo **[novo]** |
 | 085 | Entrega de e-mail desacoplada do request (porta `EmailDelivery` inline/background) + métrica de desfecho (`emails_total`); fecha a fila do D1 **[novo]** |
 | 086 | Auditoria append-only reforçada **no banco** (trigger aborta UPDATE/DELETE, mesmo do dono; REVOKE como extra); não só no ORM — fecha C8 **[novo]** |
+| 087 | Custódia da chave de PII atrás de porta `KeyProvider` (KMS-ready) + rotação por id de chave no ciphertext; env por padrão **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.
