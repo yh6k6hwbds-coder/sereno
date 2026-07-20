@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checklist LGPD / NIT — Sereno</title>
+<style>
+  :root{
+    --bg:#eaf0f4; --surface:#ffffff; --surface-2:#f4f8fb;
+    --ink:#132029; --muted:#53616d; --faint:#7f8b97; --border:#d8e1e9;
+    --accent:#0c6a83; --accent-soft:#e2eef2; --on-accent:#ffffff;
+    --ok:#1f8a5b; --ok-bg:#e2f3ea; --ok-ink:#125f3c;
+    --partial:#b1740c; --partial-bg:#fbeed2; --partial-ink:#7c4f06;
+    --pending:#5f6f7d; --pending-bg:#e6ecf1; --pending-ink:#45525e;
+    --shadow:0 1px 2px rgba(19,32,41,.05), 0 6px 20px rgba(19,32,41,.06);
+    --font-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --font-mono:ui-monospace,"SFMono-Regular","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+    --maxw:1000px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0c141d; --surface:#131f2a; --surface-2:#182634;
+      --ink:#e7eef4; --muted:#a1b1bf; --faint:#71828f; --border:#26333f;
+      --accent:#3aa9c9; --accent-soft:#12303a; --on-accent:#08171c;
+      --ok:#46c48c; --ok-bg:#102c20; --ok-ink:#82dcb0;
+      --partial:#e2ab45; --partial-bg:#33260f; --partial-ink:#f0ca82;
+      --pending:#8a9aa8; --pending-bg:#1d2935; --pending-ink:#b0bfcb;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.34);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#eaf0f4; --surface:#ffffff; --surface-2:#f4f8fb;
+    --ink:#132029; --muted:#53616d; --faint:#7f8b97; --border:#d8e1e9;
+    --accent:#0c6a83; --accent-soft:#e2eef2; --on-accent:#ffffff;
+    --ok:#1f8a5b; --ok-bg:#e2f3ea; --ok-ink:#125f3c;
+    --partial:#b1740c; --partial-bg:#fbeed2; --partial-ink:#7c4f06;
+    --pending:#5f6f7d; --pending-bg:#e6ecf1; --pending-ink:#45525e;
+    --shadow:0 1px 2px rgba(19,32,41,.05), 0 6px 20px rgba(19,32,41,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c141d; --surface:#131f2a; --surface-2:#182634;
+    --ink:#e7eef4; --muted:#a1b1bf; --faint:#71828f; --border:#26333f;
+    --accent:#3aa9c9; --accent-soft:#12303a; --on-accent:#08171c;
+    --ok:#46c48c; --ok-bg:#102c20; --ok-ink:#82dcb0;
+    --partial:#e2ab45; --partial-bg:#33260f; --partial-ink:#f0ca82;
+    --pending:#8a9aa8; --pending-bg:#1d2935; --pending-ink:#b0bfcb;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.34);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);
+    line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,32px) 72px}
+  a{color:var(--accent);text-underline-offset:2px}
+  code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);
+    border:1px solid var(--border);border-radius:5px;padding:.05em .38em;color:var(--ink);white-space:nowrap}
+
+  /* header */
+  .eyebrow{font-size:.72rem;font-weight:650;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 .5rem}
+  h1{font-size:clamp(1.7rem,4.2vw,2.6rem);line-height:1.08;margin:0;letter-spacing:-.02em;text-wrap:balance}
+  .lede{color:var(--muted);font-size:1.02rem;margin:.7rem 0 0;max-width:64ch}
+  .meta-row{display:flex;flex-wrap:wrap;gap:.5rem .9rem;margin-top:1rem;color:var(--faint);
+    font-size:.82rem;align-items:center}
+  .meta-row .sep{width:4px;height:4px;border-radius:50%;background:var(--border)}
+
+  /* disclaimer */
+  .notice{margin:1.6rem 0 0;background:var(--surface);border:1px solid var(--border);
+    border-left:4px solid var(--partial);border-radius:12px;padding:1rem 1.15rem;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:auto 1fr;gap:.85rem}
+  .notice svg{width:22px;height:22px;color:var(--partial);margin-top:2px}
+  .notice h2{margin:0 0 .25rem;font-size:.95rem;letter-spacing:.01em}
+  .notice p{margin:0;color:var(--muted);font-size:.9rem}
+  .notice strong{color:var(--ink)}
+
+  /* summary */
+  .summary{margin-top:1.6rem;background:var(--surface);border:1px solid var(--border);
+    border-radius:16px;padding:clamp(1.1rem,2.5vw,1.6rem);box-shadow:var(--shadow)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem}
+  @media(max-width:620px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{appearance:none;text-align:left;font:inherit;cursor:pointer;background:var(--surface-2);
+    border:1px solid var(--border);border-radius:12px;padding:.85rem .95rem;transition:border-color .15s,transform .15s;
+    display:flex;flex-direction:column;gap:.15rem}
+  .stat:hover{border-color:var(--accent)}
+  .stat .num{font-size:1.9rem;font-weight:680;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+  .stat .lab{font-size:.76rem;color:var(--muted);display:flex;align-items:center;gap:.42rem}
+  .stat[data-filter="ok"] .num{color:var(--ok)}
+  .stat[data-filter="partial"] .num{color:var(--partial)}
+  .stat[data-filter="pending"] .num{color:var(--pending)}
+  .stat[aria-pressed="true"]{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
+
+  .meter{display:flex;height:10px;border-radius:6px;overflow:hidden;margin-top:1.2rem;border:1px solid var(--border)}
+  .meter span{display:block;height:100%}
+  .meter .s-ok{background:var(--ok)} .meter .s-partial{background:var(--partial)} .meter .s-pending{background:var(--pending)}
+  .meter-cap{margin:.6rem 0 0;font-size:.8rem;color:var(--faint)}
+  .meter-cap b{color:var(--muted);font-weight:600}
+
+  /* dots + pills */
+  .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;display:inline-block}
+  .dot.ok{background:var(--ok)}
+  .dot.partial{background:linear-gradient(90deg,var(--partial) 0 50%,transparent 50% 100%);
+    border:1.5px solid var(--partial)}
+  .dot.pending{background:transparent;border:1.5px solid var(--pending)}
+  .pill{display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:600;
+    letter-spacing:.02em;padding:.28rem .55rem;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+  .pill.ok{background:var(--ok-bg);color:var(--ok-ink);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+  .pill.partial{background:var(--partial-bg);color:var(--partial-ink);border-color:color-mix(in srgb,var(--partial) 30%,transparent)}
+  .pill.pending{background:var(--pending-bg);color:var(--pending-ink);border-color:color-mix(in srgb,var(--pending) 30%,transparent)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.2rem;align-items:center}
+  .legend .hint{font-size:.78rem;color:var(--faint);margin-left:auto}
+  @media(max-width:560px){.legend .hint{margin-left:0;width:100%}}
+
+  /* docs strip */
+  .docs{margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:clamp(1rem,2.4vw,1.4rem);box-shadow:var(--shadow)}
+  .docs h2{margin:0 0 .2rem;font-size:.95rem}
+  .docs .sub{margin:0 0 .9rem;font-size:.84rem;color:var(--muted)}
+  .docs ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,1fr);gap:.55rem}
+  @media(max-width:620px){.docs ul{grid-template-columns:1fr}}
+  .docs li{display:grid;grid-template-columns:auto 1fr;gap:.7rem;align-items:start;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:.7rem .8rem}
+  .docs .tick{width:20px;height:20px;flex:0 0 auto;border-radius:6px;background:var(--accent-soft);
+    color:var(--accent);display:grid;place-items:center;margin-top:1px}
+  .docs .tick svg{width:13px;height:13px}
+  .docs .d-name{font-weight:620;font-size:.9rem;margin:0}
+  .docs .d-path{font-family:var(--font-mono);font-size:.76rem;color:var(--faint);margin:.15rem 0 0;word-break:break-all}
+  .docs .tag{font-size:.72rem;color:var(--muted)}
+
+  /* sections */
+  .section{margin-top:2.4rem}
+  .section.hidden{display:none}
+  .sec-head{display:flex;align-items:center;gap:.75rem;margin:0 0 1rem}
+  .sec-badge{width:34px;height:34px;flex:0 0 auto;border-radius:9px;background:var(--accent-soft);
+    color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:1rem}
+  .sec-head h3{margin:0;font-size:1.12rem;letter-spacing:-.01em}
+  .sec-head .art{font-size:.76rem;color:var(--faint);font-weight:500}
+
+  .rows{display:flex;flex-direction:column;gap:.6rem}
+  .row{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    display:grid;grid-template-columns:52px 132px 1fr;gap:.4rem 1rem;padding:.9rem 1.1rem;
+    box-shadow:var(--shadow);transition:border-color .15s}
+  .row:hover{border-color:color-mix(in srgb,var(--accent) 40%,var(--border))}
+  .row.hidden{display:none}
+  .row .id{font-family:var(--font-mono);font-size:.82rem;font-weight:600;color:var(--faint);padding-top:.15rem}
+  .row .st{padding-top:.05rem}
+  .row .body{min-width:0}
+  .row .title{font-weight:640;font-size:.96rem;margin:0 0 .25rem;color:var(--ink)}
+  .row .ev{margin:0;font-size:.88rem;color:var(--muted)}
+  .row .ev strong{color:var(--ink);font-weight:640}
+  @media(max-width:640px){
+    .row{grid-template-columns:1fr;gap:.45rem}
+    .row .id{padding-top:0}
+    .row .meta{display:flex;align-items:center;gap:.7rem}
+  }
+
+  /* actions */
+  .actions{margin-top:1rem;background:var(--surface);border:1px solid var(--border);
+    border-radius:16px;padding:clamp(1.1rem,2.5vw,1.7rem);box-shadow:var(--shadow)}
+  .actions ol{list-style:none;counter-reset:a;margin:0;padding:0;display:flex;flex-direction:column;gap:.7rem}
+  .actions li{counter-increment:a;display:grid;grid-template-columns:auto 1fr;gap:.85rem;align-items:start;
+    padding:.7rem;border-radius:10px}
+  .actions li:hover{background:var(--surface-2)}
+  .actions li::before{content:counter(a);width:28px;height:28px;border-radius:8px;background:var(--accent);
+    color:var(--on-accent);display:grid;place-items:center;font-weight:700;font-size:.9rem;font-variant-numeric:tabular-nums}
+  .actions .a-txt{font-size:.94rem}
+  .actions .a-txt .refs{color:var(--faint);font-size:.82rem}
+  .actions .blocker{display:inline-block;margin-top:.3rem;font-size:.74rem;font-weight:650;
+    color:var(--partial-ink);background:var(--partial-bg);border-radius:6px;padding:.1rem .45rem;
+    border:1px solid color-mix(in srgb,var(--partial) 30%,transparent)}
+
+  h4.block-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.13em;color:var(--faint);
+    margin:2.6rem 0 .5rem;font-weight:650}
+
+  footer{margin-top:2.6rem;padding-top:1.4rem;border-top:1px solid var(--border);
+    color:var(--faint);font-size:.82rem;display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;align-items:center}
+  footer code{white-space:normal}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Proteção de dados · LGPD 13.709/2018</p>
+    <h1>Checklist LGPD / NIT</h1>
+    <p class="lede">Mapeamento técnico do que já está implementado no <strong>Sereno</strong> — piloto
+      de neuromodulação não invasiva — frente às exigências usuais da LGPD, como material de apoio ao
+      NIT/UNINTA, ao Encarregado&nbsp;(DPO) e à submissão ao CEP.</p>
+    <div class="meta-row">
+      <span>Sereno · piloto de 4 semanas</span><span class="sep"></span>
+      <span>UNINTA — Sobral/CE</span><span class="sep"></span>
+      <span>Atualizado 20 jul 2026</span><span class="sep"></span>
+      <span>Fonte: <code>docs/lgpd-nit-checklist.md</code></span>
+    </div>
+  </header>
+
+  <div class="notice">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 3l8 4v5c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V7l8-4z"/><path d="M12 8v4"/><path d="M12 15.5h.01"/>
+    </svg>
+    <div>
+      <h2>Material de apoio — não é parecer jurídico</h2>
+      <p>Bases legais, enquadramento de dado sensível de saúde, prazos de retenção, contratos com
+        operadores e designação de Encarregado são <strong>decisões institucionais/jurídicas</strong>.
+        Este documento sinaliza, não decide. Toda linha <strong>Pendente</strong> exige validação
+        humana antes do piloto com dados reais.</p>
+    </div>
+  </div>
+
+  <section class="summary" aria-label="Resumo de status">
+    <div class="stats">
+      <button class="stat" data-filter="all" aria-pressed="true">
+        <span class="num">35</span><span class="lab">Itens no total</span></button>
+      <button class="stat" data-filter="ok" aria-pressed="false">
+        <span class="num">18</span><span class="lab"><span class="dot ok"></span>Implementado</span></button>
+      <button class="stat" data-filter="partial" aria-pressed="false">
+        <span class="num">7</span><span class="lab"><span class="dot partial"></span>Parcial</span></button>
+      <button class="stat" data-filter="pending" aria-pressed="false">
+        <span class="num">10</span><span class="lab"><span class="dot pending"></span>Pendente</span></button>
+    </div>
+    <div class="meter" role="img" aria-label="18 implementados, 7 parciais, 10 pendentes de 35">
+      <span class="s-ok" style="width:51.4%"></span>
+      <span class="s-partial" style="width:20%"></span>
+      <span class="s-pending" style="width:28.6%"></span>
+    </div>
+    <p class="meter-cap"><b>18 de 35</b> implementados e verificados em teste/CI · <b>7</b> parciais
+      (mecanismo pronto, falta o passo de produção/formalização) · <b>10</b> pendentes de decisão
+      institucional.</p>
+    <div class="legend">
+      <span class="pill ok"><span class="dot ok"></span>Implementado — existe em código, coberto por teste/CI</span>
+      <span class="pill partial"><span class="dot partial"></span>Parcial — falta produção/formalização</span>
+      <span class="pill pending"><span class="dot pending"></span>Pendente — decisão do NIT/DPO/assessoria</span>
+      <span class="hint">Clique num número acima para filtrar.</span>
+    </div>
+  </section>
+
+  <section class="docs" aria-label="Documentos de apoio">
+    <h2>Documentos de apoio no repositório</h2>
+    <p class="sub">Rascunhos técnicos que acompanham este checklist — ancorados no código, para o NIT/DPO/CEP validarem.</p>
+    <ul>
+      <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><p class="d-name">Política de retenção e descarte <span class="tag">· E1/E2</span></p>
+        <p class="d-path">docs/politica-retencao-descarte.md</p></div></li>
+      <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><p class="d-name">Plano de resposta a incidentes <span class="tag">· G4</span></p>
+        <p class="d-path">docs/plano-resposta-incidentes.md</p></div></li>
+      <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><p class="d-name">Registro de operações (ROPA, Art. 37) <span class="tag">· G3</span></p>
+        <p class="d-path">docs/registro-operacoes-tratamento.md</p></div></li>
+      <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><p class="d-name">Decisões de arquitetura (ADRs) <span class="tag">· evidência</span></p>
+        <p class="d-path">docs/decisoes/ADR-0xx-*.md</p></div></li>
+    </ul>
+  </section>
+
+  <main id="board">
+
+    <section class="section" data-sec>
+      <div class="sec-head"><span class="sec-badge">A</span>
+        <h3>Bases legais, finalidade e dados sensíveis</h3></div>
+      <div class="rows">
+        <article class="row" data-status="partial"><div class="id">A1</div>
+          <div class="st"><span class="pill partial"><span class="dot partial"></span>Parcial</span></div>
+          <div class="body"><p class="title">Finalidade específica e informada (viabilidade; ansiedade/sono exploratórios)</p>
+          <p class="ev">Escopo travado e documentado (<code>CLAUDE.md</code>, <code>docs/ROADMAP.md</code>);
+          <strong>falta</strong> o texto de finalidade no TCLE ser validado pela assessoria.</p></div></article>
+        <article class="row" data-status="pending"><div class="id">A2</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Base legal do tratamento definida</p>
+          <p class="ev"><strong>Decisão do NIT/assessoria.</strong> Dado de saúde é <strong>sensível</strong> (Art.&nbsp;11).
+          Definir a base — tipicamente consentimento específico e destacado para pesquisa (Art.&nbsp;11,&nbsp;I) e/ou
+          estudos em saúde (Art.&nbsp;11,&nbsp;II,&nbsp;"c"), articulada com a Res.&nbsp;CNS&nbsp;466/2012 e o CEP.</p></div></article>
+        <article class="row" data-status="ok"><div class="id">A3</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Minimização de dados (coleta só do necessário)</p>
+          <p class="ev">PII limitada a nome/e-mail de contato (<code>ContactInfo</code>); pesquisa usa
+          <code>study_code</code> pseudônimo; sem dado clínico além dos instrumentos versionados (GAD-7/PSQI/SUS).</p></div></article>
+        <article class="row" data-status="ok"><div class="id">A4</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Não uso para decisão automatizada clínica</p>
+          <p class="ev">Recomendador <strong>por regras</strong>, ML nunca decide ao vivo (inegociável&nbsp;#5;
+          <code>recommender/</code>, ADR-068/083). Vestíveis não alimentam decisão (ADR-084).</p></div></article>
+      </div>
+    </section>
+
+    <section class="section" data-sec>
+      <div class="sec-head"><span class="sec-badge">B</span><h3>Consentimento (TCLE)</h3></div>
+      <div class="rows">
+        <article class="row" data-status="ok"><div class="id">B1</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Registro de consentimento versionado, com data e evidência</p>
+          <p class="ev"><code>ConsentRecord</code> (<code>tcle_version</code>, <code>accepted</code>, <code>ip_address</code>,
+          hash do payload); <code>POST /v1/consent</code> recusa versão divergente da vigente (<code>consent/</code>).</p></div></article>
+        <article class="row" data-status="partial"><div class="id">B2</div>
+          <div class="st"><span class="pill partial"><span class="dot partial"></span>Parcial</span></div>
+          <div class="body"><p class="title">Consentimento <strong>específico e destacado</strong> para dado sensível</p>
+          <p class="ev">O mecanismo registra a versão aceita; <strong>falta</strong> o <strong>conteúdo</strong> do TCLE
+          ser redigido/validado (assessoria + CEP) com destaque para dado de saúde.</p></div></article>
+        <article class="row" data-status="ok"><div class="id">B3</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Revogação do consentimento pelo titular</p>
+          <p class="ev">Self-service: <code>POST /v1/participants/me/consent/withdraw</code> carimba <code>revoked_at</code> +
+          marca <code>withdrawn</code> e <strong>bloqueia novas sessões</strong> (ADR-089; testado). Retirar&nbsp;≠&nbsp;eliminar —
+          o dado de pesquisa já coletado é retido pseudonimizado (ADR-066).</p></div></article>
+      </div>
+    </section>
+
+    <section class="section" data-sec>
+      <div class="sec-head"><span class="sec-badge">C</span><h3>Segurança da informação — medidas técnicas</h3>
+        <span class="art">Art. 46</span></div>
+      <div class="rows">
+        <article class="row" data-status="ok"><div class="id">C1</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">PII cifrada em repouso, separada do dado de pesquisa</p>
+          <p class="ev">AES-256-GCM na aplicação, AAD ligando participante+campo; <strong>envelope</strong> (DEK por
+          registro embrulhada pela KEK) — <code>core/pii_crypto.py</code>, ADR-059/088.</p></div></article>
+        <article class="row" data-status="ok"><div class="id">C2</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Transporte cifrado (TLS/HTTPS)</p>
+          <p class="ev"><code>force_https = true</code> no deploy (<code>fly.toml</code>, ADR-076).</p></div></article>
+        <article class="row" data-status="ok"><div class="id">C3</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Autenticação forte de staff (senha + 2º fator)</p>
+          <p class="ev">argon2id + JWT access/refresh + <strong>MFA TOTP obrigatório</strong> (ADR-043/074);
+          sem 2º fator, só token de cadastro restrito.</p></div></article>
+        <article class="row" data-status="ok"><div class="id">C4</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Autenticação de participante sem senha (OTP), sem vazar o código</p>
+          <p class="ev">OTP por e-mail, gravado só como hash, uso único, expira, tentativas limitadas;
+          <strong>nunca logado</strong> (<code>participant_auth/</code>, ADR-063/085).</p></div></article>
+        <article class="row" data-status="ok"><div class="id">C5</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Controle de acesso por papel (RBAC) no servidor</p>
+          <p class="ev">Matriz <code>RBAC</code> server-side; nenhuma permissão revela o braço
+          (<code>core/security.py</code>, inegociável&nbsp;#2/#6).</p></div></article>
+        <article class="row" data-status="ok"><div class="id">C6</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Ciclo de vida de credenciais (desativar/rotacionar)</p>
+          <p class="ev">Lifecycle de staff: desativar suspende o acesso já emitido; rotação de senha (ADR-081).</p></div></article>
+        <article class="row" data-status="ok"><div class="id">C7</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Proteção contra abuso (rate limit) e revogação de token</p>
+          <p class="ev">Rate limit por IP real atrás de proxy + denylist de <code>jti</code> (ADR-064/078/079).</p></div></article>
+        <article class="row" data-status="ok"><div class="id">C8</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Trilha de auditoria <strong>append-only</strong>, sem PII/braço</p>
+          <p class="ev"><strong>Duas camadas:</strong> guard no ORM <strong>e</strong> trigger no banco que aborta
+          UPDATE/DELETE — mesmo por SQL cru e mesmo do dono da tabela (<code>core/audit_ddl.py</code>, ADR-056/086; testado).</p></div></article>
+        <article class="row" data-status="ok"><div class="id">C9</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Fail-safe de configuração de produção</p>
+          <p class="ev">Guard recusa subir sem a chave selada / com OTP-no-console (ADR-077); postura de falha
+          do Redis configurável (ADR-079).</p></div></article>
+        <article class="row" data-status="ok"><div class="id">C10</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Observabilidade sem PII (logs/métricas)</p>
+          <p class="ev">Logs JSON e métricas Prometheus só com método/rota/status; entrega de e-mail observável
+          sem corpo/código (ADR-067/080/085).</p></div></article>
+        <article class="row" data-status="partial"><div class="id">C11</div>
+          <div class="st"><span class="pill partial"><span class="dot partial"></span>Parcial</span></div>
+          <div class="body"><p class="title">Custódia de chaves em KMS/cofre gerenciado</p>
+          <p class="ev"><strong>Seam + envelope prontos:</strong> chave de PII atrás da porta <code>KeyProvider</code>;
+          cifra por envelope via <code>wrap</code>/<code>unwrap</code> (padrão real de KMS) + rotação por id (ADR-087/088; testado).
+          <strong>Falta</strong> o adaptador <strong>KMS/Vault</strong> real — hoje a custódia segue em env/secret.</p></div></article>
+        <article class="row" data-status="pending"><div class="id">C12</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Teste de intrusão / revisão de segurança independente</p>
+          <p class="ev"><strong>Recomendado antes do piloto.</strong> Há revisão de segurança no fluxo de dev, mas um
+          pentest externo é decisão do NIT.</p></div></article>
+      </div>
+    </section>
+
+    <section class="section" data-sec>
+      <div class="sec-head"><span class="sec-badge">D</span><h3>Direitos do titular</h3><span class="art">Art. 18</span></div>
+      <div class="rows">
+        <article class="row" data-status="ok"><div class="id">D1</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Acesso / portabilidade dos dados do titular</p>
+          <p class="ev"><code>GET /v1/participants/{id}/data</code> reúne os dados do titular (PII do próprio),
+          <strong>sem</strong> o braço; auditado (<code>data_rights/</code>, ADR-066).</p></div></article>
+        <article class="row" data-status="ok"><div class="id">D2</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Eliminação da PII direta a pedido</p>
+          <p class="ev"><code>POST /v1/participants/{id}/erase</code> remove contato cifrado + artefatos de OTP e
+          marca <code>withdrawn</code>; auditado.</p></div></article>
+        <article class="row" data-status="partial"><div class="id">D3</div>
+          <div class="st"><span class="pill partial"><span class="dot partial"></span>Parcial</span></div>
+          <div class="body"><p class="title">Retenção de dado pseudonimizado após eliminação</p>
+          <p class="ev">O <code>erase</code> <strong>retém</strong> o dado pseudonimizado (exceção de pesquisa, ADR-066) e
+          <strong>não</strong> apaga a auditoria; <strong>confirmar</strong> com CEP/assessoria que consta no TCLE.</p></div></article>
+        <article class="row" data-status="pending"><div class="id">D4</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Atendimento a titular via canal do Encarregado</p>
+          <p class="ev"><strong>Decisão do NIT/DPO.</strong> A retirada de consentimento já é self-service (B3);
+          acesso e eliminação seguem operados pela equipe. <strong>Falta</strong> o canal público do Encarregado e
+          o prazo de resposta (Art.&nbsp;18,&nbsp;§5º).</p></div></article>
+      </div>
+    </section>
+
+    <section class="section" data-sec>
+      <div class="sec-head"><span class="sec-badge">E</span><h3>Retenção, descarte e ciclo de vida</h3></div>
+      <div class="rows">
+        <article class="row" data-status="pending"><div class="id">E1</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Política de retenção/descarte com <strong>prazos</strong> definidos</p>
+          <p class="ev"><strong>Rascunho técnico pronto</strong> (<code>docs/politica-retencao-descarte.md</code>) com
+          inventário de dados e prazos <strong>propostos</strong>; <strong>falta</strong> a <strong>aprovação
+          institucional</strong> (CEP/assessoria) dos prazos — é o que E1 mede.</p></div></article>
+        <article class="row" data-status="pending"><div class="id">E2</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Expurgo agendado ao fim do prazo</p>
+          <p class="ev">Não implementado (pendência do ADR-066 e da política, §6). Job/rotina depende dos prazos de E1.</p></div></article>
+        <article class="row" data-status="ok"><div class="id">E3</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Marcação de status do titular (ativo/retirado/concluído)</p>
+          <p class="ev"><code>Participant.status</code> com CHECK (<code>active</code>/<code>withdrawn</code>/<code>completed</code>).</p></div></article>
+      </div>
+    </section>
+
+    <section class="section" data-sec>
+      <div class="sec-head"><span class="sec-badge">F</span><h3>Operadores e transferência internacional</h3>
+        <span class="art">Art. 33</span></div>
+      <div class="rows">
+        <article class="row" data-status="ok"><div class="id">F1</div>
+          <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
+          <div class="body"><p class="title">Residência dos dados no Brasil</p>
+          <p class="ev">Backend + Postgres em <code>gru</code>/São Paulo (<code>fly.toml</code>, ADR-076; inegociável&nbsp;#6).</p></div></article>
+        <article class="row" data-status="pending"><div class="id">F2</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Contrato/DPA com operadores (Fly.io, SMTP, GitHub Pages)</p>
+          <p class="ev"><strong>Decisão do NIT/jurídico.</strong> Mapear operadores e firmar cláusulas; avaliar que
+          Fly.io/GitHub são empresas estrangeiras (ainda que a região seja BR) e a transferência internacional (Art.&nbsp;33).</p></div></article>
+        <article class="row" data-status="partial"><div class="id">F3</div>
+          <div class="st"><span class="pill partial"><span class="dot partial"></span>Parcial</span></div>
+          <div class="body"><p class="title">Dado de contato enviado a provedor de e-mail (OTP/alertas)</p>
+          <p class="ev">Entrega desacoplada e observável (ADR-085); <strong>falta</strong> o DPA com o provedor SMTP e a
+          política de bounces.</p></div></article>
+      </div>
+    </section>
+
+    <section class="section" data-sec>
+      <div class="sec-head"><span class="sec-badge">G</span><h3>Governança e conformidade</h3></div>
+      <div class="rows">
+        <article class="row" data-status="pending"><div class="id">G1</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Encarregado (DPO) designado e publicado</p>
+          <p class="ev"><strong>Decisão do NIT/UNINTA.</strong></p></div></article>
+        <article class="row" data-status="pending"><div class="id">G2</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Relatório de Impacto à Proteção de Dados (RIPD/DPIA)</p>
+          <p class="ev"><strong>Recomendado</strong> para dado sensível de saúde. Este checklist + os ADRs servem de insumo técnico.</p></div></article>
+        <article class="row" data-status="partial"><div class="id">G3</div>
+          <div class="st"><span class="pill partial"><span class="dot partial"></span>Parcial</span></div>
+          <div class="body"><p class="title">Registro das operações de tratamento (Art. 37)</p>
+          <p class="ev"><strong>Rascunho consolidado</strong> (<code>docs/registro-operacoes-tratamento.md</code>):
+          8 operações (OP-01…08) com finalidade, dados, base legal, operadores, transferência, retenção e segurança.
+          <strong>Falta</strong> o controlador <strong>adotar/manter</strong> o registro formal e definir a base legal (A2).</p></div></article>
+        <article class="row" data-status="pending"><div class="id">G4</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Plano de resposta a incidentes + notificação à ANPD (Art. 48)</p>
+          <p class="ev"><strong>Rascunho técnico pronto</strong> (<code>docs/plano-resposta-incidentes.md</code>):
+          fases, severidade, playbook de contenção e notificação. <strong>Falta</strong> o NIT/DPO definir
+          contatos/plantão, confirmar prazos e <strong>aprovar</strong>; alertas automáticos seguem pendência.</p></div></article>
+        <article class="row" data-status="partial"><div class="id">G5</div>
+          <div class="st"><span class="pill partial"><span class="dot partial"></span>Parcial</span></div>
+          <div class="body"><p class="title">Aprovação do CEP/CONEP (ética em pesquisa)</p>
+          <p class="ev">Submissão em preparação (<code>docs/Roteiro_Submissao_CEP.docx</code>); a LGPD caminha junto do parecer ético.</p></div></article>
+        <article class="row" data-status="pending"><div class="id">G6</div>
+          <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
+          <div class="body"><p class="title">Aplicabilidade SaMD/ANVISA (se houver claim clínico)</p>
+          <p class="ev"><strong>Decisão do NIT/assessoria.</strong> Copy mantém "ferramenta complementar, experimental",
+          o que reduz risco de enquadramento — mas confirmar.</p></div></article>
+      </div>
+    </section>
+
+    <p id="empty" hidden style="text-align:center;color:var(--faint);margin:2rem 0">Nenhum item neste filtro.</p>
+
+    <h4 class="block-title">Ações recomendadas ao NIT — em ordem de prioridade</h4>
+    <div class="actions">
+      <ol>
+        <li><div class="a-txt"><strong>Definir a base legal</strong> do tratamento de dado sensível de saúde e refletir no TCLE.
+          <span class="refs">A2, B2</span><br><span class="blocker">Bloqueia o piloto com dados reais</span></div></li>
+        <li><div class="a-txt"><strong>Designar o Encarregado (DPO)</strong> e o canal de atendimento ao titular. <span class="refs">G1, D4</span></div></li>
+        <li><div class="a-txt"><strong>Política de retenção/descarte</strong> com prazos e expurgo. <span class="refs">E1, E2</span></div></li>
+        <li><div class="a-txt"><strong>DPAs com operadores</strong> (Fly.io, SMTP, GitHub Pages) e análise de transferência internacional. <span class="refs">F2, F3</span></div></li>
+        <li><div class="a-txt"><strong>RIPD/DPIA</strong> usando este checklist + ADRs como insumo. <span class="refs">G2, G3</span></div></li>
+        <li><div class="a-txt"><strong>Plano de incidentes</strong> e fluxo de notificação à ANPD. <span class="refs">G4</span></div></li>
+        <li><div class="a-txt"><strong>Produção:</strong> migrar chaves para KMS/cofre e considerar pentest externo. <span class="refs">C11, C12</span></div></li>
+      </ol>
+    </div>
+  </main>
+
+  <footer>
+    <span>Cada linha <strong style="color:var(--ok)">Implementado</strong> é rastreável ao código/ADR citado.</span>
+    <span>Gerado a partir de <code>docs/lgpd-nit-checklist.md</code> · não substitui parecer do NIT/jurídico nem do CEP.</span>
+  </footer>
+</div>
+
+<script>
+  (function(){
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.stat'));
+    var rows = Array.prototype.slice.call(document.querySelectorAll('.row'));
+    var sections = Array.prototype.slice.call(document.querySelectorAll('[data-sec]'));
+    var empty = document.getElementById('empty');
+    var active = 'all';
+
+    function apply(filter){
+      active = filter;
+      buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.filter === filter)); });
+      var anyVisible = false;
+      rows.forEach(function(r){
+        var show = filter === 'all' || r.dataset.status === filter;
+        r.classList.toggle('hidden', !show);
+        if(show) anyVisible = true;
+      });
+      sections.forEach(function(sec){
+        var visible = sec.querySelectorAll('.row:not(.hidden)').length;
+        sec.classList.toggle('hidden', visible === 0);
+      });
+      empty.hidden = anyVisible;
+    }
+
+    buttons.forEach(function(b){
+      b.addEventListener('click', function(){
+        apply(active === b.dataset.filter && b.dataset.filter !== 'all' ? 'all' : b.dataset.filter);
+      });
+    });
+  })();
+</script>
+</body>
+</html>
