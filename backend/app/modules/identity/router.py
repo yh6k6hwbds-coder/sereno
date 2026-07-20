@@ -20,7 +20,7 @@ from app.core.db import get_db
 from app.core.problem import ProblemException
 from app.core.models import StaffUser
 from app.core import auth
-from app.core.security import RBAC, current_user
+from app.core.security import RBAC, current_user, assert_staff_active
 from app.core.rate_limit import enforce as rate_limit
 from app.core.token_revocation import get_denylist
 
@@ -72,6 +72,10 @@ async def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     user = db.scalars(select(StaffUser).where(StaffUser.email == body.email)).first()
     if user is None or not auth.verify_password(user.password_hash, body.password):
         raise ProblemException(401, "Credenciais inválidas", "E-mail ou senha incorretos.")
+    if not user.is_active:
+        # Mensagem GENÉRICA de propósito: não confirma a existência da conta a quem
+        # tenta entrar numa conta suspensa (ADR-081).
+        raise ProblemException(401, "Credenciais inválidas", "E-mail ou senha incorretos.")
     if user.mfa_enabled:
         # Ainda não dá acesso: emite desafio; exige o 2º fator.
         return {"mfa_required": True, "token_type": "bearer",
@@ -90,13 +94,16 @@ async def mfa_verify(body: MfaIn, db: Session = Depends(get_db)):
     except jwt.InvalidTokenError:
         raise ProblemException(401, "Desafio MFA inválido", "Token de MFA inválido ou expirado.")
     user = db.get(StaffUser, uuid.UUID(payload["sub"]))
-    if user is None or not user.mfa_secret or not auth.verify_totp(user.mfa_secret.decode(), body.code):
+    # `is_active` também aqui: senão um desafio emitido antes da suspensão ainda trocaria
+    # por tokens plenos depois dela (ADR-081).
+    if (user is None or not user.is_active or not user.mfa_secret
+            or not auth.verify_totp(user.mfa_secret.decode(), body.code)):
         raise ProblemException(401, "Código inválido", "Código de verificação incorreto.")
     return _tokens(str(user.id), user.role)
 
 
 @router.post("/refresh")
-async def refresh(body: RefreshIn):
+async def refresh(body: RefreshIn, db: Session = Depends(get_db)):
     try:
         payload = auth.decode_token(body.refresh_token, expected_type="refresh")
     except jwt.InvalidTokenError:
@@ -104,6 +111,9 @@ async def refresh(body: RefreshIn):
     jti = payload.get("jti")
     if jti and get_denylist().is_revoked(jti):
         raise ProblemException(401, "Sessão inválida", "Token de renovação revogado.")
+    # Sem isto, staff suspenso renovaria o par de tokens indefinidamente; o acesso
+    # morreria só no `require()`, e não na fronteira de emissão (ADR-081).
+    assert_staff_active(db, {"id": payload["sub"], "role": payload.get("role")})
     return _tokens(payload["sub"], payload["role"])
 
 

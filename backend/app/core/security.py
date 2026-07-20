@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.problem import ProblemException
 from app.core import auth as auth_core
 from app.core.db import get_db
-from app.core.models import Participant
+from app.core.models import Participant, StaffUser
 from app.core.token_revocation import get_denylist
 
 # Matriz mínima de permissões (espelha a Etapa 5).
@@ -72,11 +72,31 @@ async def current_staff_enrolling(cred: HTTPAuthorizationCredentials = Depends(_
     return {"id": payload["sub"], "role": payload.get("role"), "scope": payload.get("scope", "")}
 
 
+def assert_staff_active(db: Session, user: dict) -> None:
+    """Recusa staff desativado — mesmo com token válido em mãos (ADR-081).
+
+    O JWT não sabe do lifecycle: sem esta conferência no banco, desativar um pesquisador
+    só teria efeito quando o token dele expirasse. Só se aplica a papéis de staff;
+    participante tem o seu próprio caminho (`current_participant`)."""
+    if user.get("role") not in ("researcher", "admin"):
+        return
+    try:
+        sid = uuid.UUID(str(user["id"]))
+    except (ValueError, TypeError):
+        raise ProblemException(401, "Token inválido", "Identificador de staff inválido.")
+    staff = db.get(StaffUser, sid)
+    if staff is None:
+        raise ProblemException(401, "Não autenticado", "Usuário de staff não encontrado.")
+    if not staff.is_active:
+        raise ProblemException(401, "Acesso suspenso", "Esta conta de staff está desativada.")
+
+
 def require(perm: str):
     """Dependência de autorização: exige `perm` para o papel do usuário."""
-    async def dep(user: dict = Depends(current_user)) -> dict:
+    async def dep(user: dict = Depends(current_user), db: Session = Depends(get_db)) -> dict:
         if perm not in RBAC.get(user.get("role"), set()):
             raise ProblemException(403, "Acesso negado", f"Requer a permissão: {perm}")
+        assert_staff_active(db, user)
         return user
     return dep
 

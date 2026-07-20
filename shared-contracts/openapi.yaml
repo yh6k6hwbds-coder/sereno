@@ -452,6 +452,16 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
   /staff:
+    get:
+      summary: Listar usuários de staff (admin)
+      operationId: listStaff
+      description: >
+        Lista pesquisadores/admins com estado operacional (papel, MFA, ativo, último login).
+        Somente admin (`user:manage`). Não devolve senha nem segredo de MFA.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/StaffList' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
     post:
       summary: Criar usuário de staff (admin) — sem auto-registro público
       operationId: createStaff
@@ -464,6 +474,47 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /staff/{id}/deactivate:
+    parameters: [ { $ref: '#/components/parameters/PathId' } ]
+    post:
+      summary: Desativar um usuário de staff (admin)
+      operationId: deactivateStaff
+      description: >
+        Suspende o acesso do staff: tokens já emitidos deixam de valer (o RBAC confere o
+        estado no banco a cada requisição) e o login passa a falhar com 401 genérico.
+        Um admin **não** pode desativar a si mesmo (evita lockout). Auditado, sem PII.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/StaffStatus' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /staff/{id}/activate:
+    parameters: [ { $ref: '#/components/parameters/PathId' } ]
+    post:
+      summary: Reativar um usuário de staff (admin)
+      operationId: activateStaff
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/StaffStatus' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /staff/me/password:
+    post:
+      summary: Rotacionar a própria senha (staff autenticado)
+      operationId: rotateOwnPassword
+      description: >
+        Troca a senha exigindo a senha atual. A nova senha precisa diferir da atual (422).
+        Revoga o token de acesso em uso — é preciso autenticar de novo. Auditado, sem PII.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PasswordRotateIn' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PasswordRotated' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
   /staff/me/mfa/enroll:
     post:
@@ -827,6 +878,40 @@ components:
         email: { type: string }
         role: { type: string, enum: [researcher, admin] }
       required: [id, email, role]
+    StaffSummary:
+      type: object
+      description: "Estado operacional do staff — sem senha, sem segredo de MFA."
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        role: { type: string, enum: [researcher, admin] }
+        mfa_enabled: { type: boolean }
+        is_active: { type: boolean }
+        last_login_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+      required: [id, email, role, mfa_enabled, is_active, created_at]
+    StaffList:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/StaffSummary' } }
+      required: [items]
+    StaffStatus:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        is_active: { type: boolean }
+      required: [id, is_active]
+    PasswordRotateIn:
+      type: object
+      properties:
+        current_password: { type: string, minLength: 8, maxLength: 200 }
+        new_password: { type: string, minLength: 8, maxLength: 200 }
+      required: [current_password, new_password]
+    PasswordRotated:
+      type: object
+      description: "Senha trocada; o token de acesso usado na chamada foi revogado."
+      properties: { status: { type: string, enum: [password_rotated] } }
+      required: [status]
     MfaEnrollOut:
       type: object
       description: "provisioning_uri (otpauth://) para o app autenticador; secret para entrada manual."

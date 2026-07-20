@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 
-from app.core.models import Participant, Allocation, AudioProtocol, RecommendationLog
+from app.core.models import Participant, Allocation, AudioProtocol, RecommendationLog, StaffUser
 from app.core import auth
 
 REC = "/v1/recommendations"
@@ -22,6 +22,16 @@ def _participant(TestSession, code):
     with TestSession() as s:
         p = Participant(study_code=code); s.add(p); s.commit(); pid = p.id
     return pid, {"Authorization": f"Bearer {auth.issue_access(str(pid), 'participant')}"}
+
+
+def _staff_headers(TestSession, email="coh@uninta.edu.br"):
+    """Pesquisador REAL no banco: desde o ADR-081 o RBAC confere `is_active` na linha,
+    então um token com sub inexistente (uuid solto) é recusado com 401."""
+    with TestSession() as s:
+        u = StaffUser(email=email, password_hash=auth.hash_password("Senha-Forte-123"),
+                      role="researcher", mfa_enabled=False)
+        s.add(u); s.commit(); uid = u.id
+    return {"Authorization": f"Bearer {auth.issue_access(str(uid), 'researcher')}"}
 
 
 def _seed_library(TestSession):
@@ -103,7 +113,7 @@ def test_coherence_report_blind_for_staff(api):
     _r3 = _recommend(client, hdr, goal="sleep", sleep_issue="onset")
     client.post(f"{REC}/{r1}/accept", headers=hdr, json={"accepted": True})
 
-    staff = {"Authorization": f"Bearer {auth.issue_access(str(uuid.uuid4()), 'researcher')}"}
+    staff = _staff_headers(TestSession)
     r = client.get(COH, headers=staff)
     assert r.status_code == 200
     b = r.json()
@@ -144,7 +154,7 @@ def test_coherence_relaxation_mean_via_session_link(api):
     with TestSession() as s:
         assert str(s.get(RecommendationLog, uuid.UUID(rid)).session_id) == sid
     # A coerência agora computa a média de relaxamento das aceitas.
-    staff = {"Authorization": f"Bearer {auth.issue_access(str(uuid.uuid4()), 'researcher')}"}
+    staff = _staff_headers(TestSession)
     b = client.get(COH, headers=staff).json()
     assert b["mean_relaxation_accepted"] == 4.0
 

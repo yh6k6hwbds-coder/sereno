@@ -234,6 +234,8 @@ class StaffUser(Base):                          # pesquisador/admin — RBAC + M
     role: Mapped[str] = mapped_column(String(12), nullable=False)
     mfa_secret: Mapped[bytes] = mapped_column(LargeBinary, nullable=True)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    # Lifecycle: desativar suspende o acesso sem apagar a trilha de autoria (ADR-081).
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
     last_login_at: Mapped[dt.datetime] = TS(default=False)
     created_at: Mapped[dt.datetime] = TS()
     __table_args__ = (CheckConstraint("role in ('researcher','admin')", name="ck_staff_role"),)

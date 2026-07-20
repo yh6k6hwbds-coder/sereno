@@ -185,7 +185,15 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
 > auditado sem PII); MFA em dois passos — `enroll` (gera segredo + `provisioning_uri`, não ativa)
 > e `confirm` (valida TOTP → ativa). 10 testes. **Pendências:** ~~exigir MFA p/ admin~~ (feito,
 > ADR-074: MFA obrigatório p/ staff — login sem 2º fator só emite token de cadastro restrito);
-> rotação de senha; convite por e-mail; lifecycle (listar/desativar).
+> ~~rotação de senha~~ e ~~lifecycle (listar/desativar)~~ (feitos, ADR-081); convite por e-mail.
+> **Lifecycle concluído (2026-07-20, ADR-081):** coluna `staff_user.is_active` (migração
+> `c3d4e5f6a7b8`); `GET /v1/staff` (lista papel/MFA/ativo/último login, sem senha/segredo);
+> `POST /v1/staff/{id}/deactivate|activate` (admin não se desativa — 409; 404/409 nas negações);
+> `POST /v1/staff/me/password` (exige a atual, recusa igual, revoga o token em uso). O **RBAC
+> confere `is_active` no banco** a cada requisição e as fronteiras de token (login/mfa-verify/
+> refresh) recusam suspenso → o token já emitido para de valer na hora. Autoria preservada
+> (suspender ≠ apagar). +11 testes (suíte 213→224, cobertura 89%). **Pendências:** reset de senha
+> por admin (depende de e-mail); registro do `last_login_at`; convite por e-mail.
 
 ### C4 — Captura de contato + **cifra de PII** · P0 · `DONE`
 > **Concluída (2026-07-04, ADR-059):** `POST /v1/participants/{id}/contact` (staff `enroll:write`)
