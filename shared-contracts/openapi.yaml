@@ -168,6 +168,22 @@ paths:
         '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/ConsentOut' } } } }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /participants/me/consent/withdraw:
+    post:
+      summary: Retirar o consentimento (self-service do titular)
+      operationId: withdrawConsent
+      description: >
+        O próprio participante retira o consentimento (LGPD, Art. 8 §5): marca o consentimento
+        ativo como revogado (`revoked_at`), muda o status para `withdrawn` e **encerra a
+        participação** — não é possível iniciar novas sessões depois. Auditado, sem PII. A
+        **eliminação** dos dados (Art. 18) é direito separado (canal do Encarregado / rota de
+        admin); o dado de pesquisa já coletado é retido pseudonimizado (ADR-066). Idempotente
+        por estado: retirar de novo devolve 409.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ConsentWithdrawn' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /participants/me/baseline:
     post:
       summary: Enviar avaliação de linha de base (PSQI + GAD-7)
@@ -790,6 +806,14 @@ components:
         id: { type: string, format: uuid }
         accepted_at: { type: string, format: date-time }
         content_hash: { type: string }
+    ConsentWithdrawn:
+      type: object
+      description: "Consentimento retirado pelo titular; participação encerrada."
+      properties:
+        status: { type: string, enum: [withdrawn] }
+        revoked_consents: { type: integer, minimum: 0, description: "quantos registros de consentimento foram marcados como revogados" }
+        withdrawn_at: { type: string, format: date-time }
+      required: [status, withdrawn_at]
     PSQIIn:
       type: object
       properties:

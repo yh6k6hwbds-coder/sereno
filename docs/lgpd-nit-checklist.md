@@ -33,7 +33,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 |---|------|--------|------------------|
 | B1 | Registro de consentimento versionado, com data e evidência | ✅ | `ConsentRecord` (`tcle_version`, `accepted`, `ip_address`, hash do payload); `POST /v1/consent` recusa versão divergente da vigente (ADR do consentimento; `consent/`). |
 | B2 | Consentimento **específico e destacado** para dado sensível | 🟡 | O mecanismo registra a versão aceita; **falta** o **conteúdo** do TCLE ser redigido/validado (assessoria + CEP) com destaque para dado de saúde. |
-| B3 | Revogação do consentimento pelo titular | 🟡 | A revogação existe via **eliminação** (marca `withdrawn` + remove PII, ver E3); **falta** um caminho self‑service de revogação (hoje intermediado pela equipe). Avaliar se o piloto exige self‑service. |
+| B3 | Revogação do consentimento pelo titular | ✅ | Self‑service: `POST /v1/participants/me/consent/withdraw` carimba `revoked_at` + marca `withdrawn` e **bloqueia novas sessões** (`consent/router.py`, ADR‑089; testado). Retirar ≠ eliminar — o dado de pesquisa já coletado é retido pseudonimizado (ADR‑066) e a eliminação (Art. 18) segue como direito separado. |
 
 ## C. Segurança da informação (Art. 46) — medidas técnicas
 
@@ -59,7 +59,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 | D1 | Acesso / portabilidade dos dados do titular | ✅ | `GET /v1/participants/{id}/data` reúne os dados do titular (PII decifrada do próprio), **sem** o braço; auditado (`data_rights/`, ADR‑066). |
 | D2 | Eliminação da PII direta a pedido | ✅ | `POST /v1/participants/{id}/erase` remove contato cifrado + artefatos de OTP e marca `withdrawn`; auditado. |
 | D3 | Retenção de dado de pesquisa pseudonimizado após eliminação | 🟡 | O `erase` **retém** o dado pseudonimizado (exceção de pesquisa da LGPD, ADR‑066) e **não** apaga a auditoria; **confirmar** com CEP/assessoria que a retenção pós‑revogação está descrita no TCLE. |
-| D4 | Atendimento a titular via canal do Encarregado | ⬜ | **Decisão do NIT/DPO.** Hoje os direitos são operados pela equipe (admin, `user:manage`); definir canal público e prazo de resposta (Art. 18, §5º). |
+| D4 | Atendimento a titular via canal do Encarregado | ⬜ | **Decisão do NIT/DPO.** A **retirada de consentimento** já é self‑service (B3/ADR‑089); acesso e eliminação seguem operados pela equipe (admin, `user:manage`). **Falta** o canal público do Encarregado e o prazo de resposta (Art. 18, §5º). |
 
 ## E. Retenção, descarte e ciclo de vida
 

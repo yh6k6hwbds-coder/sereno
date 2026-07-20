@@ -13,11 +13,13 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from sqlalchemy import select, update
+
 from app.core.client_ip import client_ip
 from app.core.db import get_db
 from app.core.security import require, current_participant
 from app.core.problem import ProblemException
-from app.core.models import ConsentRecord
+from app.core.models import ConsentRecord, Participant
 from app.modules.audit.service import record_event
 
 router = APIRouter(prefix="/participants/me", tags=["consent"])
@@ -81,3 +83,44 @@ async def record_consent(
 
     return ConsentOut(id=record.id, accepted=record.accepted,
                       accepted_at=record.accepted_at, content_hash=record.content_hash)
+
+
+@router.post("/consent/withdraw")
+async def withdraw_consent(
+    db: Session = Depends(get_db),
+    participant_id: uuid.UUID = Depends(current_participant),
+    _user: dict = Depends(require("consent:write")),
+):
+    """O próprio titular retira o consentimento (LGPD, Art. 8 §5).
+
+    Marca o consentimento ativo como revogado (`revoked_at`) e o participante como
+    `withdrawn` — o que **encerra a participação** (o início de sessão passa a recusar).
+    NÃO elimina dados: a eliminação (Art. 18) é direito separado (canal do Encarregado /
+    rota de admin) e o dado de pesquisa já coletado é retido pseudonimizado (ADR-066).
+    Auditado, sem PII. Retirar de novo → 409."""
+    p = db.get(Participant, participant_id)
+    if p is None:                                    # rede: current_participant já garante
+        raise ProblemException(401, "Não autenticado", "Participante não encontrado.")
+    if p.status == "withdrawn":
+        raise ProblemException(409, "Consentimento já retirado",
+                               "Você já retirou o consentimento anteriormente.")
+
+    now = dt.datetime.now(dt.timezone.utc)
+    # Carimba revoked_at nos consentimentos ATIVOS (aceitos e ainda não revogados).
+    revoked = db.execute(
+        update(ConsentRecord)
+        .where(ConsentRecord.participant_id == participant_id,
+               ConsentRecord.accepted.is_(True),
+               ConsentRecord.revoked_at.is_(None))
+        .values(revoked_at=now)
+    ).rowcount
+    p.status = "withdrawn"
+    db.flush()
+
+    # Auditoria SEM PII: só o fato e quantos registros foram revogados.
+    record_event(db, action="consent.withdrawn", resource_type="participant",
+                 actor_type="participant", actor_id=participant_id, resource_id=participant_id,
+                 meta={"revoked_consents": int(revoked or 0)})
+
+    return {"status": "withdrawn", "revoked_consents": int(revoked or 0),
+            "withdrawn_at": now.isoformat()}

@@ -91,5 +91,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 086 | Auditoria append-only reforçada **no banco** (trigger aborta UPDATE/DELETE, mesmo do dono; REVOKE como extra); não só no ORM — fecha C8 **[novo]** |
 | 087 | Custódia da chave de PII atrás de porta `KeyProvider` (KMS-ready) + rotação por id de chave no ciphertext; env por padrão **[novo]** |
 | 088 | Envelope encryption da PII: DEK por registro embrulhada pela KEK (porta `wrap`/`unwrap`); KEK nunca cifra a PII — padrão real de KMS **[novo]** |
+| 089 | Retirada de consentimento self-service (titular): `revoked_at` + status `withdrawn` + bloqueia novas sessões; retirar ≠ eliminar — fecha B3 **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

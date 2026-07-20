@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session as DbSession
 from app.core.db import get_db
 from app.core.security import require, current_participant
 from app.core.problem import ProblemException
-from app.core.models import Session as SessionModel, PostSessionSurvey, AudioProtocol
+from app.core.models import Session as SessionModel, PostSessionSurvey, AudioProtocol, Participant
 from app.modules.allocation.service import resolve_arm
 from app.modules.sessions.service import condition_for_arm, resolve_protocol, materialize_audio
 from app.modules.sessions import storage
@@ -64,6 +64,11 @@ async def start_session(body: SessionStartIn, db: DbSession = Depends(get_db),
     if not body.headphones_ok:
         raise ProblemException(422, "Fones não verificados",
                                "Verifique fones estéreo antes de iniciar a sessão.")
+    # Consentimento retirado encerra a participação (LGPD; ADR-089) — não inicia sessão.
+    p = db.get(Participant, participant_id)
+    if p is not None and p.status == "withdrawn":
+        raise ProblemException(403, "Consentimento retirado",
+                               "Você retirou o consentimento; não é possível iniciar novas sessões.")
     # Resolução do braço é INTERNA — o cliente nunca a vê.
     arm = resolve_arm(db, participant_id)
     if arm is None:
