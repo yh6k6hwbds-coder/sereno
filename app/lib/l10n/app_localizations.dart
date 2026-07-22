@@ -236,18 +236,31 @@ class AppLocalizations {
 
   static const Map<String, List<String>> _consentSummary = {
     'pt': [
-      'O estudo avalia um app de sessões de áudio (frequências binaurais) para relaxamento e sono.',
+      'O estudo avalia um app de sessões de áudio (frequências binaurais) para relaxamento e '
+          'sono. A evidência científica sobre elas ainda é limitada e inconsistente.',
+      'O app não é tratamento e não substitui cuidado profissional. Não interrompa nenhum '
+          'acompanhamento por causa do estudo.',
       'Você fará questionários e sessões de ~20 min, com fones, por 4 semanas.',
-      'Os riscos são mínimos; você pode interromper e registrar qualquer desconforto.',
-      'Seus dados são tratados de forma confidencial e pseudonimizada (LGPD).',
-      'A participação é voluntária; você pode sair a qualquer momento, sem prejuízo.',
+      'Os riscos são mínimos; você pode interromper a sessão e registrar qualquer desconforto.',
+      'Você será sorteado(a) para um de dois grupos e não saberá qual até o fim do estudo.',
+      'Serão coletados dados de saúde (sono e ansiedade), tratados de forma confidencial e '
+          'pseudonimizada (LGPD). Se você desistir, o já coletado é mantido sem o seu nome.',
+      'A participação é voluntária. Recusar ou sair não afeta suas notas, seu vínculo nem '
+          'qualquer atendimento.',
     ],
     'en': [
-      'The study evaluates an app of audio sessions (binaural beats) for relaxation and sleep.',
+      'The study evaluates an app of audio sessions (binaural beats) for relaxation and sleep. '
+          'The scientific evidence about them is still limited and inconsistent.',
+      'The app is not treatment and does not replace professional care. Do not stop any '
+          'ongoing care because of the study.',
       'You will complete questionnaires and ~20-min sessions, with headphones, over 4 weeks.',
-      'Risks are minimal; you may stop and report any discomfort.',
-      'Your data is handled confidentially and pseudonymized (LGPD).',
-      'Participation is voluntary; you may leave at any time, without penalty.',
+      'Risks are minimal; you may stop the session and report any discomfort.',
+      'You will be randomly assigned to one of two groups and will not know which until the '
+          'end of the study.',
+      'Health data (sleep and anxiety) will be collected, handled confidentially and '
+          'pseudonymized (LGPD). If you withdraw, data already collected is kept without your name.',
+      'Participation is voluntary. Refusing or leaving does not affect your grades, your '
+          'institutional standing, or any care you receive.',
     ],
   };
 

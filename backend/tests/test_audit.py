@@ -16,6 +16,7 @@ from sqlalchemy import select, func
 
 from app.core.models import Participant, StaffUser, AuditLog, Screening, ConsentRecord
 from app.core import auth
+from app.modules.consent.router import TCLE_CURRENT   # versao vigente do termo (nao literal)
 from app.modules.audit.service import record_event, list_events, AuditAppendOnlyError
 
 CONSENT_URL = "/v1/participants/me/consent"
@@ -44,12 +45,12 @@ def test_consent_records_audit_event(api):
     client, TestSession = api
     pid, hdr = _participant(TestSession)
     assert client.post(CONSENT_URL, headers=hdr,
-                       json={"tcle_version": "1.0.0", "accepted": True}).status_code == 201
+                       json={"tcle_version": TCLE_CURRENT, "accepted": True}).status_code == 201
     with TestSession() as s:
         ev = s.scalars(select(AuditLog).where(AuditLog.action == "consent.recorded")).one()
         assert ev.actor_type == "participant" and ev.actor_id == pid
         assert ev.resource_type == "consent_record"
-        assert ev.meta == {"tcle_version": "1.0.0", "accepted": True}
+        assert ev.meta == {"tcle_version": TCLE_CURRENT, "accepted": True}
 
 
 def test_allocation_records_audit_event_without_arm(api):
@@ -59,7 +60,7 @@ def test_allocation_records_audit_event_without_arm(api):
     # Funil (C2): triado elegível + consentimento, pré-condição da alocação.
     with TestSession() as s:
         s.add(Screening(participant_id=pid, eligible=True, criteria={"version": "1.0.0"}))
-        s.add(ConsentRecord(participant_id=pid, tcle_version="1.0.0", accepted=True,
+        s.add(ConsentRecord(participant_id=pid, tcle_version=TCLE_CURRENT, accepted=True,
                             accepted_at=dt.datetime.now(dt.timezone.utc), content_hash="0" * 64))
         s.commit()
     assert client.post(ALLOC_URL, headers=staff_hdr,
@@ -77,7 +78,7 @@ def test_allocation_records_audit_event_without_arm(api):
 def test_read_audit_as_admin_200(api):
     client, TestSession = api
     pid, phdr = _participant(TestSession)
-    client.post(CONSENT_URL, headers=phdr, json={"tcle_version": "1.0.0", "accepted": True})
+    client.post(CONSENT_URL, headers=phdr, json={"tcle_version": TCLE_CURRENT, "accepted": True})
     _uid, admin_hdr = _staff(TestSession, "admin")
     r = client.get(AUDIT_URL, headers=admin_hdr)
     assert r.status_code == 200

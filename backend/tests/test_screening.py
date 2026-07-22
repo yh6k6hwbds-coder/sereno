@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.core.models import Participant, StaffUser, Screening, ConsentRecord, Allocation, AuditLog
 from app.core import auth
+from app.modules.consent.router import TCLE_CURRENT   # versao vigente do termo (nao literal)
 
 SCREEN = "/v1/screening"
 ALLOC = "/v1/allocation"
@@ -34,7 +35,7 @@ def _participant(TestSession, code="P-SC"):
 
 def _consent(TestSession, pid, accepted=True):
     with TestSession() as s:
-        s.add(ConsentRecord(participant_id=pid, tcle_version="1.0.0", accepted=accepted,
+        s.add(ConsentRecord(participant_id=pid, tcle_version=TCLE_CURRENT, accepted=accepted,
                             accepted_at=dt.datetime.now(dt.timezone.utc), content_hash="0" * 64))
         s.commit()
 

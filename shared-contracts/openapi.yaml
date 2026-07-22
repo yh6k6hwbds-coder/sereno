@@ -802,7 +802,14 @@ components:
     ConsentIn:
       type: object
       properties:
-        tcle_version: { type: string }
+        tcle_version:
+          type: string
+          examples: ["0.1.0-rascunho"]
+          description: >
+            Versão do termo que o participante leu. Precisa ser IGUAL à vigente (obtida em
+            GET /participants/me/consent/_status); divergente → 409. É assim que uma revisão do
+            texto invalida aceites contra a redação antiga, em vez de deixá-los ambíguos.
+            O sufixo `-rascunho` marca texto AINDA NÃO aprovado pelo CEP (docs/tcle-rascunho.md).
         accepted: { type: boolean }
       required: [tcle_version, accepted]
     ConsentOut:

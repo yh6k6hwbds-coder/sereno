@@ -25,11 +25,17 @@ from app.modules.audit.service import record_event
 router = APIRouter(prefix="/participants/me", tags=["consent"])
 
 # Versão vigente do TCLE (em produção: vir de configuração/conteúdo versionado).
-TCLE_CURRENT = "1.0.0"
+# O sufixo `-rascunho` é deliberado: o texto correspondente (`docs/tcle-rascunho.md`) ainda
+# NÃO passou pelo CEP. Marcar na própria versão evita que um aceite registrado hoje seja lido
+# depois como consentimento a um termo aprovado. Ao sair o parecer, isto vira `1.0.0` — e o
+# 409 abaixo cuida de recusar aceites contra a redação antiga.
+# Ao mudar aqui, mudar TAMBÉM `tcleVersion` em `app/lib/core/config.dart` (o cliente envia a
+# versão que exibiu) e o resumo em `app/lib/l10n/app_localizations.dart`.
+TCLE_CURRENT = "0.1.0-rascunho"
 
 
 class ConsentIn(BaseModel):
-    tcle_version: str = Field(..., examples=["1.0.0"])
+    tcle_version: str = Field(..., examples=["0.1.0-rascunho"])
     accepted: bool = Field(..., description="True = concorda em participar")
 
 

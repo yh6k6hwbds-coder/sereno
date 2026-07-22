@@ -11,6 +11,7 @@ from __future__ import annotations
 import datetime as dt
 from app.core.models import Participant, StaffUser, Screening, ConsentRecord
 from app.core import auth
+from app.modules.consent.router import TCLE_CURRENT   # versao vigente do termo (nao literal)
 from app.modules.allocation.randomization import generate_sequence, arm_for_index
 from app.modules.allocation.service import allocate_participant, resolve_arm
 
@@ -22,7 +23,7 @@ def _seed_allocatable(TestSession, code):
     with TestSession() as s:
         p = Participant(study_code=code); s.add(p); s.flush()
         s.add(Screening(participant_id=p.id, eligible=True, criteria={"version": "1.0.0"}))
-        s.add(ConsentRecord(participant_id=p.id, tcle_version="1.0.0", accepted=True,
+        s.add(ConsentRecord(participant_id=p.id, tcle_version=TCLE_CURRENT, accepted=True,
                             accepted_at=dt.datetime.now(dt.timezone.utc), content_hash="0" * 64))
         s.commit()
         return p.id

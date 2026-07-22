@@ -19,6 +19,7 @@ from sqlalchemy import select
 
 from app.core.models import Participant, Allocation, ConsentRecord, AuditLog, StaffUser
 from app.core import auth
+from app.modules.consent.router import TCLE_CURRENT   # versao vigente do termo (nao literal)
 
 WITHDRAW = "/v1/participants/me/consent/withdraw"
 CONSENT = "/v1/participants/me/consent"
@@ -35,7 +36,7 @@ def _participant(TestSession, code="P-W", allocated=False):
 
 
 def _consent(client, hdr):
-    r = client.post(CONSENT, headers=hdr, json={"tcle_version": "1.0.0", "accepted": True})
+    r = client.post(CONSENT, headers=hdr, json={"tcle_version": TCLE_CURRENT, "accepted": True})
     assert r.status_code == 201
 
 

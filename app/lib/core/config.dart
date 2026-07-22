@@ -21,8 +21,10 @@ String get apiBaseUrl {
   return _compiledApiBaseUrl;
 }
 
-/// Versão vigente do TCLE (deve casar com o backend).
-const String tcleVersion = '1.0.0';
+/// Versão vigente do TCLE — deve casar com `TCLE_CURRENT` no backend (divergente → 409).
+/// O sufixo `-rascunho` marca texto que ainda NÃO passou pelo CEP (`docs/tcle-rascunho.md`);
+/// ao sair o parecer, vira `1.0.0` aqui, no backend e no resumo de `app_localizations.dart`.
+const String tcleVersion = '0.1.0-rascunho';
 
 /// Duração padrão da sessão em segundos (metadado neutro — igual nos dois braços).
 /// Futuro: receber do protocolo via campo neutro na resposta de início.

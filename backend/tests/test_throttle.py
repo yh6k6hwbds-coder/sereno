@@ -12,6 +12,7 @@ O estado do limiter/denylist é isolado por teste (fixture autouse no conftest).
 from __future__ import annotations
 from app.core.models import Participant, StaffUser
 from app.core import auth
+from app.modules.consent.router import TCLE_CURRENT   # versao vigente do termo (nao literal)
 
 REQ_OTP = "/v1/auth/participant/request-otp"
 LOGIN = "/v1/auth/token"
@@ -69,11 +70,11 @@ def test_logout_revokes_access_token(api):
     hdr = {"Authorization": f"Bearer {auth.issue_access(str(pid), 'participant')}"}
     # o token funciona antes do logout
     assert client.post(CONSENT, headers=hdr,
-                       json={"tcle_version": "1.0.0", "accepted": True}).status_code == 201
+                       json={"tcle_version": TCLE_CURRENT, "accepted": True}).status_code == 201
     assert client.post(LOGOUT, headers=hdr).status_code == 200
     # o MESMO token agora é recusado (jti revogado)
     assert client.post(CONSENT, headers=hdr,
-                       json={"tcle_version": "1.0.0", "accepted": True}).status_code == 401
+                       json={"tcle_version": TCLE_CURRENT, "accepted": True}).status_code == 401
 
 
 def test_logout_revokes_refresh_token(api):

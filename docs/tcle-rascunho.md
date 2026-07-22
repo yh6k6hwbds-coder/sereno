@@ -21,11 +21,12 @@
 > (riscos, em especial **R-09** e **R-05**), `politica-retencao-descarte.md` (prazos),
 > `registro-operacoes-tratamento.md` (o que é tratado).
 >
-> **Versão deste rascunho:** `0.1-rascunho` · **Data:** 2026-07-22
-> ⚠️ **Acoplamento com o código:** a versão aprovada precisa ser refletida em `TCLE_CURRENT`
-> (`backend/app/modules/consent/router.py`, hoje `"1.0.0"`) e o **resumo em linguagem simples**
-> exibido no app (`app/lib/l10n/app_localizations.dart`, `_consentSummary`) precisa ser conferido
-> contra o texto final. Ver §16.
+> **Versão deste rascunho:** `0.1.0-rascunho` · **Data:** 2026-07-22
+> ✅ **Sincronizado com o código:** `TCLE_CURRENT` (backend), `tcleVersion` (app) e o resumo em
+> linguagem simples (`_consentSummary`) já refletem **este rascunho**, na versão
+> `0.1.0-rascunho`. O sufixo é deliberado — um aceite registrado hoje **não** pode ser lido
+> depois como consentimento a um termo aprovado. Ao sair o parecer do CEP, a versão vira `1.0.0`
+> nos três lugares. Ver §N4.
 
 ---
 
@@ -328,21 +329,34 @@ Duas seções existem por causa de riscos identificados no `relatorio-impacto-pr
 - **§8 (o app não é tratamento)** endereça o **R-05** — risco de o participante adiar cuidado
   profissional. Por isso está em destaque, com os contatos de emergência, e não diluído no texto.
 
-### N4. Consistência com o sistema (verificar antes de publicar a versão final)
+### N4. Consistência com o sistema
 
-1. **`TCLE_CURRENT`** em `backend/app/modules/consent/router.py` (hoje `"1.0.0"`) precisa receber a
-   versão aprovada. O backend **recusa** (409) aceite com versão divergente da vigente — então
-   publicar o texto sem atualizar a constante quebra o fluxo de consentimento.
-2. **Resumo no app:** `_consentSummary` em `app/lib/l10n/app_localizations.dart` mostra 5 tópicos em
-   linguagem simples, em **pt-BR e en**. Precisa ser conferido contra o texto final — hoje ele **não
-   menciona** a retenção pós-desistência (§13), que é o ponto mais delicado do termo.
-3. **O texto integral precisa estar acessível no app** no momento do aceite, não só o resumo
-   `[a confirmar com o CEP]`.
-4. **Registro do aceite:** o sistema grava versão, data/hora, aceite/recusa, hash do conteúdo e
+**Já sincronizado (versão `0.1.0-rascunho` nos três lugares):**
+
+1. ✅ **`TCLE_CURRENT`** em `backend/app/modules/consent/router.py`. O backend **recusa** (409)
+   aceite com versão divergente — é assim que uma revisão do texto invalida aceites contra a
+   redação antiga. Os testes deixaram de usar o literal `"1.0.0"` e passaram a importar a
+   constante, então a próxima troca de versão é **uma linha** (menos um teste, que guarda
+   deliberadamente o caminho do 409 com versão velha).
+2. ✅ **`tcleVersion`** em `app/lib/core/config.dart` — o cliente envia a versão que exibiu.
+3. ✅ **Resumo no app:** `_consentSummary` em `app/lib/l10n/app_localizations.dart`, em **pt-BR e
+   en**, passou de 5 para 7 tópicos. Os que faltavam e agora estão lá: evidência **limitada e
+   inconsistente**; **não é tratamento**; **sorteio para um de dois grupos** sem saber qual; dado
+   **de saúde** explicitamente; **retenção pós-desistência** (§13); e recusa/saída **sem afetar
+   notas, vínculo ou atendimento** (§11, risco R-09).
+
+**Ainda pendente:**
+
+4. **O texto integral precisa estar acessível no app** no momento do aceite, não só o resumo
+   `[a confirmar com o CEP]` — hoje o app mostra apenas os 7 tópicos. É desenvolvimento, mas
+   depende do texto final e da exigência do CEP.
+5. **Registro do aceite:** o sistema grava versão, data/hora, aceite/recusa, hash do conteúdo e
    endereço IP (`consent_record`), e a retirada é self-service (ADR-089). Isso dá evidência do
    consentimento, mas **não decide** se o CEP aceita a via digital como suficiente.
-5. **Bilíngue:** o app é pt-BR/en. Se o estudo admitir participante que use a interface em inglês,
+6. **Bilíngue:** o app é pt-BR/en. Se o estudo admitir participante que use a interface em inglês,
    o TCLE precisa de versão correspondente `[a confirmar — provavelmente restringir ao pt-BR]`.
+7. **Ao sair o parecer do CEP:** trocar a versão para `1.0.0` nos três lugares (backend, config do
+   app, e conferência do resumo) e revisar a tradução en — ou restringir ao pt-BR, conforme o item 6.
 
 ### N5. Antes de submeter ao CEP
 
