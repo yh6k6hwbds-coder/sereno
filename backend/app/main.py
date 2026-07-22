@@ -9,13 +9,15 @@ Aviso: ferramenta complementar de pesquisa; não substitui cuidado profissional.
 from __future__ import annotations
 import os
 import time
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.db import get_db
 
 from app.core.problem import install_problem_handlers, ProblemException
 from app.core.logging import setup_logging, request_logger
 from app.core.config import validate_runtime_config
-from app.core import metrics
+from app.core import metrics, readiness
 
 # Roteadores por domínio (fronteiras explícitas do monólito modular).
 from app.modules.identity.router import router as identity_router
@@ -87,12 +89,19 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["infra"])
     async def health():
+        # Liveness puro: o processo está de pé. NÃO toca em dependência (senão uma queda
+        # de banco viraria reinício em loop, que não conserta banco nenhum).
         return {"status": "ok"}
 
     @app.get("/ready", tags=["infra"])
-    async def ready():
-        # TODO: checar conexões (DB, Redis) antes de reportar pronto.
-        return {"status": "ready"}
+    async def ready(response: Response, db=Depends(get_db)):
+        # Readiness REAL (ADR-090): sonda banco (obrigatório) e Redis (peso conforme a
+        # postura do ADR-079). Não pronto → 503, para o roteador parar de mandar tráfego.
+        # Usa a sessão da REQUISIÇÃO — sondar uma engine à parte atestaria uma conexão
+        # que nenhum endpoint usa.
+        ok, body = readiness.probe(db)
+        response.status_code = 200 if ok else 503
+        return body
 
     @app.get("/metrics", tags=["infra"])
     async def prometheus_metrics(request: Request):

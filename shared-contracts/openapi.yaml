@@ -294,6 +294,10 @@ paths:
         revela ativo/sham). Assinatura/validade inválidas → 403 genérico (sem oráculo).
         Resposta bit-a-bit idêntica à do caminho autenticado; suporta Range. Prepara o
         offload para storage em nuvem (um presign de S3 encaixa nesta mesma forma).
+        Por ser público (sem Authorization), é LIMITADO POR TAXA por IP (429) — o único
+        endpoint sem token não pode ser um canal livre de varredura de assinatura nem de
+        tráfego (ADR-090). A chave de assinatura é ROTACIONÁVEL: URLs já emitidas seguem
+        válidas até expirar após a troca (chave anterior aceita só para VERIFICAR).
       parameters:
         - name: content_hash
           in: path
@@ -330,6 +334,7 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '416': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /adverse-events:
     post:
       summary: Registrar evento adverso

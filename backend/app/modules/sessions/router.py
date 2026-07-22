@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session as DbSession
 from app.core.db import get_db
 from app.core.security import require, current_participant
 from app.core.problem import ProblemException
+from app.core.rate_limit import enforce as rate_limit
 from app.core.models import Session as SessionModel, PostSessionSurvey, AudioProtocol, Participant
 from app.modules.allocation.service import resolve_arm
 from app.modules.sessions.service import condition_for_arm, resolve_protocol, materialize_audio
@@ -207,7 +208,13 @@ async def get_signed_audio(content_hash: str, request: Request,
     """Entrega o WAV por URL ASSINADA (E3), sem ``Authorization``: a capability é a própria
     assinatura — exatamente como um signed URL de nuvem. A chave é o ``content_hash``
     **opaco** (já conhecido do cliente; não revela ativo/sham). Assinatura/validade
-    inválidas → 403 genérico (sem oráculo). É a mesma resposta bit-a-bit do caminho autenticado."""
+    inválidas → 403 genérico (sem oráculo). É a mesma resposta bit-a-bit do caminho autenticado.
+
+    Por ser o ÚNICO endpoint público, é limitado por taxa por IP **antes** da verificação
+    (ADR-090): assim o freio vale também para quem só varre assinaturas, e a força-bruta do
+    HMAC não ganha um canal ilimitado. Limite generoso frente ao uso real (uma sessão baixa
+    um arquivo, mais alguns Range); ajustável por ``AUDIO_RATE_LIMIT``/``AUDIO_RATE_WINDOW_S``."""
+    rate_limit(request, bucket="audio", default_limit=60)
     if not storage.verify_signed(content_hash, exp, sig):
         raise ProblemException(403, "Assinatura inválida", "URL de áudio inválida ou expirada.")
     proto = db.scalar(select(AudioProtocol).where(AudioProtocol.content_hash == content_hash))

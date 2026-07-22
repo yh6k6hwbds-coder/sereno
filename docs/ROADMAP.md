@@ -193,7 +193,9 @@ O que o CEP e a análise exigem. Tudo com trilha de auditoria.
 > confere `is_active` no banco** a cada requisição e as fronteiras de token (login/mfa-verify/
 > refresh) recusam suspenso → o token já emitido para de valer na hora. Autoria preservada
 > (suspender ≠ apagar). +11 testes (suíte 213→224, cobertura 89%). **Pendências:** reset de senha
-> por admin (depende de e-mail); registro do `last_login_at`; convite por e-mail.
+> por admin (depende de e-mail); convite por e-mail. ~~Registro do `last_login_at`~~ feito
+> (2026-07-21, ADR-090): gravado no `/auth/mfa/verify` — o único passo que concede acesso pleno;
+> senha-sem-MFA e `refresh` **não** contam como login. +2 testes.
 
 ### C4 — Captura de contato + **cifra de PII** · P0 · `DONE`
 > **Concluída (2026-07-04, ADR-059):** `POST /v1/participants/{id}/contact` (staff `enroll:write`)
@@ -307,7 +309,13 @@ Endurecimento para dado real e para o CEP.
 > `core/metrics.py`, instrumentado no mesmo middleware; `http_requests_total` + `http_request_duration_seconds`
 > com rótulo por **template de rota** (baixa cardinalidade, sem PII/braço; 404 → `<unmatched>`);
 > guard opcional `METRICS_TOKEN`; `fly.toml` liga `[metrics]` p/ o scraping nativo da Fly. +7 testes
-> (suíte 206→213). **Pendências:** métricas de negócio + alertas (quando o piloto pedir); `/ready` real.
+> (suíte 206→213).
+> **Prontidão (2026-07-21, ADR-090):** ~~`/ready` real~~ fechada — sonda o **banco** na sessão da
+> própria requisição (fora → 503, o roteador para de mandar tráfego) e o **Redis** com o peso do
+> ADR-079 (fail-open → `degraded` mas pronto; fail-closed → não pronto). `/health` segue liveness
+> puro. Corpo agregado, sem DSN/host/credencial. Junto veio `DB_CONNECT_TIMEOUT_S` (padrão 5s):
+> sem ele, banco inalcançável **pendura** a sonda em vez de reprovar. +8 testes.
+> **Pendências:** métricas de negócio + alertas (quando o piloto pedir).
 
 ---
 
@@ -358,9 +366,14 @@ modularidade para isso).
 > URL de nuvem. Chave = `content_hash` **opaco** (não revela braço; já conhecido do cliente);
 > mesma resposta **bit-a-bit** (ETag, Range) e headers neutros; 403 genérico p/ assinatura
 > inválida/expirada. +10 testes (suíte 224→234, cobertura 89%); A1 segue verde sem mudança.
+> **Endurecimento (2026-07-21, ADR-090):** ~~rate limit no endpoint público~~ e ~~rotação da chave
+> de assinatura~~ fechados — o freio por IP (`AUDIO_RATE_LIMIT`, 60/min) roda **antes** da
+> verificação (limita também a varredura de assinatura) e responde 429 de forma idêntica nos dois
+> braços; a chave ativa é a única que assina e as anteriores
+> (`AUDIO_URL_SIGNING_KEYS_PREVIOUS`) seguem válidas só p/ verificar, então rotacionar não derruba
+> quem está ouvindo. +6 testes.
 > **Pendências (a "construção" da E3):** adaptador de storage em nuvem real (presign S3/GCS +
-> upload do cache) — encaixa na mesma porta; rate limit no endpoint público; rotação da chave
-> de assinatura. Enquanto isso, o WAV ainda é servido pelo próprio backend (preparação, não
+> upload do cache) — encaixa na mesma porta. Enquanto isso, o WAV ainda é servido pelo próprio backend (preparação, não
 > offload completo — condizente com "escalabilidade preparada, não construída" do CLAUDE.md).
 
 ### E4 — Pipeline de features para ML (offline) · P2 · `DONE`

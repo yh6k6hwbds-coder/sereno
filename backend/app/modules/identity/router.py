@@ -99,6 +99,13 @@ async def mfa_verify(body: MfaIn, db: Session = Depends(get_db)):
     if (user is None or not user.is_active or not user.mfa_secret
             or not auth.verify_totp(user.mfa_secret.decode(), body.code)):
         raise ProblemException(401, "Código inválido", "Código de verificação incorreto.")
+    # Registra o login AQUI, não no /auth/token: só este passo concede acesso pleno (MFA é
+    # obrigatório — inegociável #6). Senha correta sem 2º fator não é login. `refresh`
+    # também não é: renovar não é voltar a entrar, e contá-lo faria uma sessão esquecida
+    # parecer atividade recente. É o que a lista de staff (ADR-081) mostra, e o que permite
+    # notar conta inativa/acesso fora de hora. Sem PII: só o carimbo de tempo.
+    user.last_login_at = dt.datetime.now(dt.timezone.utc)
+    db.commit()
     return _tokens(str(user.id), user.role)
 
 

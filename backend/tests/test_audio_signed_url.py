@@ -177,6 +177,93 @@ def test_inline_mode_is_default_no_redirect(api, monkeypatch, tmp_path):
     assert r.status_code == 200 and "location" not in {k.lower() for k in r.headers}
 
 
+def test_signed_endpoint_is_rate_limited(api, monkeypatch, tmp_path):
+    # ADR-090: o único endpoint PÚBLICO não pode ser um canal ilimitado.
+    _signed_mode(monkeypatch, tmp_path)
+    monkeypatch.setenv("AUDIO_RATE_LIMIT", "2")
+    client, TestSession = api
+    _seed_short_library(TestSession)
+    _pid, hdr = _seed_participant(TestSession, "P-RL", "A")
+    loc = client.get(f"{START}/{_start(client, hdr)}/audio", headers=hdr,
+                     follow_redirects=False).headers["location"]
+    assert client.get(loc).status_code == 200
+    assert client.get(loc).status_code == 200
+    r = client.get(loc)
+    assert r.status_code == 429
+    assert r.headers["content-type"].startswith("application/problem+json")
+
+
+def test_rate_limit_applies_before_signature_check(api, monkeypatch, tmp_path):
+    # O freio precisa valer para quem SÓ varre assinaturas — senão a força-bruta do HMAC
+    # ganharia tentativas ilimitadas (403 barato) enquanto o limite só puniria o uso legítimo.
+    _signed_mode(monkeypatch, tmp_path)
+    monkeypatch.setenv("AUDIO_RATE_LIMIT", "2")
+    client, TestSession = api
+    _seed_short_library(TestSession)
+    bad = f"/v1/audio/{ACTIVE_HASH}?exp={int(time.time()) + 300}&sig=" + "0" * 64
+    assert client.get(bad).status_code == 403
+    assert client.get(bad).status_code == 403
+    assert client.get(bad).status_code == 429      # limitado, não mais 403
+
+
+def test_rate_limit_does_not_leak_arm(api, monkeypatch, tmp_path):
+    # O 429 tem de ter a mesma forma para os dois braços (inegociável #1/#2).
+    _signed_mode(monkeypatch, tmp_path)
+    monkeypatch.setenv("AUDIO_RATE_LIMIT", "0")   # tudo é barrado: compara só a forma
+    client, TestSession = api
+    _seed_short_library(TestSession)
+    ra = client.get(f"/v1/audio/{ACTIVE_HASH}")
+    rb = client.get(f"/v1/audio/{SHAM_HASH}")
+    assert ra.status_code == rb.status_code == 429
+    assert ra.json()["title"] == rb.json()["title"]
+    for resp in (ra, rb):
+        blob = (resp.text + " ".join(resp.headers.values())).lower()
+        assert not any(tok in blob for tok in FORBIDDEN)
+
+
+def test_key_rotation_keeps_urls_already_issued_valid(api, monkeypatch, tmp_path):
+    # ADR-090: trocar a chave não pode derrubar quem já está ouvindo. A URL emitida com a
+    # chave antiga segue válida enquanto a antiga estiver declarada como ANTERIOR.
+    _signed_mode(monkeypatch, tmp_path)
+    monkeypatch.setenv("AUDIO_URL_SIGNING_KEY", "chave-antiga")
+    client, TestSession = api
+    _seed_short_library(TestSession)
+    emitida = storage.build_signed_path(ACTIVE_HASH, ttl_s=300)
+
+    # Rotação: nova chave ativa, antiga aceita só para VERIFICAR.
+    monkeypatch.setenv("AUDIO_URL_SIGNING_KEY", "chave-nova")
+    monkeypatch.setenv("AUDIO_URL_SIGNING_KEYS_PREVIOUS", "chave-antiga")
+    assert client.get(emitida).status_code == 200
+
+    # Aposentada a anterior, a URL antiga morre — o fim da janela de convivência.
+    monkeypatch.delenv("AUDIO_URL_SIGNING_KEYS_PREVIOUS")
+    assert client.get(emitida).status_code == 403
+
+
+def test_previous_key_never_signs(monkeypatch):
+    # A anterior é verify-only: o que se ASSINA agora só valida com a ativa.
+    monkeypatch.setenv("AUDIO_URL_SIGNING_KEY", "chave-nova")
+    monkeypatch.setenv("AUDIO_URL_SIGNING_KEYS_PREVIOUS", "chave-antiga")
+    exp = int(time.time()) + 300
+    from app.modules.sessions.storage import _derive, _sign_with
+    assert storage.verify_signed(ACTIVE_HASH, exp, storage._sign(ACTIVE_HASH, exp)) is True
+    # A assinatura recém-emitida é a da chave ATIVA, não a da anterior.
+    assert storage._sign(ACTIVE_HASH, exp) != _sign_with(_derive("chave-antiga"), ACTIVE_HASH, exp)
+    # Uma chave que nunca esteve na lista não vale.
+    assert storage.verify_signed(ACTIVE_HASH, exp,
+                                 _sign_with(_derive("chave-alheia"), ACTIVE_HASH, exp)) is False
+
+
+def test_rotation_does_not_extend_expiry(monkeypatch):
+    # A chave anterior aceita a ASSINATURA, não a validade: expirada continua expirada.
+    monkeypatch.setenv("AUDIO_URL_SIGNING_KEY", "chave-antiga")
+    exp = int(time.time()) - 10
+    sig = storage._sign(ACTIVE_HASH, exp)
+    monkeypatch.setenv("AUDIO_URL_SIGNING_KEY", "chave-nova")
+    monkeypatch.setenv("AUDIO_URL_SIGNING_KEYS_PREVIOUS", "chave-antiga")
+    assert storage.verify_signed(ACTIVE_HASH, exp, sig) is False
+
+
 def test_sign_verify_roundtrip_and_key_isolation(monkeypatch):
     # Unidade: a assinatura só valida com a MESMA chave; trocar a chave invalida.
     monkeypatch.setenv("AUDIO_URL_SIGNING_KEY", "chave-1")

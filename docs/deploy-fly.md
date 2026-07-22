@@ -62,8 +62,18 @@ fly secrets set `
 ```powershell
 fly deploy --app sereno-piloto-api
 # A imagem é buildada do backend/Dockerfile; o entrypoint roda `alembic upgrade head`.
-curl https://sereno-piloto-api.fly.dev/health      # deve responder {"status":"ok"}
+curl https://sereno-piloto-api.fly.dev/health      # liveness: {"status":"ok"}
+curl -i https://sereno-piloto-api.fly.dev/ready    # prontidão real: 200 {"status":"ready", "checks":{...}}
 ```
+
+> **`/health` vs `/ready` (ADR-090).** O health check do `fly.toml` aponta para **`/health`**
+> (liveness: o processo está de pé) e assim deve continuar **enquanto houver 1 réplica só** —
+> `/ready` reprova (503) quando o banco cai, e com réplica única isso tiraria a app inteira do
+> balanceador durante um soluço do Postgres, trocando "erro em algumas requisições" por
+> "indisponível". **A partir de 2 réplicas, mude o check para `/ready`**: aí retirar a réplica doente
+> da rotação é exatamente o comportamento desejado, e as outras absorvem o tráfego. `/ready` também
+> serve para diagnóstico manual a qualquer momento: `checks.redis = "down"` com `status = "degraded"`
+> indica Redis fora em postura fail-open (ADR-079) — a app funciona, o rate limit está frouxo.
 
 Semear dados de demo para testar o login (opcional, dados sintéticos):
 

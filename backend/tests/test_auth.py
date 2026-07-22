@@ -115,6 +115,46 @@ def test_mfa_flow(api):
     assert r3.status_code == 401
 
 
+def test_last_login_recorded_only_on_full_access(api):
+    """ADR-090: a coluna existia e a lista de staff a exibia, mas nada a preenchia.
+
+    Registrada só quando o acesso pleno é concedido (mfa/verify): senha correta sem 2º
+    fator não é login, e `refresh` não é voltar a entrar."""
+    from app.core.models import StaffUser
+    client, TestSession = api
+    uid, secret = _seed_staff(TestSession, email="ll@uninta.edu.br", role="admin", mfa=True)
+
+    def _last_login():
+        with TestSession() as s:
+            return s.get(StaffUser, uid).last_login_at
+
+    assert _last_login() is None                       # nasce vazia
+    r1 = client.post("/v1/auth/token", json={"email": "ll@uninta.edu.br",
+                                             "password": "Senha-Forte-123"})
+    assert _last_login() is None                       # só a senha não conta como login
+    r2 = client.post("/v1/auth/mfa/verify",
+                     json={"mfa_token": r1.json()["mfa_token"], "code": pyotp.TOTP(secret).now()})
+    assert r2.status_code == 200
+    marcado = _last_login()
+    assert marcado is not None
+
+    # Renovar o token não é um novo login (senão sessão esquecida pareceria uso recente).
+    client.post("/v1/auth/refresh", json={"refresh_token": r2.json()["refresh_token"]})
+    assert _last_login() == marcado
+
+
+def test_failed_mfa_does_not_record_login(api):
+    from app.core.models import StaffUser
+    client, TestSession = api
+    uid, _secret = _seed_staff(TestSession, email="bad@uninta.edu.br", role="admin", mfa=True)
+    r1 = client.post("/v1/auth/token", json={"email": "bad@uninta.edu.br",
+                                             "password": "Senha-Forte-123"})
+    assert client.post("/v1/auth/mfa/verify",
+                       json={"mfa_token": r1.json()["mfa_token"], "code": "000000"}).status_code == 401
+    with TestSession() as s:
+        assert s.get(StaffUser, uid).last_login_at is None
+
+
 def test_refresh_issues_new_access(api):
     client, TestSession = api
     tokens = _login_full(client, TestSession)

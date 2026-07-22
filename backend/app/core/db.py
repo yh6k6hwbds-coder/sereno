@@ -38,7 +38,13 @@ def _init() -> None:
     global _engine, _SessionLocal
     if _engine is None:
         url = normalize_database_url(os.getenv("DATABASE_URL", DEFAULT_URL))
-        connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
+        if url.startswith("sqlite"):
+            connect_args = {"check_same_thread": False}
+        else:
+            # Timeout de CONEXÃO curto (ADR-090). Sem ele, um banco inalcançável na rede
+            # (pacote descartado, não recusado) pendura a conexão pelo default do SO —
+            # minutos. O worker fica preso e o /ready trava em vez de responder 503.
+            connect_args = {"connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT_S", "5"))}
         _engine = create_engine(url, connect_args=connect_args, future=True)
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, expire_on_commit=False, class_=Session)
 
