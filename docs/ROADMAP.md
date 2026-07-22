@@ -3,7 +3,11 @@
 > Documento vivo. É o backlog que se abre no Claude Code para executar a **próxima
 > fatia**. Método fixo (não negociável): **contrato → código → teste (inclui caminhos de
 > negação) → CI verde → ADR → próxima**. Simplicidade > complexidade. Escopo travado no
-> **piloto de 4 semanas**; itens de expansão ficam em Fase E e não entram no caminho crítico.
+> **piloto de 4 semanas**; itens de expansão ficam em Fase E/F4 e não entram no caminho crítico.
+>
+> **Desde 2026-07-22 as fases de código (A–E) estão fechadas.** O que resta está na **Fase F** e,
+> em sua maioria, **não é código** — é decisão institucional, ética ou operacional. O método acima
+> vale para as fatias A–E; itens da Fase F fecham com **decisão registrada**, não com CI verde.
 
 ## Como ler
 - **Prioridade:** `P0` = caminho crítico para um piloto coletável · `P1` = importante ·
@@ -13,6 +17,19 @@
 - **Inegociáveis:** o que a fatia NÃO pode violar (ver `CLAUDE.md`).
 
 ## Estado atual (baseline deste roadmap)
+
+> ### ⛳ Marco (2026-07-22): **todas as fases (A–E) `DONE`. O caminho crítico deixou de ser código.**
+> CI do HEAD (`bf92fa9`) com 5/5 jobs verdes; **307 testes de backend a 90% de cobertura**,
+> **42 widget tests** (Flutter), 4 migrações Alembic, bateria FFT aprovada. ADRs **041–091**.
+>
+> **O que falta para o piloto rodar não se resolve escrevendo código** — depende de base legal,
+> CEP, DPO e prazos institucionais. O backlog dessas pendências está na **Fase F**, ao fim deste
+> documento, organizada **por dono**. Antes de abrir qualquer fatia nova, olhe lá: a maior parte
+> do que resta **não é sua para executar, é para cobrar**.
+
+<details>
+<summary>Histórico do baseline anterior (2026-07-09)</summary>
+
 > **Marco (2026-07-09): caminho crítico do piloto (Fases A–D) `DONE` e verde.** CI do HEAD
 > (`f78db58`) com 5/5 jobs verdes (backend, backend-postgres, `app`/Flutter bloqueante, contracts,
 > audio-fft); reprodução local: 169 testes de backend a 85,0% de cobertura, 4 migrações Alembic,
@@ -20,6 +37,8 @@
 > travada por escopo no `CLAUDE.md` (não implementar sem decisão explícita do mantenedor).
 > **Higiene de CI (2026-07-09):** actions atualizadas para o runtime Node 24
 > (`actions/checkout@v7`, `actions/setup-python@v6`), eliminando o aviso de deprecação do Node 20.
+
+</details>
 - **Backend (169 testes verdes):** `problem+json`; banco/migração portáveis (4 migrações);
   auth de staff (argon2+JWT+MFA + **rate limit/denylist de jti — D2/ADR-064**); auth de
   participante (OTP + **entrega por e-mail — D1/ADR-063**); **gestão de staff + MFA enrollment
@@ -36,7 +55,15 @@
   e visualização não reativa → **pós-sessão (B3) encaixado ao fim da sessão**. Telas B2–B6 ligadas
   à navegação. (Testes Flutter escritos, não executados aqui — sem SDK local; o job `app` do CI,
   **bloqueante** em erros, valida.)
-- **ADRs:** 041–067 e 073–077 (índice em `docs/decisoes/`).
+- **ADRs:** 041–091 (índice em `docs/decisoes/`).
+- **Consentimento (fluxo completo, 2026-07-22):** resumo em linguagem simples (7 tópicos, pt/en) →
+  **texto integral do TCLE na tela** (ADR do rascunho em `docs/tcle-rascunho.md`; o asset do app é
+  **gerado** do documento que vai ao CEP, e o CI falha se divergirem) → aceite versionado. Versão
+  vigente: **`0.1.0-rascunho`** — o sufixo é deliberado enquanto não houver parecer do CEP.
+- **Pacote documental LGPD/CEP:** checklist (`lgpd-nit-checklist.md`), **RIPD** 
+  (`relatorio-impacto-protecao-dados.md`), **ROPA** (`registro-operacoes-tratamento.md`), retenção
+  (`politica-retencao-descarte.md`), incidentes (`plano-resposta-incidentes.md`) e **TCLE**
+  (`tcle-rascunho.md`). Todos rascunhos técnicos: decisões de terceiros marcadas `[a confirmar]`.
 
 ---
 
@@ -407,11 +434,91 @@ modularidade para isso).
 
 ---
 
-## Ordem sugerida de execução (caminho crítico do piloto)
+## FASE F — O que falta para o piloto rodar (não é código) · P0
+
+> **Por que esta fase existe.** As fases A–E estão fechadas: o sistema coleta, protege, analisa e
+> exporta. Mas **o piloto não pode começar a coletar dado real**, e nada disso se resolve abrindo
+> uma fatia no Claude Code. Esta seção existe para que o backlog pare de sugerir que o trabalho
+> restante é de programação — a maior parte é **de terceiros, para cobrar**, não para executar.
+>
+> Organizada **por dono**. O `CLAUDE.md` é explícito: LGPD, SaMD/ANVISA e PI exigem NIT + assessoria
+> — **sinalizar, não decidir**. Os documentos em `docs/` são o insumo pronto para essas decisões.
+
+### F1 — Bloqueadores institucionais (NIT / assessoria / DPO) · P0 · `TODO`
+Nenhum depende de desenvolvimento. **O primeiro bloqueia todos os outros.**
+
+| # | Pendência | Item | Insumo pronto |
+|---|---|---|---|
+| F1.1 | **Base legal** do tratamento de dado sensível de saúde (Art. 7 / Art. 11) | A2 | RIPD §4, ROPA (base por operação) |
+| F1.2 | **Encarregado (DPO)** designado + canal público de atendimento ao titular | G1/D4 | ROPA §1, RIPD §2 |
+| F1.3 | **Prazos de retenção** aprovados (proposta: 5 anos pós-encerramento) | E1 | `politica-retencao-descarte.md` §4 |
+| F1.4 | **DPAs** com operadores (Fly.io, SMTP, GitHub Pages) + análise do Art. 33 | F2/F3 | ROPA §4 |
+| F1.5 | **Adoção formal** do RIPD e do ROPA pelo controlador; decisão sobre risco residual aceitável e eventual consulta prévia à ANPD | G2/G3 | RIPD §10 |
+| F1.6 | Enquadramento **SaMD/ANVISA** (confirmar que a copy "ferramenta complementar" afasta o risco) | G6 | postura científica do `CLAUDE.md` |
+
+> ⚠️ **F1.1 é o bloqueador duro:** sem base legal definida **não se coleta dado real**. Tudo o mais
+> pode avançar em paralelo, isso não.
+
+### F2 — Aprovação ética (CEP) · P0 · `TODO`
+| # | Pendência | Onde |
+|---|---|---|
+| F2.1 | **Aprovar o TCLE**; preencher `[a preencher]` (título, contatos, CEP, DPO) | `tcle-rascunho.md` §N2 |
+| F2.2 | **Detalhes do protocolo clínico** — critérios de inclusão/exclusão, nº de sessões por semana, tempo total. **Não existem em nenhum lugar do repositório**; hoje são `[a confirmar com o protocolo]` no TCLE §4/§5 | `tcle-rascunho.md` §4, §5 |
+| F2.3 | **Via digital basta?** — se o registro no app substitui a assinatura, e como a via é entregue | `tcle-rascunho.md` §16, §N2 |
+| F2.4 | **Eliminação do dado de pesquisa já coletado** a pedido do titular: permitida, e em que condições | D3, RIPD R-10 |
+| F2.5 | **Salvaguardas de recrutamento** contra assimetria de poder: convite por pessoa **sem vínculo de avaliação** com o candidato; desistência que não passe pelo pesquisador | **RIPD R-09** |
+
+> ⚠️ **F2.5 é o maior risco residual do RIPD (Alto) e nenhum código o reduz.** O TCLE §11 já diz que
+> recusar não traz prejuízo — necessário, mas não suficiente: o resto é procedimento de convite.
+
+### F3 — Operacional (mantenedor / ops) · P0/P1 · `TODO`
+Depende de infraestrutura no ar ou de credencial, não de escrever código.
+
+| # | Pendência | Estado do código |
+|---|---|---|
+| F3.1 | **Agendar o expurgo de OTP** (cron ou máquina agendada da Fly) | ✅ Mecanismo pronto e testado (ADR-091). **Enquanto ninguém agendar, não roda** — receita em `deploy-fly.md` §3.1 |
+| F3.2 | **SMTP real** (sem ele o OTP não é entregue em produção) | ✅ Código pronto (ADR-063/085); falta credencial em cofre |
+| F3.3 | **Deploy na Fly** | ✅ `fly.toml` + runbook prontos (ADR-076); depende de cartão |
+| F3.4 | Ao aprovar o TCLE: trocar a versão para `1.0.0` em **3 lugares** — `TCLE_CURRENT` (backend), `tcleVersion` (`app/lib/core/config.dart`) e conferir o resumo do app | Testes e seed importam a constante → **uma linha em cada** |
+| F3.5 | **Pentest externo** antes de dado real | ⬜ C12 |
+| F3.6 | Com **≥2 réplicas**: trocar o health check do `fly.toml` de `/health` para `/ready` | ✅ `/ready` real (ADR-090); com 1 réplica derrubaria a app num soluço do Postgres |
+
+### F4 — Construção pós-piloto (código, **exige sign-off**) · P2 · `TODO`
+Fora do MVP por decisão de escopo (`CLAUDE.md`). Todos têm o *seam* pronto — são "construir o que
+já está preparado", não redesenhar.
+
+| # | Item | Porta/seam existente |
+|---|---|---|
+| F4.1 | Adaptador **KMS/Vault** real | `KeyProvider.wrap/unwrap` (ADR-087/088) |
+| F4.2 | **Expurgo do dataset** ao fim do prazo | módulo `retention` (ADR-091) — **bloqueado por F1.3** |
+| F4.3 | Storage de áudio em **nuvem** (presign S3/GCS) | `AudioStorage` (ADR-082) |
+| F4.4 | **Persistência cifrada** de vestíveis | `WearableSink` (ADR-084) |
+| F4.5 | Adaptador **RQ/Redis** para e-mail (durabilidade) + bounces | `EmailDelivery` (ADR-085) |
+| F4.6 | **Alertas** automáticos sobre métricas (falha de e-mail, acesso anômalo) | `/metrics` (ADR-080) — fecha detecção de RIPD R-03/R-06 |
+| F4.7 | Reset de senha por admin + convite por e-mail (staff) | C3 (ADR-081) |
+| F4.8 | Exibir o **texto integral** também em inglês, ou restringir o estudo ao pt-BR | `tcle-rascunho.md` §N4.6 |
+
+---
+
+## Ordem sugerida de execução
+
+**Agora (Fase F):** `F1.1 (base legal) → F2.1/F2.2 (TCLE + protocolo, com o CEP) → F1.2 (DPO) →
+F1.3 (prazos) → F2.5 (recrutamento) → F3.2/F3.3 (SMTP + deploy) → F3.1 (agendar expurgo) →
+F3.4 (versão 1.0.0 do termo)`.
+
+Racional: **F1.1 destrava tudo** (sem base legal não se coleta). F2.1/F2.2 andam em paralelo com o
+CEP e alimentam o TCLE. F3 só faz sentido quando houver o que colocar no ar. **F4 não entra sem
+sign-off do mantenedor** — é expansão de escopo.
+
+<details>
+<summary>Ordem histórica das fatias de código (A–E, todas concluídas)</summary>
+
 `A1 → A2 → B1 → B2 → C1 → C4 → D1 → C2 → B3 → B4 → B5 → B6 → C6 → C7 → D3` — depois o resto
 de D e a Fase E conforme necessidade. Racional: primeiro a sessão funcional (A), depois o
 mínimo para **coletar com segurança** (login/baseline/auditoria/PII/e-mail), depois os
 desfechos e a análise, e por fim o endurecimento de infraestrutura.
+
+</details>
 
 ## Definição de Pronto (global, toda fatia)
 1. Contrato (`shared-contracts/openapi.yaml`) atualizado **antes** do código e válido.
@@ -420,3 +527,8 @@ desfechos e a análise, e por fim o endurecimento de infraestrutura.
 4. Nenhuma decisão inegociável violada (cegamento, fidelidade, PII/LGPD, escopo do piloto).
 5. **ADR** criado (formato ADR-041) e índice atualizado.
 6. Sem segredo versionado; sem PII/braço em log; “ferramenta complementar” preservado.
+
+> **Vale para as fatias de código (A–E).** Os itens da **Fase F** não fecham com CI verde: fecham
+> com **decisão registrada** de quem tem competência para tomá-la (parecer do CEP, designação do
+> Encarregado, prazo aprovado, DPA assinado). Ao receber uma dessas, atualize o item aqui, o
+> `lgpd-nit-checklist.md` e o documento correspondente — os três precisam contar a mesma história.
