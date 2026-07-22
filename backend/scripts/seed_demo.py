@@ -27,6 +27,7 @@ from app.core.db import get_engine  # noqa: E402
 from app.core.models import (  # noqa: E402
     Participant, ContactInfo, AudioProtocol, Screening, ConsentRecord, Allocation)
 from app.core import pii_crypto  # noqa: E402
+from app.modules.consent.router import TCLE_CURRENT  # noqa: E402  # versao vigente do termo
 
 STUDY_CODE = os.getenv("DEMO_STUDY_CODE", "DEMO")
 DEMO_EMAIL = os.getenv("DEMO_EMAIL", "voce@example.com")
@@ -67,7 +68,7 @@ def main() -> None:
         if s.scalar(select(Screening).where(Screening.participant_id == p.id)) is None:
             s.add(Screening(participant_id=p.id, eligible=True, criteria={"version": "1.0.0"}))
         if s.scalar(select(ConsentRecord).where(ConsentRecord.participant_id == p.id)) is None:
-            s.add(ConsentRecord(participant_id=p.id, tcle_version="1.0.0", accepted=True,
+            s.add(ConsentRecord(participant_id=p.id, tcle_version=TCLE_CURRENT, accepted=True,
                                 accepted_at=now, content_hash="0" * 64))
         if s.scalar(select(Allocation).where(Allocation.participant_id == p.id)) is None:
             s.add(Allocation(participant_id=p.id, arm_coded="A", block=1, sequence_seed_ref="demo"))
