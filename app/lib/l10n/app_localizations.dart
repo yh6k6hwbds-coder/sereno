@@ -66,6 +66,15 @@ class AppLocalizations {
       'consentLgpd': 'Autorizo o uso dos meus dados conforme a LGPD',
       'consentContinue': 'Concordar e continuar',
       'consentWithdraw': 'Você pode retirar o consentimento quando quiser.',
+      'consentReadFull': 'Ler o termo completo',
+      'tcleFullTitle': 'Termo completo',
+      'tcleVersionLabel': 'Versão do termo',
+      'tcleDraftWarning': 'RASCUNHO — este texto ainda não foi aprovado pelo Comitê de Ética '
+          'em Pesquisa (CEP). Alguns trechos estão incompletos e serão preenchidos antes do '
+          'início do estudo.',
+      'tcleOnlyPortuguese': 'O termo oficial está em português (pt-BR).',
+      'tcleLoadError': 'Não foi possível carregar o termo. Tente novamente mais tarde e, '
+          'por favor, não aceite antes de conseguir lê-lo por inteiro.',
       // Comuns (ações)
       'back': 'Voltar',
       'send': 'Enviar',
@@ -170,6 +179,15 @@ class AppLocalizations {
       'consentLgpd': 'I authorize the use of my data under the LGPD',
       'consentContinue': 'Agree and continue',
       'consentWithdraw': 'You can withdraw your consent at any time.',
+      'consentReadFull': 'Read the full consent form',
+      'tcleFullTitle': 'Full consent form',
+      'tcleVersionLabel': 'Form version',
+      'tcleDraftWarning': 'DRAFT — this text has not yet been approved by the Research Ethics '
+          'Committee (CEP). Some parts are incomplete and will be filled in before the study '
+          'begins.',
+      'tcleOnlyPortuguese': 'The official consent form is in Portuguese (pt-BR).',
+      'tcleLoadError': 'The consent form could not be loaded. Please try again later and do '
+          'not accept before you are able to read it in full.',
       'back': 'Back',
       'send': 'Send',
       'yes': 'Yes',
@@ -381,6 +399,12 @@ class AppLocalizations {
   String get consentLgpd => _t('consentLgpd');
   String get consentContinue => _t('consentContinue');
   String get consentWithdraw => _t('consentWithdraw');
+  String get consentReadFull => _t('consentReadFull');
+  String get tcleFullTitle => _t('tcleFullTitle');
+  String get tcleVersionLabel => _t('tcleVersionLabel');
+  String get tcleDraftWarning => _t('tcleDraftWarning');
+  String get tcleOnlyPortuguese => _t('tcleOnlyPortuguese');
+  String get tcleLoadError => _t('tcleLoadError');
   List<String> get consentSummary =>
       _consentSummary[locale.languageCode] ?? _consentSummary['pt']!;
   // Comuns (ações)

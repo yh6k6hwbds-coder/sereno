@@ -20,5 +20,9 @@ dev_dependencies:
   flutter_lints: ^4.0.0
 flutter:
   uses-material-design: true
+  assets:
+    # Texto integral do TCLE. GERADO de docs/tcle-rascunho.md por scripts/sync_tcle.py —
+    # não editar à mão; o CI falha se o asset e o documento saírem de sincronia.
+    - assets/tcle/tcle-pt.txt
   # Fontes da identidade (adicionar os arquivos .ttf em assets/fonts e descomentar):
   #   Fraunces (display), Inter (corpo), IBM Plex Mono (dados)

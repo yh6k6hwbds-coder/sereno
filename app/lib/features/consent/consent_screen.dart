@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../services/participant_repository.dart';
 import '../../shared/disclaimer_banner.dart';
 import '../home/home_screen.dart';
+import 'tcle_full_text_screen.dart';
 
 /// Consentimento (TCLE): resumo em linguagem simples + confirmações. O participante
 /// só prossegue ao aceitar; a decisão é enviada ao backend (registro versionado + hash).
@@ -62,6 +63,22 @@ class _ConsentScreenState extends State<ConsentScreen> {
                         Expanded(child: Text(item, style: const TextStyle(height: 1.4))),
                       ]),
                     )),
+                const SizedBox(height: 4),
+                // O resumo acima NÃO substitui o termo. O texto integral fica a um toque,
+                // ANTES das confirmações — marcar "li e entendi" sem ter tido acesso ao
+                // termo inteiro não seria consentimento informado.
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const TcleFullTextScreen())),
+                  icon: const Icon(Icons.description_outlined, size: 18),
+                  label: Text(t.consentReadFull),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                    foregroundColor: SerenoColors.petrol,
+                    side: const BorderSide(color: SerenoColors.border),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 CheckboxListTile(
                   value: _read,

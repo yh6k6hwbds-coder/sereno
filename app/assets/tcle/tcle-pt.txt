@@ -1,0 +1,109 @@
+# GERADO por scripts/sync_tcle.py a partir de docs/tcle-rascunho.md — NÃO EDITE À MÃO.
+# Para mudar o texto, edite o .md (que vai ao CEP) e rode o script.
+H|Termo de Consentimento Livre e Esclarecido
+B|Título do estudo: [a preencher — título aprovado no protocolo]
+B|Pesquisadora responsável: Dra. Bianca Régia Silva [titulação/vínculo completo]
+B|Pesquisador(es): [a preencher]
+B|Instituição: Centro Universitário INTA (UNINTA) — Sobral/CE
+B|Versão deste termo: [versão] · Data: [data]
+H|1. Convite
+P|Você está sendo convidado(a) a participar de um estudo de pesquisa. Antes de decidir, leia este documento com calma. Pergunte tudo o que quiser: a equipe tem o dever de esclarecer suas dúvidas antes, durante e depois do estudo.
+P|Sua participação é voluntária. Você não é obrigado(a) a participar e pode desistir a qualquer momento, sem precisar explicar o motivo.
+H|2. Por que este estudo está sendo feito
+P|Muitas pessoas convivem com dificuldade para dormir e com sintomas de ansiedade. Existem aplicativos que oferecem sessões de áudio com frequências binaurais — um tipo de som em que cada ouvido recebe um tom levemente diferente — com a proposta de ajudar no relaxamento e no sono.
+P|É importante que você saiba: as evidências científicas sobre frequências binaurais ainda são limitadas e inconsistentes. Alguns estudos sugerem efeito no relaxamento; outros não encontram efeito. Não há comprovação de que essa técnica trate ansiedade ou insônia. É por isso que ela está sendo estudada — e não o contrário.
+H|3. O que este estudo quer descobrir
+P|Este é um estudo piloto de viabilidade. O objetivo principal não é provar se o áudio funciona. O objetivo é verificar se é possível conduzir um estudo assim: se as pessoas conseguem usar o aplicativo, se conseguem completar as sessões e os questionários, e se o método funciona na prática.
+P|Também vamos observar, de forma exploratória (ou seja, apenas para gerar hipóteses para estudos futuros), medidas de sono e de sintomas de ansiedade. Este estudo não tem tamanho nem desenho para concluir se o áudio é eficaz. Qualquer resultado será um indício para pesquisas maiores, não uma conclusão.
+P|Participarão aproximadamente 40 pessoas, ao longo de 4 semanas.
+H|4. Quem pode participar
+P|[a confirmar com o protocolo — critérios de inclusão e exclusão]
+P|Para participar, será necessário ter [idade mínima] anos ou mais e [demais critérios]. Não poderão participar pessoas que [critérios de exclusão, incluindo condições de saúde que contraindiquem a participação].
+P|Antes de entrar no estudo, você responderá a algumas perguntas para verificar se atende a esses critérios. Se não atender, você será informado(a) e não participará — isso não é um julgamento sobre você, apenas uma exigência do desenho do estudo.
+H|5. O que vai acontecer se você participar
+B|No início: você responderá a questionários sobre qualidade do sono e sobre sintomas de ansiedade nas últimas semanas, além de algumas informações básicas.
+B|Durante 4 semanas: você usará o aplicativo para fazer sessões de áudio de aproximadamente 20 minutos, com fones de ouvido, na frequência de [a confirmar com o protocolo — nº de sessões por semana]. Recomendamos fones com fio; se usar Bluetooth, o app registra isso, porque pode afetar a qualidade do som.
+B|Depois de cada sessão: você responderá a duas ou três perguntas rápidas sobre como se sentiu.
+B|Diariamente (opcional): você poderá registrar como foi sua noite de sono.
+B|Ao final das 4 semanas: você responderá novamente aos questionários do início, mais algumas perguntas sobre sua experiência de uso do aplicativo.
+P|O aplicativo registra automaticamente informações sobre o uso — por exemplo, quanto tempo a sessão durou e se houve interrupções. Isso é necessário para avaliar a viabilidade do estudo.
+P|Tempo total estimado: [a confirmar com o protocolo].
+H|6. O sorteio e por que você não saberá seu grupo
+P|Você será sorteado(a) para um de dois grupos. Os dois grupos usam o mesmo aplicativo, com sessões de áudio de aparência e duração iguais. Uma das versões contém o estímulo sonoro que está sendo testado; a outra é uma versão de comparação.
+P|Nem você nem a equipe que acompanha o estudo saberão em qual grupo você está enquanto o estudo estiver em andamento. Isso se chama estudo "duplo-cego" e é necessário para que a expectativa — sua ou nossa — não influencie os resultados. Não é uma informação escondida de você por outro motivo.
+P|Ao final do estudo, você poderá saber em qual grupo esteve, se quiser. Basta pedir à equipe.
+P|Se, por alguma necessidade de saúde, for indispensável saber seu grupo antes do fim, existe um procedimento formal para isso, que é registrado e exige a aprovação de duas pessoas responsáveis.
+H|7. Riscos e desconfortos
+P|Os riscos previstos são mínimos, mas você deve conhecê-los:
+B|Desconforto com o áudio: algumas pessoas podem sentir dor de cabeça, tontura, zumbido, irritação ou cansaço ao ouvir sons por períodos prolongados. Se sentir qualquer desconforto, interrompa a sessão — você pode parar a qualquer momento — e registre no aplicativo.
+B|Volume: use um volume confortável. Volume alto por tempo prolongado pode prejudicar a audição.
+B|Atenção: não use as sessões enquanto dirige, opera máquinas ou realiza qualquer atividade que exija atenção.
+B|Desconforto emocional: responder perguntas sobre ansiedade e sono pode trazer desconforto ou fazer você pensar em questões difíceis. Você pode deixar de responder qualquer pergunta.
+B|Confidencialidade: existe sempre um risco, ainda que pequeno, de que dados sejam acessados indevidamente. A seção 12 descreve as medidas adotadas para reduzir esse risco.
+P|Se você tiver qualquer efeito indesejado, registre no aplicativo (há uma tela específica para isso) e avise a equipe. Esse registro continua disponível mesmo se você já tiver desistido do estudo.
+H|8. O aplicativo NÃO é tratamento
+!|Este é o ponto mais importante deste documento.
+!|O aplicativo é uma ferramenta complementar, experimental. Ele não é tratamento, não substitui consulta, avaliação ou acompanhamento com profissional de saúde, e não deve ser usado no lugar de um tratamento que você já faça.
+!|Não interrompa nenhum tratamento, medicação ou acompanhamento por causa deste estudo.
+!|Se você está sofrendo com ansiedade ou com o sono, procure um profissional de saúde. Participar deste estudo não é uma alternativa a isso.
+P|Se você estiver em sofrimento intenso ou pensando em se machucar, procure ajuda imediatamente:
+B|CVV — Centro de Valorização da Vida: 188 (ligação gratuita, 24 h)
+B|SAMU: 192 · Emergência: 190
+B|[a preencher — serviço de saúde de referência local / apoio institucional]
+H|9. Benefícios
+P|Você pode não ter nenhum benefício direto por participar. Algumas pessoas relatam sensação de relaxamento durante sessões de áudio, mas isso não é garantido e não é o que o estudo se propõe a demonstrar.
+P|O benefício esperado é coletivo: ajudar a entender se e como este tipo de estudo pode ser conduzido, contribuindo para pesquisas futuras.
+H|10. Acompanhamento e assistência
+P|A equipe estará disponível para esclarecer dúvidas durante todo o estudo, pelos contatos da seção 15.
+P|Você tem direito a assistência integral e gratuita por eventuais danos decorrentes da sua participação, bem como direito a buscar indenização, conforme a Resolução CNS nº 466/2012. [a confirmar — como a instituição operacionaliza essa assistência]
+H|11. Participação voluntária, recusa e desistência
+P|Participar é uma escolha sua.
+!|Recusar ou desistir não trará nenhum prejuízo a você. Sua decisão não afetará, de nenhuma forma, suas notas, sua avaliação acadêmica, seu vínculo com a instituição, nem qualquer atendimento ou serviço a que você tenha direito. Você não precisa justificar sua decisão a ninguém, e a equipe não fará qualquer cobrança.
+P|Você pode retirar seu consentimento a qualquer momento, diretamente pelo aplicativo, sem precisar falar com a equipe. [a confirmar com o CEP — se além da via digital deve haver via alternativa, e como o participante é orientado sobre ela]
+P|O que acontece quando você retira o consentimento está descrito na seção 13.
+H|12. Seus dados: o que coletamos e como protegemos
+P|Base legal do tratamento: [a confirmar — NIT/assessoria jurídica]
+!|Atenção: parte dos dados deste estudo são dados pessoais sensíveis de saúde (informações sobre seu sono e sobre sintomas de ansiedade). Por isso, seu consentimento para o tratamento desses dados é específico e destacado — é sobre isso que trata esta seção.
+P|O que é coletado:
+B|Identificação (contato) — Seu nome e e-mail — usados apenas para comunicação e para enviar o código de acesso ao aplicativo
+B|Dados de saúde (sensíveis) — Respostas sobre sono e ansiedade, respostas da triagem, registros de sono, relatos de efeitos indesejados
+B|Uso do aplicativo — Duração das sessões, interrupções, respostas rápidas após cada sessão
+P|Como seus dados são protegidos:
+B|Seu nome e e-mail são guardados de forma criptografada e separada do restante. As respostas do estudo não ficam junto do seu nome: elas são ligadas a um código que não identifica você diretamente (pseudonimização).
+B|Quem analisa os dados do estudo não vê seu nome.
+B|Os dados ficam armazenados em servidores localizados no Brasil, com conexão criptografada.
+B|O acesso é restrito à equipe autorizada, exige autenticação em duas etapas, e todo acesso a operações sensíveis fica registrado em uma trilha que não pode ser apagada.
+B|Os resultados serão divulgados apenas de forma agregada (conjunto de participantes). Você não será identificado(a) em nenhuma publicação, apresentação ou relatório.
+P|Seus direitos (LGPD — Lei nº 13.709/2018): você pode, a qualquer momento, solicitar acesso aos seus dados, correção de dados incorretos, informação sobre com quem eles são compartilhados, e a eliminação dos seus dados de identificação. Para exercer esses direitos, use os contatos da seção 15 ou o canal do Encarregado de Proteção de Dados: [a preencher].
+H|13. Se você desistir: o que acontece com seus dados
+P|Este ponto merece atenção, porque tem duas partes:
+B|Você para de participar imediatamente. Não haverá novas coletas, e você não precisará fazer mais nada. Seus dados de contato (nome e e-mail) podem ser eliminados a seu pedido.
+B|Os dados já coletados até ali serão mantidos, de forma pseudonimizada (sem seu nome), e poderão ser usados na análise do estudo.
+P|Por quê? Retirar da análise dados já coletados pode distorcer os resultados e comprometer a validade da pesquisa — inclusive a segurança das conclusões sobre efeitos indesejados. Essa é uma prática padrão em pesquisa. [a confirmar com o CEP — se o participante deve poder solicitar também a eliminação dos dados de pesquisa já coletados, e em que condições]
+P|Se você não concorda com essa retenção, converse com a equipe antes de aceitar participar.
+P|Por quanto tempo os dados são guardados: [a confirmar — proposta de 5 anos após o encerramento do estudo, conforme a política de retenção e as normas de pesquisa]. Depois desse prazo, os dados são eliminados ou tornados definitivamente anônimos.
+H|14. Custos e ressarcimento
+P|Você não terá custos para participar, e não receberá pagamento por participar.
+P|Caso a participação gere alguma despesa [a confirmar — ex.: deslocamento para etapa presencial, uso de dados móveis], você tem direito a ressarcimento, conforme a Resolução CNS nº 466/2012. [a confirmar — como solicitar]
+H|15. Contatos
+P|Dúvidas sobre o estudo, sobre sua participação ou para relatar um problema:
+B|Pesquisadora responsável: [nome, telefone, e-mail, endereço institucional, horário de contato]
+B|Equipe de pesquisa: [a preencher]
+P|Dúvidas sobre seus dados pessoais:
+B|Encarregado de Proteção de Dados (DPO) da UNINTA: [a preencher — nome e canal de contato]
+P|Dúvidas sobre a ética da pesquisa — o Comitê de Ética em Pesquisa (CEP) é um colegiado independente que existe para defender os interesses dos participantes, protegendo seus direitos. Procure-o se tiver qualquer dúvida ou reclamação sobre a conduta do estudo:
+B|CEP [a preencher — nome do comitê, endereço, telefone, e-mail, horário de atendimento]
+H|16. Declaração de consentimento
+P|Eu li (ou alguém leu para mim) as informações acima. Tive a oportunidade de fazer perguntas e todas foram respondidas de forma satisfatória. Entendi que:
+B|minha participação é voluntária e posso desistir a qualquer momento, sem prejuízo;
+B|o aplicativo não é tratamento e não substitui cuidado profissional;
+B|serei sorteado(a) para um de dois grupos e não saberei qual durante o estudo;
+B|dados sensíveis de saúde (sono e sintomas de ansiedade) serão coletados e tratados como descrito na seção 12 — e concordo especificamente com isso;
+B|se eu desistir, os dados já coletados serão mantidos de forma pseudonimizada, como explicado na seção 13.
+P|Concordo em participar deste estudo.
+!|Se você está lendo este termo no aplicativo: ao tocar em "Concordar e continuar", seu aceite é registrado com a data, a hora e a versão deste texto — é isso que substitui a assinatura. Os campos abaixo valem para a via impressa. [a confirmar com o CEP — se o registro no aplicativo basta ou se é exigida também uma via assinada]
+P|Nome do participante: ______________________________________
+P|Assinatura: ______________________________ Data: ____ / ____ / ______
+P|Nome do pesquisador que obteve o consentimento: ______________________________________
+P|Assinatura: ______________________________ Data: ____ / ____ / ______
+!|Você receberá uma via deste documento. [a confirmar com o CEP — forma de entrega da via quando o consentimento for registrado no aplicativo]

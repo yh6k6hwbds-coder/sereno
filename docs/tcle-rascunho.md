@@ -34,11 +34,11 @@
 
 ## Termo de Consentimento Livre e Esclarecido
 
-**Título do estudo:** `[a preencher — título aprovado no protocolo]`
-**Pesquisadora responsável:** Dra. Bianca Régia Silva `[titulação/vínculo completo]`
-**Pesquisador(es):** `[a preencher]`
-**Instituição:** Centro Universitário INTA (UNINTA) — Sobral/CE
-**Versão deste termo:** `[versão]` · **Data:** `[data]`
+- **Título do estudo:** `[a preencher — título aprovado no protocolo]`
+- **Pesquisadora responsável:** Dra. Bianca Régia Silva `[titulação/vínculo completo]`
+- **Pesquisador(es):** `[a preencher]`
+- **Instituição:** Centro Universitário INTA (UNINTA) — Sobral/CE
+- **Versão deste termo:** `[versão]` · **Data:** `[data]`
 
 ### 1. Convite
 
@@ -279,6 +279,11 @@ foram respondidas de forma satisfatória. Entendi que:
 
 **Concordo em participar deste estudo.**
 
+> **Se você está lendo este termo no aplicativo:** ao tocar em "Concordar e continuar", seu aceite
+> é registrado com a data, a hora e a versão deste texto — é isso que substitui a assinatura. Os
+> campos abaixo valem para a via impressa. `[a confirmar com o CEP — se o registro no aplicativo
+> basta ou se é exigida também uma via assinada]`
+
 Nome do participante: ______________________________________
 
 Assinatura: ______________________________  Data: ____ / ____ / ______
@@ -345,11 +350,17 @@ Duas seções existem por causa de riscos identificados no `relatorio-impacto-pr
    **de saúde** explicitamente; **retenção pós-desistência** (§13); e recusa/saída **sem afetar
    notas, vínculo ou atendimento** (§11, risco R-09).
 
-**Ainda pendente:**
+4. ✅ **Texto integral acessível no app** no momento do aceite: botão "Ler o termo completo" na
+   tela de consentimento, **antes** das confirmações — marcar "li e entendi" sem ter tido acesso
+   ao termo inteiro não seria consentimento informado. A tela mostra aviso de **RASCUNHO** (não
+   aprovado pelo CEP) e a versão vigente.
+   **Este documento é a fonte única:** `app/assets/tcle/tcle-pt.txt` é **gerado** daqui por
+   `scripts/sync_tcle.py` (só o bloco entre os marcadores de "texto dirigido ao participante"; o
+   cabeçalho de status e estas notas ficam de fora). O CI **falha** se os dois divergirem — sem
+   isso, o texto submetido ao comitê e o texto lido na tela se afastariam sem ninguém notar.
+   Ao editar o termo: rode `python scripts/sync_tcle.py`.
 
-4. **O texto integral precisa estar acessível no app** no momento do aceite, não só o resumo
-   `[a confirmar com o CEP]` — hoje o app mostra apenas os 7 tópicos. É desenvolvimento, mas
-   depende do texto final e da exigência do CEP.
+**Ainda pendente:**
 5. **Registro do aceite:** o sistema grava versão, data/hora, aceite/recusa, hash do conteúdo e
    endereço IP (`consent_record`), e a retirada é self-service (ADR-089). Isso dá evidência do
    consentimento, mas **não decide** se o CEP aceita a via digital como suficiente.
