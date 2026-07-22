@@ -88,6 +88,28 @@ fly ssh console --app sereno-piloto-api -C "python scripts/seed_demo.py"
 > (`docker compose`, `APP_ENV=dev`, `EMAIL_DEV_CONSOLE=1`) ou pelo túnel — não na Fly de
 > produção. Para testar o login na Fly, configure o SMTP real (seção "Antes de participantes").
 
+## 3.1. Agendar o expurgo de OTP (retenção, E2/ADR-091)
+
+A política de retenção classifica os desafios de OTP como **transitórios** (expurgo diário, nunca
+> 24 h). O mecanismo está pronto e testado — **falta alguém chamá-lo periodicamente**. Enquanto não
+for agendado, o expurgo simplesmente não acontece, e o item E2 do checklist LGPD segue aberto.
+
+```powershell
+# Execução manual / verificação (não apaga nada com --dry-run):
+fly ssh console --app sereno-piloto-api -C "python scripts/purge_otp.py --dry-run"
+fly ssh console --app sereno-piloto-api -C "python scripts/purge_otp.py"
+# Saída: {"deleted": N, "remaining": M, "grace_min": 60, "dry_run": false}
+```
+
+**Opções de agendamento** (escolher uma, `[a definir com o mantenedor]`):
+- **Cron externo** (a máquina do mantenedor, um runner de CI agendado, qualquer host): invoca o
+  `fly ssh console -C` acima uma vez por dia. Mais simples; depende de um host de fora estar de pé.
+- **Máquina agendada da Fly** (`fly machine run ... --schedule daily`): roda dentro da própria
+  infraestrutura, sem depender de host externo. Preferível quando o deploy estiver de fato no ar.
+
+O script sai com **código ≠ 0 em falha**, então qualquer agendador consegue alertar. É idempotente
+— rodar duas vezes seguidas apaga 0 na segunda; rodar com frequência maior que a diária é inofensivo.
+
 ## 4. Reconstruir o app apontando para a API pública
 
 O CI já injeta a URL. O default (`https://sereno-piloto-api.fly.dev/v1`) casa com o

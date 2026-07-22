@@ -56,7 +56,7 @@ de pesquisa — **sujeita a confirmação**.
 | Categoria | Tabelas / dados | Contém PII? | Retenção proposta `[a confirmar]` | Gatilho e forma de descarte |
 |---|---|---|---|---|
 | **PII de contato** | `contact_info` (nome/e-mail cifrados) | Sim (cifrada) | Durante a participação; eliminar em até **30 dias** após o encerramento da coleta **ou** na revogação/pedido do titular, o que ocorrer primeiro | Eliminação da linha + crypto-shredding; já disponível via `erase` (ADR-066) e revogação self-service (ADR-089) |
-| **Artefatos de autenticação** | `otp_challenge` (hash de OTP, expiração) | Indireto | **Transitório** — expurgar registros expirados/consumidos (proposta: **diário**; nunca > 24 h) | Expurgo agendado (job) — **pendência E2**; hoje removidos no `erase` |
+| **Artefatos de autenticação** | `otp_challenge` (hash de OTP, expiração) | Indireto | **Transitório** — expurgar registros expirados/consumidos (proposta: **diário**; nunca > 24 h) | ✅ **Implementado** (ADR-091): `purge_expired_otp` apaga o que expirou há > 60 min (carência configurável); entrada `backend/scripts/purge_otp.py`, auditada só na contagem. Apaga **apenas o já expirado** — nunca desafio vivo (zeraria `attempts`). **Falta agendar** (cron/máquina agendada). Também removidos no `erase` |
 | **Evidência de consentimento** | `consent_record` (versão, aceite, `revoked_at`, hash, `ip_address`) | `ip_address` é pessoal | Igual ao dado de pesquisa (**5 anos** pós-encerramento) — é a prova do consentimento | Ao fim do prazo: eliminar; **minimizar `ip_address`** no encerramento da coleta (manter só a evidência) `[a confirmar]` |
 | **Identificação pseudônima** | `participant` (study_code, status), `allocation` (braço A/B) | Não (pseudônimo) | **5 anos** pós-encerramento (chave do dataset) | Eliminação/anonimização ao fim do prazo, junto ao dataset |
 | **Dado de pesquisa** | `screening`, `baseline_assessment`, `followup_assessment`, `session`, `post_session_survey`, `sleep_diary`, `adverse_event`, `recommendation_log` | Não (pseudonimizado) | **5 anos** após encerramento/publicação (exceção de pesquisa, Art. 16 II) | Ao fim do prazo: eliminação ou **anonimização** definitiva |
@@ -83,8 +83,13 @@ de pesquisa — **sujeita a confirmação**.
 - Auditoria append-only garantida no banco (ADR-086); retida, nunca editada.
 - Status do titular (`active`/`withdrawn`/`completed`) — controle de ciclo de vida.
 
+- **Expurgo dos transitórios de OTP** (ADR-091): `modules/retention/service.py` +
+  `backend/scripts/purge_otp.py`; idempotente, auditado só na contagem.
+
 **Pendências desta política (não automatizadas ainda):**
-- **Expurgo agendado** de OTP expirados e de datasets ao fim do prazo (**item E2** — job/rotina).
+- **Agendar** a execução do expurgo de OTP (o mecanismo existe; falta cron/máquina agendada —
+  enquanto ninguém o chamar, ele não roda).
+- **Expurgo de datasets** ao fim do prazo (**item E2**, parte pesada) — depende dos prazos do E1.
 - **Minimização de `ip_address`** no encerramento da coleta.
 - **Rotina de descarte** ao fim da retenção (dataset + auditoria + backups) com registro do descarte.
 - Política de **rotação/expiração de backups** alinhada aos prazos.

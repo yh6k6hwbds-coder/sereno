@@ -117,7 +117,7 @@ Escala: **Probabilidade** (Baixa/Média/Alta) × **Impacto ao titular** (Baixo/M
 | **R-07** | **Comprometimento do e-mail** do participante → acesso à conta via OTP | Baixa | Alto | **Médio** | 🟢 Baixo |
 | **R-08** | **Uso além da finalidade** (*function creep*): dado do piloto reaproveitado para modelo/produto sem nova base legal | Média | Alto | **Alto** | 🟠 Médio |
 | **R-09** | **Consentimento viciado por assimetria de poder** — participante que é aluno/paciente de quem convida sente-se pressionado a aceitar ou a não desistir | Média | Alto | **Alto** | 🔴 **Alto** |
-| **R-10** | **Retenção além do necessário** — dado que deveria ser expurgado permanece (expurgo agendado não implementado) | Alta | Médio | **Alto** | 🔴 **Alto** |
+| **R-10** | **Retenção além do necessário** — dado que deveria ser expurgado permanece (transitórios já cobertos; **dataset** não, e prazos não aprovados) | Alta | Médio | **Alto** | 🔴 **Alto** |
 | **R-11** | **Perda/indisponibilidade** de dado de pesquisa (falha de backup) — participante colaborou e o dado se perde | Baixa | Médio | **Médio** | 🟠 Médio |
 | **R-12** | **Transferência internacional** / acesso por operador estrangeiro sem DPA | Média | Médio | **Médio** | 🟠 Médio |
 | **R-13** | Vazamento de **PII em log/métrica/mensagem de erro** | Baixa | Alto | **Médio** | 🟢 Baixo |
@@ -135,7 +135,7 @@ Escala: **Probabilidade** (Baixa/Média/Alta) × **Impacto ao titular** (Baixo/M
 | R-06 | `POST /adverse-events` sempre acessível — **inclusive após a retirada do consentimento** (segurança acima da conveniência do estudo); notificação à equipe em EA moderate/severe; guardrail de tolerabilidade de-escalona a recomendação | ADR-089; ADR-063/085; ADR-068 |
 | R-07 | OTP **só como hash**, uso único, expira, tentativas limitadas, **nunca logado**; rate limit por IP real; denylist de `jti` | ADR-063/064/078/085 |
 | R-08 | Escopo travado (`CLAUDE.md`); **ML nunca decide ao vivo** (teste guarda que ingerir vestível não cria recomendação); vestíveis são *seam* que **descarta** por padrão; features ML só consolidam o já registrado | Inegociável #5; ADR-068/083/084 |
-| R-10 | Eliminação da PII (`erase`), revogação **self-service**, crypto-shredding viável pela rotação por id de chave, status do titular | ADR-066/089/087/088 |
+| R-10 | Eliminação da PII (`erase`), revogação **self-service**, crypto-shredding viável pela rotação por id de chave, status do titular; **expurgo dos transitórios de OTP** (idempotente, auditado só na contagem, nunca apaga desafio vivo) | ADR-066/089/087/088; **ADR-091** |
 | R-11 | Migrações versionadas; integridade no banco (FK/CHECK/UNIQUE); `/ready` real evita servir réplica com banco fora | ADR-065/090 |
 | R-12 | **Residência dos dados no Brasil** (`gru`/São Paulo) | ADR-076; inegociável #6 |
 | R-13 | Logs JSON só com método/rota/status/latência; métricas com rótulo por **template** de rota; erros em problem+json sem eco de dado; corpo do `/ready` sem DSN/host/credencial | ADR-067/080/090 |
@@ -149,10 +149,14 @@ Escala: **Probabilidade** (Baixa/Média/Alta) × **Impacto ao titular** (Baixo/M
   atendimento ou vínculo**; canal de desistência que não passe pelo pesquisador. **O sistema já
   contribui no que lhe cabe** — a retirada é self-service e não exige justificar-se a ninguém
   (ADR-089) —, mas isso é o fim do problema, não o começo dele.
-- **R-10 (retenção) — residual ALTO.** Existe o mecanismo *sob demanda* (`erase`), **não** existe o
-  **expurgo agendado** (item E2): OTP expirados e datasets ao fim do prazo dependem hoje de ação
-  manual. Enquanto E2 não existir, a política de retenção é uma **intenção**, não um controle. Some-se
-  que os **prazos** ainda são propostas `[a confirmar]` — sem prazo aprovado não há o que agendar.
+- **R-10 (retenção) — residual ALTO, agora por motivo mais estreito.** Avançou: os **transitórios de
+  autenticação** (OTP expirados) já têm expurgo implementado, idempotente e auditado (ADR-091) — era
+  o único prazo da política que não dependia de aprovação do CEP. Continua **Alto** por duas razões
+  que não mudaram: (a) o expurgo do **dataset de pesquisa** não existe e **não pode existir** antes de
+  os prazos do E1 serem aprovados — sem prazo, não há o que agendar; (b) mesmo o expurgo pronto
+  **só roda se alguém o agendar** (cron/máquina agendada), o que hoje não está configurado. Enquanto
+  isso, a política de retenção segue mais **intenção** do que controle — menos do que era, ainda não
+  o suficiente.
 - **R-01 (reidentificação) — residual MÉDIO, irredutível por desenho.** Com N≈40 numa única
   instituição, nenhuma medida técnica elimina a singularização: quem tenha acesso ao dataset **e**
   conheça o grupo pode inferir casos. Mitigação real é **de governança**: restringir a circulação do
@@ -180,7 +184,8 @@ Ordenadas por impacto na redução de risco ao titular:
 
 1. **Definir a base legal (A2)** e refletir no TCLE — *pré-condição de tudo* (R-09, e todo o resto).
 2. **Salvaguardas contra assimetria de poder** no recrutamento (R-09) — decisão do CEP.
-3. **Aprovar prazos de retenção (E1)** e implementar o **expurgo agendado (E2)** (R-10).
+3. **Aprovar prazos de retenção (E1)**, **agendar** o expurgo já pronto e implementar o expurgo do
+   dataset (E2) (R-10).
 4. **Designar o Encarregado + canal do titular** (G1/D4) — sem isso o Art. 18 fica sem porta de entrada.
 5. **Termo de compromisso de não reidentificação** para quem acessa o dataset (R-01).
 6. **DPAs com operadores** + análise do Art. 33 (R-12).
@@ -197,7 +202,7 @@ e separação de PII, MFA obrigatório, RBAC que não revela o braço, auditoria
 residual é **Baixo a Médio**.
 
 **O risco relevante que resta não é técnico.** Os dois residuais **Altos** — R-09 (assimetria de
-poder no consentimento) e R-10 (retenção sem expurgo e sem prazo aprovado) — não se resolvem com
+poder no consentimento) e R-10 (retenção: dataset sem expurgo e sem prazo aprovado) — não se resolvem com
 código: dependem de decisão do CEP, do NIT/DPO e da assessoria. Some-se que a **base legal (A2) ainda
 não está definida**, o que por si só impede o início do tratamento de dados reais.
 

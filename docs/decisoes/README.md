@@ -93,5 +93,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 088 | Envelope encryption da PII: DEK por registro embrulhada pela KEK (porta `wrap`/`unwrap`); KEK nunca cifra a PII — padrão real de KMS **[novo]** |
 | 089 | Retirada de consentimento self-service (titular): `revoked_at` + status `withdrawn` + bloqueia novas sessões; retirar ≠ eliminar — fecha B3 **[novo]** |
 | 090 | Endurecimento operacional: rate limit no endpoint público de áudio (antes da verificação), rotação da chave de assinatura, `/ready` real (DB+Redis, com timeout) e `last_login_at` gravado **[novo]** |
+| 091 | Expurgo dos desafios de OTP (1º pedaço do E2): só apaga o **já expirado** (apagar vivo zeraria `attempts`); auditado só na contagem; script agendável **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

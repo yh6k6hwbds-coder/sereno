@@ -66,7 +66,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 | # | Item | Status | Evidência / Ação |
 |---|------|--------|------------------|
 | E1 | Política de retenção/descarte com **prazos** definidos | ⬜ | **Rascunho técnico pronto** (`docs/politica-retencao-descarte.md`) com inventário de dados e prazos **propostos** ancorados nos mecanismos existentes; **falta** a **aprovação institucional** (CEP/assessoria) dos prazos — é o que E1 mede. |
-| E2 | Expurgo agendado ao fim do prazo | ⬜ | Não implementado (pendência do ADR‑066 e da política, §6). Job/rotina depende dos prazos de E1. |
+| E2 | Expurgo agendado ao fim do prazo | 🟡 | **Transitórios feitos** (ADR‑091): `purge_expired_otp` + `backend/scripts/purge_otp.py` apagam desafios de OTP expirados (idempotente; auditado só na contagem; **nunca** apaga desafio vivo — zeraria o contador de tentativas). Único prazo da política que não depende do CEP. **Falta:** (a) **agendar** a execução (cron/máquina agendada — sem isso o mecanismo não roda); (b) expurgo do **dataset de pesquisa**, que depende dos prazos de **E1**. |
 | E3 | Marcação de status do titular (ativo/retirado/concluído) | ✅ | `Participant.status` com CHECK (`active`/`withdrawn`/`completed`). |
 
 ## F. Operadores e transferência internacional (Art. 33)
