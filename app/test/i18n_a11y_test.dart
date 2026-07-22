@@ -92,7 +92,10 @@ void main() {
     expect(find.text('Agree and continue'), findsOneWidget);
     expect(find.textContaining('binaural beats'), findsOneWidget); // resumo traduzido
     // O acesso ao termo INTEGRAL precisa existir também em inglês: sem ele, o que a tela
-    // oferece é só o resumo — e resumo não é consentimento informado.
+    // oferece é só o resumo — e resumo não é consentimento informado. Fica abaixo da
+    // dobra (o resumo tem 7 tópicos), então é preciso rolar — como o participante faz
+    // para chegar às confirmações, que vêm logo depois.
+    await t.scrollUntilVisible(find.text('Read the full consent form'), 200);
     expect(find.text('Read the full consent form'), findsOneWidget);
   });
 

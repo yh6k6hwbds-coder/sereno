@@ -15,7 +15,14 @@ import '../../l10n/app_localizations.dart';
 /// Formato do asset — uma linha por bloco, com prefixo (evita depender de um renderizador
 /// de Markdown): `H|` seção · `P|` parágrafo · `B|` item · `!|` destaque · `#` comentário.
 class TcleFullTextScreen extends StatefulWidget {
-  const TcleFullTextScreen({super.key});
+  /// Origem do texto. Injetável **porque o teste de widget não consegue esperar I/O real**:
+  /// dentro de `pumpAndSettle` o tempo é falso, a leitura do asset não completa e o
+  /// indicador de carga gira até estourar. Em produção é sempre o asset empacotado.
+  final Future<String> Function()? loadText;
+
+  const TcleFullTextScreen({super.key, this.loadText});
+
+  static const assetPath = 'assets/tcle/tcle-pt.txt';
 
   /// Exposto para teste: o parser é a única lógica desta tela.
   static List<TcleBlock> parse(String raw) {
@@ -52,7 +59,8 @@ class _TcleFullTextScreenState extends State<TcleFullTextScreen> {
 
   Future<void> _load() async {
     try {
-      final raw = await rootBundle.loadString('assets/tcle/tcle-pt.txt');
+      final raw = await (widget.loadText ??
+          () => rootBundle.loadString(TcleFullTextScreen.assetPath))();
       if (mounted) setState(() => _blocks = TcleFullTextScreen.parse(raw));
     } catch (_) {
       // Sem o termo não há consentimento informado: falhar visível é melhor que uma

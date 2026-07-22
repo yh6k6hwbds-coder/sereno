@@ -13,6 +13,26 @@ import 'package:sereno/features/consent/tcle_full_text_screen.dart';
 /// integral deixar de aparecer (asset não empacotado, parser quebrado), o consentimento
 /// deixa de ser informado — e isso falharia em silêncio, porque a tela continuaria abrindo.
 
+/// Texto de exemplo para os testes de RENDERIZAÇÃO. O asset real é verificado à parte
+/// (`o asset empacotado contém o termo INTEGRAL`): dentro de `pumpAndSettle` o tempo é
+/// falso e a leitura real do bundle não completaria — a tela ficaria no indicador de carga.
+const _amostra = '# comentario\n'
+    'H|Termo de Consentimento Livre e Esclarecido\n'
+    'P|Você está sendo convidado(a) a participar de um estudo.\n'
+    'B|Um item da lista\n'
+    '!|Este é o ponto mais importante deste documento.\n';
+
+Future<String> _fake() async => _amostra;
+
+/// Texto longo o bastante para exigir rolagem — o termo real tem ~107 blocos.
+String _amostraLonga() {
+  final b = StringBuffer('H|Termo de Consentimento Livre e Esclarecido\n');
+  for (var i = 0; i < 60; i++) {
+    b.write('P|Parágrafo número $i do termo.\n');
+  }
+  return b.toString();
+}
+
 Widget _app(Widget home, {Locale? locale}) => MaterialApp(
       locale: locale,
       localizationsDelegates: const [
@@ -54,7 +74,7 @@ void main() {
   testWidgets('o asset empacotado contém o termo INTEGRAL', (t) async {
     // Conteúdo, não renderização: o ListView é preguiçoso e só cria os blocos visíveis,
     // então procurar §8 na árvore de widgets falharia por rolagem, não por ausência.
-    final raw = await rootBundle.loadString('assets/tcle/tcle-pt.txt');
+    final raw = await rootBundle.loadString(TcleFullTextScreen.assetPath);
     final blocks = TcleFullTextScreen.parse(raw);
     final texto = blocks.map((b) => b.text).join('\n');
 
@@ -73,13 +93,13 @@ void main() {
   });
 
   testWidgets('abre no topo do termo', (t) async {
-    await t.pumpWidget(_app(const TcleFullTextScreen()));
+    await t.pumpWidget(_app(TcleFullTextScreen(loadText: _fake)));
     await t.pumpAndSettle();
     expect(find.textContaining('Termo de Consentimento'), findsWidgets);
   });
 
   testWidgets('avisa que é rascunho e mostra a versão', (t) async {
-    await t.pumpWidget(_app(const TcleFullTextScreen()));
+    await t.pumpWidget(_app(TcleFullTextScreen(loadText: _fake)));
     await t.pumpAndSettle();
 
     // Enquanto a versão carregar `-rascunho`, ninguém pode ler a tela como termo vigente.
@@ -90,7 +110,7 @@ void main() {
   });
 
   testWidgets('em inglês, avisa que o termo oficial é em português', (t) async {
-    await t.pumpWidget(_app(const TcleFullTextScreen(), locale: const Locale('en')));
+    await t.pumpWidget(_app(TcleFullTextScreen(loadText: _fake), locale: const Locale('en')));
     await t.pumpAndSettle();
 
     expect(find.text('Full consent form'), findsOneWidget);
@@ -99,13 +119,15 @@ void main() {
     expect(find.textContaining('Termo de Consentimento'), findsWidgets);
   });
 
-  testWidgets('o termo é rolável (não pode ficar cortado)', (t) async {
-    await t.pumpWidget(_app(const TcleFullTextScreen()));
+  testWidgets('o termo é rolável até o fim (não pode ficar cortado)', (t) async {
+    await t.pumpWidget(_app(TcleFullTextScreen(loadText: () async => _amostraLonga())));
     await t.pumpAndSettle();
 
-    expect(find.byType(ListView), findsOneWidget);
-    await t.drag(find.byType(ListView), const Offset(0, -600));
-    await t.pumpAndSettle();
-    expect(find.byType(ListView), findsOneWidget);
+    // O último bloco começa fora da tela: se não desse para chegar nele, o participante
+    // aceitaria um termo que não teve como ler inteiro.
+    const ultimo = 'Parágrafo número 59 do termo.';
+    expect(find.text(ultimo), findsNothing);
+    await t.scrollUntilVisible(find.text(ultimo), 300);
+    expect(find.text(ultimo), findsOneWidget);
   });
 }
