@@ -99,7 +99,9 @@ void main() {
   });
 
   testWidgets('avisa que é rascunho e mostra a versão', (t) async {
-    await t.pumpWidget(_app(TcleFullTextScreen(loadText: _fake)));
+    // Locale EXPLÍCITO: sem ele o teste roda em en_US (padrão do flutter_test) e o aviso
+    // sai em inglês — o idioma do piloto é pt-BR.
+    await t.pumpWidget(_app(TcleFullTextScreen(loadText: _fake), locale: const Locale('pt')));
     await t.pumpAndSettle();
 
     // Enquanto a versão carregar `-rascunho`, ninguém pode ler a tela como termo vigente.
@@ -115,6 +117,9 @@ void main() {
 
     expect(find.text('Full consent form'), findsOneWidget);
     expect(find.textContaining('Portuguese'), findsOneWidget);
+    // O aviso de rascunho não pode existir só em pt: quem lê em inglês também precisa
+    // saber que o termo ainda não foi aprovado.
+    expect(find.textContaining('DRAFT'), findsOneWidget);
     // O corpo do termo segue em pt-BR (é o texto que vai ao CEP).
     expect(find.textContaining('Termo de Consentimento'), findsWidgets);
   });
