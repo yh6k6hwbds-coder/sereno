@@ -129,22 +129,34 @@ class _TcleFullTextScreenState extends State<TcleFullTextScreen> {
       case '!':
         // Destaques são os avisos que o termo não pode deixar passar (não é tratamento,
         // recusa sem prejuízo, dado sensível). Recebem peso visual próprio.
+        // A faixa lateral é um FILHO, não um lado da borda: o Flutter proíbe
+        // `borderRadius` com borda de cores não uniformes (quebra ao pintar).
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: const Color(0xFFEEF3F5),
             borderRadius: BorderRadius.circular(12),
-            border: const Border(
-                left: BorderSide(color: SerenoColors.teal, width: 3),
-                top: BorderSide(color: SerenoColors.border),
-                right: BorderSide(color: SerenoColors.border),
-                bottom: BorderSide(color: SerenoColors.border)),
+            border: Border.all(color: SerenoColors.border),
           ),
-          child: Text(b.text,
-              style: const TextStyle(
-                  height: 1.45, color: SerenoColors.ink, fontWeight: FontWeight.w600)),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(11),
+            child: IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Container(width: 3, color: SerenoColors.teal),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    child: Text(b.text,
+                        style: const TextStyle(
+                            height: 1.45,
+                            color: SerenoColors.ink,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ]),
+            ),
+          ),
         );
       default:
         return Padding(
