@@ -82,7 +82,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 | # | Item | Status | Evidência / Ação |
 |---|------|--------|------------------|
 | G1 | Encarregado (DPO) designado e publicado | ⬜ | **Decisão do NIT/UNINTA.** |
-| G2 | Relatório de Impacto à Proteção de Dados (RIPD/DPIA) | ⬜ | **Recomendado** para dado sensível de saúde. Este checklist + os ADRs servem de insumo técnico. |
+| G2 | Relatório de Impacto à Proteção de Dados (RIPD/DPIA) | 🟡 | **Rascunho técnico pronto** (`docs/relatorio-impacto-protecao-dados.md`): necessidade/proporcionalidade, ciclo de vida, **14 riscos ao titular** (probabilidade × impacto) com mitigação rastreável a ADR e **risco residual declarado**. Dois residuais seguem **Altos e não são técnicos** — R‑09 (assimetria de poder no consentimento) e R‑10 (retenção sem expurgo/prazo aprovado). **Falta** o controlador/DPO **elaborar e adotar** o RIPD formal e decidir sobre risco residual aceitável e eventual consulta prévia à ANPD (Art. 38). |
 | G3 | Registro das operações de tratamento (Art. 37) | 🟡 | **Rascunho consolidado** (`docs/registro-operacoes-tratamento.md`): 8 operações (OP-01…08) com finalidade, dados, base legal, operadores, transferência, retenção e segurança. **Falta** o controlador **adotar/manter** o registro formal e definir a base legal (A2). |
 | G4 | Plano de resposta a incidentes + notificação à ANPD (Art. 48) | ⬜ | **Rascunho técnico pronto** (`docs/plano-resposta-incidentes.md`): fases, severidade, playbook de contenção ancorado nos mecanismos existentes, notificação. **Falta** o NIT/DPO definir contatos/plantão, confirmar prazos e **aprovar**; alertas automáticos sobre métricas seguem pendência. |
 | G5 | Aprovação do CEP/CONEP (ética em pesquisa) | 🟡 | Submissão em preparação (`docs/Roteiro_Submissao_CEP.docx`, anexos por etapa); a LGPD caminha junto do parecer ético. |
@@ -96,7 +96,9 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 2. **Designar o Encarregado (DPO)** e o canal de atendimento ao titular (G1, D4).
 3. **Política de retenção/descarte** com prazos e expurgo (E1, E2).
 4. **DPAs com operadores** (Fly.io, SMTP, GitHub Pages) e análise de transferência internacional (F2, F3).
-5. **RIPD/DPIA** usando este checklist + ADRs como insumo (G2, G3).
+5. **RIPD/DPIA** — rascunho pronto (`relatorio-impacto-protecao-dados.md`); falta adotar e decidir o
+   risco residual (G2, G3). Atenção às **salvaguardas de recrutamento** (R‑09): é o maior risco
+   residual e depende do CEP, não de código.
 6. **Plano de incidentes** e fluxo de notificação à ANPD (G4).
 7. **Produção**: migrar chaves para KMS/cofre e considerar pentest externo (C11, C12).
 
