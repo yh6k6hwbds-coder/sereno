@@ -22,7 +22,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 
 | # | Item | Status | Evidência / Ação |
 |---|------|--------|------------------|
-| A1 | Finalidade específica e informada (pesquisa de viabilidade; ansiedade/sono exploratórios) | 🟡 | Escopo travado e documentado (`CLAUDE.md`, `docs/ROADMAP.md`); **falta** o texto de finalidade no TCLE ser validado pela assessoria. |
+| A1 | Finalidade específica e informada (pesquisa de viabilidade; ansiedade/sono exploratórios) | 🟡 | Escopo travado e documentado (`CLAUDE.md`, `docs/ROADMAP.md`); **rascunho de TCLE** com a finalidade em linguagem acessível (`docs/tcle-rascunho.md` §2–§3: viabilidade, ansiedade/sono **exploratórios**, evidência declarada limitada). **Falta** validação da orientadora/assessoria e aprovação do CEP. |
 | A2 | Base legal do tratamento definida | ⬜ | **Decisão do NIT/assessoria.** Dado de saúde é **sensível** (Art. 11). Definir a base — tipicamente consentimento específico e destacado para pesquisa (Art. 11, I) e/ou estudos em saúde (Art. 11, II, "c"), articulada com a Res. CNS 466/2012 e o CEP. |
 | A3 | Minimização de dados (coleta só do necessário) | ✅ | PII limitada a nome/e-mail de contato (`ContactInfo`); pesquisa usa `study_code` pseudônimo; sem coleta de dado clínico além dos instrumentos versionados (GAD‑7/PSQI/SUS). |
 | A4 | Não uso para decisão automatizada clínica | ✅ | Recomendador **por regras**, ML nunca decide ao vivo (inegociável #5; `recommender/`, ADR‑068/083). Vestíveis não alimentam decisão (ADR‑084). |
@@ -32,7 +32,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 | # | Item | Status | Evidência / Ação |
 |---|------|--------|------------------|
 | B1 | Registro de consentimento versionado, com data e evidência | ✅ | `ConsentRecord` (`tcle_version`, `accepted`, `ip_address`, hash do payload); `POST /v1/consent` recusa versão divergente da vigente (ADR do consentimento; `consent/`). |
-| B2 | Consentimento **específico e destacado** para dado sensível | 🟡 | O mecanismo registra a versão aceita; **falta** o **conteúdo** do TCLE ser redigido/validado (assessoria + CEP) com destaque para dado de saúde. |
+| B2 | Consentimento **específico e destacado** para dado sensível | 🟡 | O mecanismo registra a versão aceita; **conteúdo rascunhado** (`docs/tcle-rascunho.md`) na estrutura da Res. CNS 466/2012, com seção destacada de dado sensível (§12), retenção pós‑desistência explícita (§13, item D3) e recusa/desistência sem prejuízo (§11, risco **R‑09** do RIPD). **Falta:** base legal (**A2**), preencher contatos/CEP/DPO, e a **aprovação do CEP** — inclusive sobre a via digital bastar. Ao aprovar, atualizar `TCLE_CURRENT` no backend e o resumo do app (ver §N4 do rascunho). |
 | B3 | Revogação do consentimento pelo titular | ✅ | Self‑service: `POST /v1/participants/me/consent/withdraw` carimba `revoked_at` + marca `withdrawn` e **bloqueia novas sessões** (`consent/router.py`, ADR‑089; testado). Retirar ≠ eliminar — o dado de pesquisa já coletado é retido pseudonimizado (ADR‑066) e a eliminação (Art. 18) segue como direito separado. |
 
 ## C. Segurança da informação (Art. 46) — medidas técnicas

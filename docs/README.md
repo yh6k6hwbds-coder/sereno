@@ -16,6 +16,8 @@ sinalizam, não decidem; itens `[a confirmar]` exigem decisão institucional (ve
 
 - `lgpd-nit-checklist.md` — **porta de entrada**: mapeamento item a item do que já existe em código
   (✅/🟡/⬜), com as ações priorizadas ao NIT. Companheiro visual: `lgpd-nit-checklist.html`.
+- `tcle-rascunho.md` — rascunho do **TCLE** (A1/B2), para revisão da orientadora e do CEP. Ao
+  aprovar, sincronizar `TCLE_CURRENT` (backend) e o resumo do app — ver §N4 do próprio rascunho.
 - `relatorio-impacto-protecao-dados.md` — **RIPD/DPIA** (G2): riscos ao titular, mitigação e risco
   residual.
 - `registro-operacoes-tratamento.md` — **ROPA** (G3, Art. 37): as 8 operações de tratamento.
