@@ -31,6 +31,9 @@ Cada um termina com campos a preencher — a pendência fecha quando a folha vol
 - `dossie-submissao-cep.md` — **CEP**: estado da submissão documento a documento, as 5 perguntas ao
   comitê (F2.1–F2.5) e o que declarar sobre proteção de dados. Substitui as §5 e §8 do
   `anexos-docx/Roteiro_Submissao_CEP.docx` (julho), que segue válido no resto.
+- `emails-encaminhamento.md` — os textos para **enviar** os três acima, com a lista de anexos de
+  cada um e um checklist pré-envio. O 3º é rascunho de consulta ao CEP, a ser enviado **pela
+  pesquisadora responsável** (a correspondência com o comitê parte de quem responde pelo estudo).
 - `tcle-rascunho.md` — rascunho do **TCLE** (A1/B2), para revisão da orientadora e do CEP. Ao
   aprovar, sincronizar `TCLE_CURRENT` (backend) e o resumo do app — ver §N4 do próprio rascunho.
 - `relatorio-impacto-protecao-dados.md` — **RIPD/DPIA** (G2): riscos ao titular, mitigação e risco
