@@ -4,6 +4,10 @@ __pycache__/
 .venv/
 venv/
 .env
+# Backups do .env (ex.: .env.bak-20260824) carregam os MESMOS segredos e não estavam cobertos
+# pela regra acima — um `git add -A` distraído versionaria a chave de PII.
+.env.*
+!.env.example
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
