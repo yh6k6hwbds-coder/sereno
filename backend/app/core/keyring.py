@@ -7,10 +7,10 @@ Mesmo padrão das outras portas do projeto (`EmailSender`, `AudioStorage`, `Wear
   - `EnvKeyProvider` (**padrão**): a chave (KEK) vem do ambiente/secret (`PII_ENC_KEY`),
     custódia atual do piloto. Lê o ambiente **a cada chamada** — permite rotação sem
     reiniciar o processo.
-  - Um `KmsKeyProvider` (futuro) implementa a MESMA porta buscando/desembrulhando a chave
-    num **KMS/Vault** (a KEK nunca sai do HSM; a app pede wrap/unwrap ou busca a chave no
-    boot). Encaixa aqui **sem tocar no `pii_crypto`** — é a "custódia evolui para KMS"
-    prometida no ADR‑059, agora com seam real.
+  - `VaultTransitKeyProvider` (`KEY_PROVIDER=vault`, ADR‑095): implementa a MESMA porta
+    contra o **motor Transit do HashiCorp Vault** — a KEK nunca sai do cofre; a app só pede
+    wrap/unwrap. É a "custódia evolui para KMS" prometida no ADR‑059, agora construída.
+    Dado cifrado antes da adoção continua legível: `unwrap` de id não‑Vault delega ao env.
 
 **Rotação:** cada ciphertext carrega o **id da chave** que o cifrou (ver `pii_crypto`). A chave
 ativa (`PII_ENC_KEY` + `PII_ENC_KEY_ID`) cifra o novo; chaves **aposentadas** (`PII_ENC_KEYS`,
@@ -92,13 +92,128 @@ class EnvKeyProvider:
         return AESGCM(kek).decrypt(nonce, wrapped, aad)
 
 
+class VaultTransitKeyProvider:
+    """Custódia real em **HashiCorp Vault (motor Transit)** — a KEK nunca sai do cofre.
+
+    Implementa a MESMA porta do `EnvKeyProvider`, mas `wrap`/`unwrap` viram chamadas ao Vault:
+    a aplicação manda a DEK e recebe o blob embrulhado, sem jamais ver a KEK. É a promessa do
+    ADR-087/088 cumprida (F4.1/ADR-095).
+
+    **Mapeamento do AAD:** o Transit não tem AAD; tem ``context``, das *derived keys*. Com a
+    chave criada com ``derived=true``, o contexto participa da derivação — decifrar com outro
+    contexto **falha**, que é exatamente a garantia que o AAD dá aqui (o valor fica preso ao
+    participante e ao campo). Por isso a chave **precisa** ser criada com ``derived=true``:
+    ``vault write -f transit/keys/<nome> derived=true``.
+
+    **Rotação** é do Vault: o ciphertext carrega a versão (``vault:v2:...``) e o decrypt
+    continua funcionando após ``rotate``. Por isso o ``key_id`` guardado no token não precisa
+    (nem deve) carregar a versão.
+
+    **Migração:** ``unwrap`` de um ``key_id`` que não é do Vault, ``by_id`` e ``active``
+    delegam ao ``fallback`` (env, por padrão) — dado cifrado antes da adoção do Vault
+    continua legível, sem re-cifrar tudo num big bang."""
+
+    PREFIX = "vault:"
+
+    def __init__(self, *, addr: str, token: str, key_name: str, mount: str = "transit",
+                 timeout_s: float = 5.0, client=None,
+                 fallback: KeyProvider | None = None) -> None:
+        self._addr = addr.rstrip("/")
+        self._token = token                      # NUNCA logado nem posto em exceção
+        self._key = key_name
+        self._mount = mount.strip("/")
+        self._timeout = timeout_s
+        self._client = client
+        self._fallback = fallback or EnvKeyProvider()
+
+    # -- porta ------------------------------------------------------------
+    def active(self) -> tuple[str, bytes]:
+        """Só existe para o formato LEGADO (KEK cifrando direto). Delega ao fallback.
+
+        Com Vault não há "chave ativa em bytes" — é esse o ponto. Cifrar novo sempre passa
+        por ``wrap``."""
+        return self._fallback.active()
+
+    def by_id(self, key_id: str) -> bytes:
+        """Chaves v1/legado (bytes) — só o fallback pode resolvê-las."""
+        if key_id.startswith(self.PREFIX):
+            raise KeyMissing(
+                f"'{key_id}' é uma chave custodiada no Vault: a KEK não sai do cofre. "
+                "Tokens v1 (KEK direta) precisam ser migrados para envelope (ADR-088).")
+        return self._fallback.by_id(key_id)
+
+    def wrap(self, dek: bytes, *, aad: bytes) -> tuple[str, bytes]:
+        data = self._call("encrypt", {
+            "plaintext": base64.b64encode(dek).decode("ascii"),
+            "context": base64.b64encode(aad).decode("ascii"),
+        })
+        ciphertext = data.get("ciphertext")
+        if not isinstance(ciphertext, str) or not ciphertext:
+            raise KeyMissing("Vault não devolveu ciphertext no wrap.")
+        return f"{self.PREFIX}{self._mount}:{self._key}", ciphertext.encode("utf-8")
+
+    def unwrap(self, key_id: str, blob: bytes, *, aad: bytes) -> bytes:
+        if not key_id.startswith(self.PREFIX):
+            # Registro anterior à adoção do Vault: segue legível pelo provedor antigo.
+            return self._fallback.unwrap(key_id, blob, aad=aad)
+        data = self._call("decrypt", {
+            "ciphertext": blob.decode("utf-8"),
+            "context": base64.b64encode(aad).decode("ascii"),
+        })
+        plaintext = data.get("plaintext")
+        if not isinstance(plaintext, str) or not plaintext:
+            raise KeyMissing("Vault não devolveu plaintext no unwrap.")
+        return base64.b64decode(plaintext)
+
+    # -- transporte -------------------------------------------------------
+    def _call(self, op: str, payload: dict) -> dict:
+        """POST no Transit. Erros viram ``KeyMissing`` **sem** eco do token nem do corpo."""
+        import httpx
+        url = f"{self._addr}/v1/{self._mount}/{op}/{self._key}"
+        client = self._client
+        try:
+            if client is None:
+                with httpx.Client(timeout=self._timeout) as c:
+                    resp = c.post(url, json=payload,
+                                  headers={"X-Vault-Token": self._token})
+            else:
+                resp = client.post(url, json=payload,
+                                   headers={"X-Vault-Token": self._token})
+            if resp.status_code >= 400:
+                # O corpo de erro do Vault pode ecoar o contexto — só o status sai daqui.
+                raise KeyMissing(f"Vault recusou '{op}' (HTTP {resp.status_code}).")
+            return resp.json().get("data") or {}
+        except KeyMissing:
+            raise
+        except Exception as e:  # noqa: BLE001 — rede/JSON/timeout: falha explícita e opaca
+            raise KeyMissing(f"Vault indisponível em '{op}' ({type(e).__name__}).") from None
+
+
 _provider: KeyProvider | None = None
+
+
+def _build_from_env() -> KeyProvider:
+    """`KEY_PROVIDER=vault` → Transit; qualquer outro valor (padrão) → ambiente/secret.
+
+    Falta de `VAULT_ADDR`/`VAULT_TOKEN` no modo vault **levanta**: cair calado para o env
+    daria a impressão de custódia em HSM sem que ela exista — pior que não ter Vault."""
+    if (os.getenv("KEY_PROVIDER") or "env").strip().lower() != "vault":
+        return EnvKeyProvider()
+    addr, token = os.getenv("VAULT_ADDR"), os.getenv("VAULT_TOKEN")
+    if not addr or not token:
+        raise KeyMissing("KEY_PROVIDER=vault exige VAULT_ADDR e VAULT_TOKEN.")
+    return VaultTransitKeyProvider(
+        addr=addr, token=token,
+        key_name=os.getenv("VAULT_TRANSIT_KEY", "sereno-pii-kek"),
+        mount=os.getenv("VAULT_TRANSIT_MOUNT", "transit"),
+        timeout_s=float(os.getenv("VAULT_TIMEOUT_S", "5")),
+    )
 
 
 def get_key_provider() -> KeyProvider:
     global _provider
     if _provider is None:
-        _provider = EnvKeyProvider()
+        _provider = _build_from_env()
     return _provider
 
 
