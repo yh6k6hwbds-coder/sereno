@@ -29,8 +29,12 @@ def _reset_throttles():
     from app.core.token_revocation import set_denylist, InMemoryDenylist
     from app.core.email import set_email_sender, set_email_delivery
     from app.core.keyring import set_key_provider
+    from app.core import alerts
     from app.modules.research.export_service import get_job_store
     from app.modules.wearables.sink import set_wearable_sink
+    # Janelas/cooldowns dos alertas (ADR-093) são estado de processo: sem zerar, os 401 de
+    # um teste de negação somariam com os do seguinte e dispararia alerta fora de hora.
+    alerts.reset()
     set_rate_limiter(InMemoryRateLimiter())
     set_denylist(InMemoryDenylist())
     get_job_store().reset()
@@ -39,6 +43,7 @@ def _reset_throttles():
     set_wearable_sink(None)    # próxima chamada reconstrói a partir do ambiente
     set_key_provider(None)     # idem — provedor de chave de PII (env por padrão)
     yield
+    alerts.reset()
     set_rate_limiter(None)     # próxima chamada reconstrói a partir do ambiente
     set_denylist(None)
     set_email_sender(None)

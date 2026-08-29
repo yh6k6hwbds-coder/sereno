@@ -42,16 +42,33 @@ LATENCY = Histogram(
 )
 # Entrega de e-mail (OTP/alerta): só o DESFECHO agregado — nunca destinatário, assunto ou
 # corpo (o código OTP jamais é observado). Torna visível a perda silenciosa de entrega (ADR-085).
+# `bounced` é separado de `failed` (ADR-092) porque pedem ações opostas: recusa definitiva é
+# endereço errado (falar com a pessoa); falha transitória é provedor fora (esperar/alertar).
 EMAILS = Counter(
     "emails_total",
-    "Total de tentativas de entrega de e-mail por desfecho (sent|failed).",
+    "Total de tentativas de entrega de e-mail por desfecho (sent|failed|bounced).",
     ["outcome"],
     registry=REGISTRY,
 )
 
 
+# Alertas disparados (ADR-093): só a REGRA que disparou — nunca ator, participante ou braço.
+# Deixa auditável "o detector funcionou" sem repetir no /metrics o conteúdo do aviso.
+ALERTS = Counter(
+    "alerts_total",
+    "Total de alertas automáticos disparados, por regra.",
+    ["rule"],
+    registry=REGISTRY,
+)
+
+
+def observe_alert(rule: str) -> None:
+    """Conta um alerta disparado, por regra. Sem PII."""
+    ALERTS.labels(rule=rule).inc()
+
+
 def observe_email(outcome: str) -> None:
-    """Conta uma entrega de e-mail por desfecho ('sent'|'failed'). Sem PII/corpo."""
+    """Conta uma entrega de e-mail por desfecho ('sent'|'failed'|'bounced'). Sem PII/corpo."""
     EMAILS.labels(outcome=outcome).inc()
 
 

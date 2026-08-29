@@ -17,7 +17,7 @@ from app.core.db import get_db
 from app.core.problem import install_problem_handlers, ProblemException
 from app.core.logging import setup_logging, request_logger
 from app.core.config import validate_runtime_config
-from app.core import metrics, readiness
+from app.core import alerts, metrics, readiness
 
 # Roteadores por domínio (fronteiras explícitas do monólito modular).
 from app.modules.identity.router import router as identity_router
@@ -81,8 +81,12 @@ def create_app() -> FastAPI:
             "duration_ms": round(elapsed * 1000, 1)}})
         # Métrica: TEMPLATE da rota (baixa cardinalidade); o próprio /metrics não se mede.
         if request.url.path != "/metrics":
-            metrics.observe(method=request.method, path=metrics.route_template(request),
+            template = metrics.route_template(request)
+            metrics.observe(method=request.method, path=template,
                             status=response.status_code, duration_s=elapsed)
+            # Detecção (ADR-093): a mesma informação de baixa cardinalidade alimenta os
+            # alertas. Best-effort — `record()` nunca propaga, então não afeta a resposta.
+            alerts.observe_response(path_template=template, status=response.status_code)
         return response
 
     install_problem_handlers(app)
