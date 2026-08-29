@@ -129,10 +129,10 @@ Escala: **Probabilidade** (Baixa/Média/Alta) × **Impacto ao titular** (Baixo/M
 |---|---|---|
 | R-01 | Pseudonimização por `study_code`; export **sem PII e sem condição** (só A/B); dataset de ML **offline**, com índice ordinal e **sem hora de parede** (evita correlação temporal); RBAC nos endpoints de pesquisa | ADR-061/083; `test_export.py`, `test_ml_features.py` |
 | R-02 | PII **cifrada** (AES-256-GCM, envelope DEK/KEK; AAD amarra participante+campo) e **separada** da pesquisa; alerta de EA à equipe **sem PII**; auditoria sem PII | ADR-059/087/088/085/086 |
-| R-03 | RBAC no servidor (nenhuma permissão revela o braço); **MFA obrigatório**; auditoria **append-only no banco** (trigger aborta UPDATE/DELETE mesmo do dono); lifecycle de staff (suspender invalida o token já emitido); desbloqueio exige **duas pessoas** | ADR-043/074/086/081/075 |
+| R-03 | RBAC no servidor (nenhuma permissão revela o braço); **MFA obrigatório**; auditoria **append-only no banco** (trigger aborta UPDATE/DELETE mesmo do dono); lifecycle de staff (suspender invalida o token já emitido); desbloqueio exige **duas pessoas**; **alerta de volume atípico** de leitura em `/research`/`/audit` | ADR-043/074/086/081/075; **ADR-093** |
 | R-04 | Sham ativo (Δf=0) com **UI idêntica**; visualização **não reativa** ao áudio; handle neutro ao cliente; headers de áudio neutros; 429 do endpoint público idêntico nos dois braços; guard de produção da chave selada | Inegociáveis #1/#2; ADR-053/077/082/090 |
 | R-05 | Aviso persistente "ferramenta complementar, não substitui cuidado profissional"; postura anti-*overclaim* obrigatória em toda copy; tela de EA grave reforça **192/CVV 188** | `CLAUDE.md` (postura científica); ADR-073 |
-| R-06 | `POST /adverse-events` sempre acessível — **inclusive após a retirada do consentimento** (segurança acima da conveniência do estudo); notificação à equipe em EA moderate/severe; guardrail de tolerabilidade de-escalona a recomendação | ADR-089; ADR-063/085; ADR-068 |
+| R-06 | `POST /adverse-events` sempre acessível — **inclusive após a retirada do consentimento** (segurança acima da conveniência do estudo); notificação à equipe em EA moderate/severe; **entrega durável (fila) e alerta quando a notificação falha** — o aviso deixa de sumir em silêncio; guardrail de tolerabilidade de-escalona a recomendação | ADR-089; ADR-063/085; **ADR-092/093**; ADR-068 |
 | R-07 | OTP **só como hash**, uso único, expira, tentativas limitadas, **nunca logado**; rate limit por IP real; denylist de `jti` | ADR-063/064/078/085 |
 | R-08 | Escopo travado (`CLAUDE.md`); **ML nunca decide ao vivo** (teste guarda que ingerir vestível não cria recomendação); vestíveis são *seam* que **descarta** por padrão; features ML só consolidam o já registrado | Inegociável #5; ADR-068/083/084 |
 | R-10 | Eliminação da PII (`erase`), revogação **self-service**, crypto-shredding viável pela rotação por id de chave, status do titular; **expurgo dos transitórios de OTP** (idempotente, auditado só na contagem, nunca apaga desafio vivo) | ADR-066/089/087/088; **ADR-091** |
@@ -163,10 +163,13 @@ Escala: **Probabilidade** (Baixa/Média/Alta) × **Impacto ao titular** (Baixo/M
   dataset, exigir compromisso de não reidentificação de quem o acessa e **não publicar dados
   individualizados** (só agregados) `[a alinhar com o CEP]`.
 - **R-03 (insider) — residual MÉDIO.** RBAC, MFA e auditoria append-only tornam o acesso indevido
-  **rastreável**, não impossível: um pesquisador legítimo com `research:read` vê o dataset. Não há
-  alerta automático sobre padrão anômalo de acesso (pendência de G4/D5). Mitigação de governança:
-  conceder o papel mínimo e revisar a lista de staff periodicamente (`GET /v1/staff` já expõe papel,
-  MFA, ativo e **último acesso** — ADR-090).
+  **rastreável**, não impossível: um pesquisador legítimo com `research:read` vê o dataset. Desde
+  2026-08-29 há **alerta automático de volume atípico** de leitura em `/research` e `/audit`
+  (ADR-093) — o aviso não identifica ninguém de propósito: aponta para a auditoria, onde a pergunta
+  "quem" se responde sob controle de acesso. É detecção, não prevenção, e **depende de
+  `TEAM_NOTIFY_EMAIL` configurado** no ambiente. Mitigação de governança segue necessária: conceder
+  o papel mínimo e revisar a lista de staff periodicamente (`GET /v1/staff` já expõe papel, MFA,
+  ativo e **último acesso** — ADR-090).
 - **R-05 (adiar cuidado) — residual MÉDIO.** O aviso é persistente e a copy é controlada, mas a
   adesão do participante ao aviso não é observável pelo sistema. O CEP deve avaliar se o critério de
   exclusão cobre quem está em quadro que exija cuidado imediato.
@@ -175,8 +178,10 @@ Escala: **Probabilidade** (Baixa/Média/Alta) × **Impacto ao titular** (Baixo/M
   brasileira.
 - **R-14 (capacidade) — depende dos critérios de triagem** definidos com o CEP; hoje a elegibilidade é
   regra versionada, mas **quais** critérios entram é decisão do protocolo, não do código.
-- **C11/C12 (transversal):** custódia de chave ainda em env/secret (adaptador **KMS/Vault** pendente,
-  com o *seam* pronto) e **pentest externo** não realizado.
+- **C11/C12 (transversal):** o adaptador **Vault Transit** foi construído em 2026-08-29 (ADR-095) —
+  com ele a KEK não sai do cofre e o dado já cifrado segue legível. Mas **nenhum Vault está no ar**:
+  na prática a custódia continua em env/secret até alguém hospedar e operar o cofre, então **C11
+  permanece aberto**. **Pentest externo (C12)** não realizado.
 
 ## 9. Medidas adicionais recomendadas (ainda não implementadas)
 
@@ -189,14 +194,17 @@ Ordenadas por impacto na redução de risco ao titular:
 4. **Designar o Encarregado + canal do titular** (G1/D4) — sem isso o Art. 18 fica sem porta de entrada.
 5. **Termo de compromisso de não reidentificação** para quem acessa o dataset (R-01).
 6. **DPAs com operadores** + análise do Art. 33 (R-12).
-7. **Alertas automáticos** (falha de e-mail, padrão anômalo de acesso) — fecha detecção de R-03/R-06.
-8. **Adaptador KMS/Vault** (C11) e **pentest externo** (C12) antes de dado real em produção.
+7. ~~**Alertas automáticos** (falha de e-mail, padrão anômalo de acesso)~~ — **implementado em
+   2026-08-29 (ADR-093)**: 4 regras com janela e cooldown, aviso sem PII. Resta o passo
+   operacional (`TEAM_NOTIFY_EMAIL` no ambiente); sem ele o alerta só vai para o log.
+8. **Hospedar o Vault** e ativar `KEY_PROVIDER=vault` (C11 — o adaptador já existe, ADR-095) e
+   **pentest externo** (C12), antes de dado real em produção.
 9. **Minimizar `ip_address`** do consentimento no encerramento da coleta (proporcionalidade).
 
 ## 10. Conclusão técnica preliminar
 
 Do ponto de vista **técnico**, as medidas de segurança do Art. 46 estão implementadas em profundidade
-e são **verificáveis** (297 testes, CI em 5 jobs, cada medida rastreável a um ADR): cifra com envelope
+e são **verificáveis** (351 testes, CI em 5 jobs, cada medida rastreável a um ADR): cifra com envelope
 e separação de PII, MFA obrigatório, RBAC que não revela o braço, auditoria append-only garantida
 **no banco**, residência no Brasil, observabilidade sem PII. Para os riscos de natureza técnica, o
 residual é **Baixo a Médio**.

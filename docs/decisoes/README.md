@@ -94,5 +94,9 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 089 | Retirada de consentimento self-service (titular): `revoked_at` + status `withdrawn` + bloqueia novas sessões; retirar ≠ eliminar — fecha B3 **[novo]** |
 | 090 | Endurecimento operacional: rate limit no endpoint público de áudio (antes da verificação), rotação da chave de assinatura, `/ready` real (DB+Redis, com timeout) e `last_login_at` gravado **[novo]** |
 | 091 | Expurgo dos desafios de OTP (1º pedaço do E2): só apaga o **já expirado** (apagar vivo zeraria `attempts`); auditado só na contagem; script agendável **[novo]** |
+| 092 | Entrega de e-mail **durável** (fila RQ/Redis + worker) e **bounce** separado de falha transitória (`emails_total{outcome=bounced}`); 5xx não é reintentado; corpo do OTP com TTL curto no Redis **[novo]** |
+| 093 | **Alertas automáticos** em processo (falha de e-mail, rajada de 401, 5xx em série, volume atípico em `/research`): janela + cooldown, sem PII no aviso, laço de realimentação quebrado — fecha detecção de R-03/R-06 **[novo]** |
+| 094 | **Convite e redefinição de senha de staff** por token de uso único (só hash no banco): o admin destrava, **não** escolhe a senha nem vê o token; redefinir **não** desliga o MFA **[novo]** |
+| 095 | Custódia da chave de PII em **Vault Transit** (`KEY_PROVIDER=vault`): a KEK não sai do cofre, AAD vira `context` de *derived key*, dado antigo segue legível pelo env — fecha C11 no código **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

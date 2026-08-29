@@ -18,14 +18,29 @@
 
 ## Estado atual (baseline deste roadmap)
 
-> ### ⛳ Marco (2026-07-22): **todas as fases (A–E) `DONE`. O caminho crítico deixou de ser código.**
-> CI do HEAD (`bf92fa9`) com 5/5 jobs verdes; **307 testes de backend a 90% de cobertura**,
-> **42 widget tests** (Flutter), 4 migrações Alembic, bateria FFT aprovada. ADRs **041–091**.
+> ### ⛳ Marco (2026-08-29): **A–E `DONE` + 4 itens da F4 construídos com sign-off do mantenedor.**
+> CI-espelho verde: **351 testes de backend a 90% de cobertura**, **42 widget tests** (Flutter),
+> **5 migrações** Alembic, bateria FFT aprovada, contrato OpenAPI válido. ADRs **041–095**.
+>
+> Construídos em 2026-08-29 (fora do MVP, autorizados item a item): **F4.5** entrega de e-mail
+> durável + bounces (ADR-092), **F4.6** alertas automáticos (ADR-093), **F4.7** convite e
+> redefinição de senha de staff (ADR-094), **F4.1** custódia em Vault Transit (ADR-095). Os quatro
+> entregam **código**; os três primeiros ainda dependem de um passo de **ops** para valer em
+> produção, e o quarto, de um Vault hospedado.
 >
 > **O que falta para o piloto rodar não se resolve escrevendo código** — depende de base legal,
 > CEP, DPO e prazos institucionais. O backlog dessas pendências está na **Fase F**, ao fim deste
 > documento, organizada **por dono**. Antes de abrir qualquer fatia nova, olhe lá: a maior parte
 > do que resta **não é sua para executar, é para cobrar**.
+
+<details>
+<summary>Histórico do baseline anterior (2026-07-22)</summary>
+
+> ### ⛳ Marco (2026-07-22): **todas as fases (A–E) `DONE`. O caminho crítico deixou de ser código.**
+> CI do HEAD (`bf92fa9`) com 5/5 jobs verdes; **307 testes de backend a 90% de cobertura**,
+> **42 widget tests** (Flutter), 4 migrações Alembic, bateria FFT aprovada. ADRs **041–091**.
+
+</details>
 
 <details>
 <summary>Histórico do baseline anterior (2026-07-09)</summary>
@@ -476,11 +491,15 @@ Depende de infraestrutura no ar ou de credencial, não de escrever código.
 
 | # | Pendência | Estado do código |
 |---|---|---|
-| F3.1 | **Agendar o expurgo de OTP** (cron ou máquina agendada da Fly) | ✅ Mecanismo pronto e testado (ADR-091). **Enquanto ninguém agendar, não roda** — receita em `deploy-fly.md` §3.1 |
+| F3.1 | **Agendar o expurgo de transitórios** (cron ou máquina agendada da Fly) — hoje cobre OTP **e** tokens de convite/senha de staff | ✅ Mecanismo pronto e testado (ADR-091/094). **Enquanto ninguém agendar, não roda** — receita em `deploy-fly.md` §3.1 |
 | F3.2 | **SMTP real** (sem ele o OTP não é entregue em produção) | ✅ Código pronto (ADR-063/085); falta credencial em cofre |
 | F3.3 | **Deploy na Fly** | ✅ `fly.toml` + runbook prontos (ADR-076); depende de cartão |
 | F3.4 | Ao aprovar o TCLE: trocar a versão para `1.0.0` em **3 lugares** — `TCLE_CURRENT` (backend), `tcleVersion` (`app/lib/core/config.dart`) e conferir o resumo do app | Testes e seed importam a constante → **uma linha em cada** |
 | F3.5 | **Pentest externo** antes de dado real | ⬜ C12 |
+| F3.7 | **Ligar os alertas**: `TEAM_NOTIFY_EMAIL` no ambiente (sem ele o alerta só vai para o log) | ✅ Detector pronto (ADR-093) |
+| F3.8 | **Subir o worker de e-mail** (`EMAIL_DELIVERY=queue` + `python scripts/email_worker.py`) — sem worker a fila enche e nada é enviado | ✅ Adaptador pronto (ADR-092) |
+| F3.9 | **Hospedar um Vault** e ligar `KEY_PROVIDER=vault` (chave com `derived=true`) | ✅ Adaptador pronto (ADR-095) |
+| F3.10 | Ao publicar o painel de staff: definir `STAFF_SETUP_URL`; até lá o convite manda o token cru | ✅ Fluxo pronto (ADR-094) |
 | F3.6 | Com **≥2 réplicas**: trocar o health check do `fly.toml` de `/health` para `/ready` | ✅ `/ready` real (ADR-090); com 1 réplica derrubaria a app num soluço do Postgres |
 
 ### F4 — Construção pós-piloto (código, **exige sign-off**) · P2 · `TODO`
@@ -489,13 +508,13 @@ já está preparado", não redesenhar.
 
 | # | Item | Porta/seam existente |
 |---|---|---|
-| F4.1 | Adaptador **KMS/Vault** real | `KeyProvider.wrap/unwrap` (ADR-087/088) |
+| F4.1 | ✅ **FEITO** (2026-08-29, ADR-095) — adaptador **Vault Transit** (`KEY_PROVIDER=vault`), com migração incremental do dado já cifrado. Falta **hospedar e operar um Vault** (`derived=true` na chave); até lá o padrão segue `env` e **C11 continua aberto na prática** | `KeyProvider.wrap/unwrap` (ADR-087/088) |
 | F4.2 | **Expurgo do dataset** ao fim do prazo | módulo `retention` (ADR-091) — **bloqueado por F1.3** |
 | F4.3 | Storage de áudio em **nuvem** (presign S3/GCS) | `AudioStorage` (ADR-082) |
 | F4.4 | **Persistência cifrada** de vestíveis | `WearableSink` (ADR-084) |
-| F4.5 | Adaptador **RQ/Redis** para e-mail (durabilidade) + bounces | `EmailDelivery` (ADR-085) |
-| F4.6 | **Alertas** automáticos sobre métricas (falha de e-mail, acesso anômalo) | `/metrics` (ADR-080) — fecha detecção de RIPD R-03/R-06 |
-| F4.7 | Reset de senha por admin + convite por e-mail (staff) | C3 (ADR-081) |
+| F4.5 | ✅ **FEITO** (2026-08-29, ADR-092) — adaptador **RQ/Redis** + worker + bounce separado de falha transitória. Falta o **passo de ops**: `EMAIL_DELIVERY=queue` e um worker no deploy | `EmailDelivery` (ADR-085) |
+| F4.6 | ✅ **FEITO** (2026-08-29, ADR-093) — 4 regras (falha de e-mail, rajada de 401, 5xx em série, volume atípico em `/research`) com janela, cooldown e aviso sem PII. Falta ops: `TEAM_NOTIFY_EMAIL` no ambiente | `/metrics` (ADR-080) — fecha detecção de RIPD R-03/R-06 |
+| F4.7 | ✅ **FEITO** (2026-08-29, ADR-094) — convite e redefinição por token de uso único; o admin destrava sem ver o token nem contornar o MFA. **Sem página de "definir senha"** (o app é do participante): hoje o staff chama `POST /v1/staff/setup-password` direto | C3 (ADR-081) |
 | F4.8 | Exibir o **texto integral** também em inglês, ou restringir o estudo ao pt-BR | `tcle-rascunho.md` §N4.6 |
 
 ---

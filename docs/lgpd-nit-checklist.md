@@ -41,7 +41,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 |---|------|--------|------------------|
 | C1 | PII cifrada em repouso, separada do dado de pesquisa | ✅ | AES‑256‑GCM na aplicação, AAD ligando participante+campo; chave em env/cofre, **falha explícita** sem chave (`core/pii_crypto.py`, ADR‑059). |
 | C2 | Transporte cifrado (TLS/HTTPS) | ✅ | `force_https = true` no deploy (`fly.toml`, ADR‑076). |
-| C3 | Autenticação forte de staff (senha + 2º fator) | ✅ | argon2id + JWT access/refresh + **MFA TOTP obrigatório** (ADR‑043/074); sem 2º fator, só token de cadastro restrito. |
+| C3 | Autenticação forte de staff (senha + 2º fator) | ✅ | argon2id + JWT access/refresh + **MFA TOTP obrigatório** (ADR‑043/074); sem 2º fator, só token de cadastro restrito. **Convite e redefinição por link de uso único** (ADR‑094): cada pessoa define a própria senha — nem o admin a conhece — e redefinir **não** contorna o MFA. |
 | C4 | Autenticação de participante sem senha (OTP), sem vazar o código | ✅ | OTP por e‑mail, gravado só como hash, uso único, expira, tentativas limitadas; **nunca logado** (`participant_auth/`, ADR‑063/085). |
 | C5 | Controle de acesso por papel (RBAC) no servidor | ✅ | Matriz `RBAC` server‑side; nenhuma permissão revela o braço (`core/security.py`, inegociável #2/#6). |
 | C6 | Ciclo de vida de credenciais (desativar/rotacionar) | ✅ | Lifecycle de staff: desativar suspende o acesso já emitido; rotação de senha (ADR‑081). |
@@ -49,7 +49,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 | C8 | Trilha de auditoria **append‑only**, sem PII/braço | ✅ | **Duas camadas:** guard no ORM (`audit/service.py`, ADR‑056) **e** trigger no banco que aborta UPDATE/DELETE — mesmo por SQL cru e mesmo do dono da tabela (`core/audit_ddl.py`, migração `d4e5f6a7b8c9`, ADR‑086); testado (`test_audit_append_only_db.py`). Ações sensíveis auditadas (consentimento, alocação, export, erase, desbloqueio, staff). |
 | C9 | Fail‑safe de configuração de produção | ✅ | Guard recusa subir sem a chave selada / com OTP‑no‑console (ADR‑077); postura de falha do Redis configurável (ADR‑079). |
 | C10 | Observabilidade sem PII (logs/métricas) | ✅ | Logs JSON e métricas Prometheus só com método/rota/status; entrega de e‑mail observável sem corpo/código (ADR‑067/080/085). |
-| C11 | Custódia de chaves em KMS/cofre gerenciado | 🟡 | **Seam + envelope prontos:** a chave de PII fica atrás da porta `KeyProvider` (ADR‑087); a cifra usa **envelope** (DEK por registro embrulhada pela KEK via `wrap`/`unwrap`), padrão real de KMS — a KEK nunca cifra a PII (`core/keyring.py`, `core/pii_crypto.py`, ADR‑088; testado). Rotação por id de chave. **Falta** o adaptador **KMS/Vault** real (a custódia hoje segue em env/secret gitignored) — implementa `wrap`/`unwrap` via API, sem tocar na cripto. `JWT_SECRET`/chave selada A/B seguem em env/secret. |
+| C11 | Custódia de chaves em KMS/cofre gerenciado | 🟡 | **Seam + envelope prontos:** a chave de PII fica atrás da porta `KeyProvider` (ADR‑087); a cifra usa **envelope** (DEK por registro embrulhada pela KEK via `wrap`/`unwrap`), padrão real de KMS — a KEK nunca cifra a PII (`core/keyring.py`, `core/pii_crypto.py`, ADR‑088; testado). Rotação por id de chave. **Adaptador construído** em 2026‑08‑29: `VaultTransitKeyProvider` (`KEY_PROVIDER=vault`, ADR‑095) faz `wrap`/`unwrap` no **Vault Transit** — a KEK não sai do cofre — e o dado cifrado antes segue legível (migração incremental). **Falta hospedar e operar um Vault** (chave criada com `derived=true`): enquanto isso o padrão continua `env`, e a custódia efetiva **não mudou**. `JWT_SECRET`/chave selada A/B seguem em env/secret. |
 | C12 | Teste de intrusão / revisão de segurança independente | ⬜ | **Recomendado antes do piloto.** Há `/security-review` no fluxo de dev, mas um pentest externo é decisão do NIT. |
 
 ## D. Direitos do titular (Art. 18)
@@ -75,7 +75,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 |---|------|--------|------------------|
 | F1 | Residência dos dados no Brasil | ✅ | Backend + Postgres em `gru`/São Paulo (`fly.toml`, ADR‑076; inegociável #6). |
 | F2 | Contrato/DPA com operadores (Fly.io, provedor SMTP, GitHub Pages) | ⬜ | **Decisão do NIT/jurídico.** Mapear operadores e firmar cláusulas de tratamento; avaliar que Fly.io/GitHub são empresas estrangeiras (ainda que a região seja BR) e o enquadramento de eventual transferência internacional (Art. 33). |
-| F3 | Dado de contato enviado a provedor de e‑mail (OTP/alertas) | 🟡 | Entrega desacoplada e observável (ADR‑085); **falta** o DPA com o provedor SMTP e a política de bounces. |
+| F3 | Dado de contato enviado a provedor de e‑mail (OTP/alertas) | 🟡 | Entrega desacoplada e observável (ADR‑085); **fila durável e política de bounces implementadas** (ADR‑092): recusa definitiva não é reintentada e é contada à parte, e o endereço sai dos logs (só o domínio). **Falta** o DPA com o provedor SMTP. |
 
 ## G. Governança e conformidade
 
@@ -84,7 +84,7 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 | G1 | Encarregado (DPO) designado e publicado | ⬜ | **Decisão do NIT/UNINTA.** |
 | G2 | Relatório de Impacto à Proteção de Dados (RIPD/DPIA) | 🟡 | **Rascunho técnico pronto** (`docs/relatorio-impacto-protecao-dados.md`): necessidade/proporcionalidade, ciclo de vida, **14 riscos ao titular** (probabilidade × impacto) com mitigação rastreável a ADR e **risco residual declarado**. Dois residuais seguem **Altos e não são técnicos** — R‑09 (assimetria de poder no consentimento) e R‑10 (retenção sem expurgo/prazo aprovado). **Falta** o controlador/DPO **elaborar e adotar** o RIPD formal e decidir sobre risco residual aceitável e eventual consulta prévia à ANPD (Art. 38). |
 | G3 | Registro das operações de tratamento (Art. 37) | 🟡 | **Rascunho consolidado** (`docs/registro-operacoes-tratamento.md`): 8 operações (OP-01…08) com finalidade, dados, base legal, operadores, transferência, retenção e segurança. **Falta** o controlador **adotar/manter** o registro formal e definir a base legal (A2). |
-| G4 | Plano de resposta a incidentes + notificação à ANPD (Art. 48) | ⬜ | **Rascunho técnico pronto** (`docs/plano-resposta-incidentes.md`): fases, severidade, playbook de contenção ancorado nos mecanismos existentes, notificação. **Falta** o NIT/DPO definir contatos/plantão, confirmar prazos e **aprovar**; alertas automáticos sobre métricas seguem pendência. |
+| G4 | Plano de resposta a incidentes + notificação à ANPD (Art. 48) | ⬜ | **Rascunho técnico pronto** (`docs/plano-resposta-incidentes.md`): fases, severidade, playbook de contenção ancorado nos mecanismos existentes, notificação. **Falta** o NIT/DPO definir contatos/plantão, confirmar prazos e **aprovar**. Os **alertas automáticos** deixaram de ser pendência técnica (ADR‑093): 4 regras com janela e cooldown avisam a equipe por e‑mail/log, sem PII — resta configurar `TEAM_NOTIFY_EMAIL` no ambiente. |
 | G5 | Aprovação do CEP/CONEP (ética em pesquisa) | 🟡 | Submissão em preparação (`docs/Roteiro_Submissao_CEP.docx`, anexos por etapa); a LGPD caminha junto do parecer ético. |
 | G6 | Aplicabilidade SaMD/ANVISA (se houver claim clínico) | ⬜ | **Decisão do NIT/assessoria.** Copy mantém "ferramenta complementar, experimental" (postura científica do `CLAUDE.md`), o que reduz risco de enquadramento — mas confirmar. |
 
@@ -100,7 +100,8 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
    risco residual (G2, G3). Atenção às **salvaguardas de recrutamento** (R‑09): é o maior risco
    residual e depende do CEP, não de código.
 6. **Plano de incidentes** e fluxo de notificação à ANPD (G4).
-7. **Produção**: migrar chaves para KMS/cofre e considerar pentest externo (C11, C12).
+7. **Produção**: **hospedar o cofre** e ligar `KEY_PROVIDER=vault` — o adaptador já existe
+   (C11/ADR‑095) — e considerar pentest externo (C12).
 
 ## Como manter este documento
 Cada linha ✅ é rastreável ao código/ADR citado; ao mudar um mecanismo, atualize a linha e o ADR

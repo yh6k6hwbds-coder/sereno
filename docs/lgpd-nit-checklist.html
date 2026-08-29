@@ -192,7 +192,7 @@
     <div class="meta-row">
       <span>Sereno · piloto de 4 semanas</span><span class="sep"></span>
       <span>UNINTA — Sobral/CE</span><span class="sep"></span>
-      <span>Atualizado 20 jul 2026</span><span class="sep"></span>
+      <span>Atualizado 29 ago 2026</span><span class="sep"></span>
       <span>Fonte: <code>docs/lgpd-nit-checklist.md</code></span>
     </div>
   </header>
@@ -325,7 +325,9 @@
           <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
           <div class="body"><p class="title">Autenticação forte de staff (senha + 2º fator)</p>
           <p class="ev">argon2id + JWT access/refresh + <strong>MFA TOTP obrigatório</strong> (ADR-043/074);
-          sem 2º fator, só token de cadastro restrito.</p></div></article>
+          sem 2º fator, só token de cadastro restrito. <strong>Convite e redefinição por link de uso
+          único</strong> (ADR-094): cada pessoa define a própria senha — nem o admin a conhece — e
+          redefinir <strong>não</strong> contorna o MFA.</p></div></article>
         <article class="row" data-status="ok"><div class="id">C4</div>
           <div class="st"><span class="pill ok"><span class="dot ok"></span>Implementado</span></div>
           <div class="body"><p class="title">Autenticação de participante sem senha (OTP), sem vazar o código</p>
@@ -364,7 +366,10 @@
           <div class="body"><p class="title">Custódia de chaves em KMS/cofre gerenciado</p>
           <p class="ev"><strong>Seam + envelope prontos:</strong> chave de PII atrás da porta <code>KeyProvider</code>;
           cifra por envelope via <code>wrap</code>/<code>unwrap</code> (padrão real de KMS) + rotação por id (ADR-087/088; testado).
-          <strong>Falta</strong> o adaptador <strong>KMS/Vault</strong> real — hoje a custódia segue em env/secret.</p></div></article>
+          <strong>Adaptador construído</strong> em 2026-08-29: <code>VaultTransitKeyProvider</code>
+          (<code>KEY_PROVIDER=vault</code>, ADR-095) embrulha/desembrulha no <strong>Vault Transit</strong> —
+          a KEK não sai do cofre — e o dado cifrado antes segue legível. <strong>Falta hospedar e operar
+          um Vault</strong>: até lá o padrão continua <code>env</code> e a custódia efetiva não mudou.</p></div></article>
         <article class="row" data-status="pending"><div class="id">C12</div>
           <div class="st"><span class="pill pending"><span class="dot pending"></span>Pendente</span></div>
           <div class="body"><p class="title">Teste de intrusão / revisão de segurança independente</p>
@@ -436,8 +441,9 @@
         <article class="row" data-status="partial"><div class="id">F3</div>
           <div class="st"><span class="pill partial"><span class="dot partial"></span>Parcial</span></div>
           <div class="body"><p class="title">Dado de contato enviado a provedor de e-mail (OTP/alertas)</p>
-          <p class="ev">Entrega desacoplada e observável (ADR-085); <strong>falta</strong> o DPA com o provedor SMTP e a
-          política de bounces.</p></div></article>
+          <p class="ev">Entrega desacoplada e observável (ADR-085); <strong>fila durável e política de
+          bounces implementadas</strong> (ADR-092): recusa definitiva não é reintentada e é contada à parte,
+          e o endereço sai dos logs (só o domínio). <strong>Falta</strong> o DPA com o provedor SMTP.</p></div></article>
       </div>
     </section>
 
@@ -463,7 +469,9 @@
           <div class="body"><p class="title">Plano de resposta a incidentes + notificação à ANPD (Art. 48)</p>
           <p class="ev"><strong>Rascunho técnico pronto</strong> (<code>docs/plano-resposta-incidentes.md</code>):
           fases, severidade, playbook de contenção e notificação. <strong>Falta</strong> o NIT/DPO definir
-          contatos/plantão, confirmar prazos e <strong>aprovar</strong>; alertas automáticos seguem pendência.</p></div></article>
+          contatos/plantão, confirmar prazos e <strong>aprovar</strong>. Os <strong>alertas automáticos</strong>
+          deixaram de ser pendência técnica (ADR-093): 4 regras com janela e cooldown avisam a equipe por
+          e-mail/log, sem PII — resta configurar <code>TEAM_NOTIFY_EMAIL</code> no ambiente.</p></div></article>
         <article class="row" data-status="partial"><div class="id">G5</div>
           <div class="st"><span class="pill partial"><span class="dot partial"></span>Parcial</span></div>
           <div class="body"><p class="title">Aprovação do CEP/CONEP (ética em pesquisa)</p>
@@ -488,7 +496,9 @@
         <li><div class="a-txt"><strong>DPAs com operadores</strong> (Fly.io, SMTP, GitHub Pages) e análise de transferência internacional. <span class="refs">F2, F3</span></div></li>
         <li><div class="a-txt"><strong>RIPD/DPIA</strong> usando este checklist + ADRs como insumo. <span class="refs">G2, G3</span></div></li>
         <li><div class="a-txt"><strong>Plano de incidentes</strong> e fluxo de notificação à ANPD. <span class="refs">G4</span></div></li>
-        <li><div class="a-txt"><strong>Produção:</strong> migrar chaves para KMS/cofre e considerar pentest externo. <span class="refs">C11, C12</span></div></li>
+        <li><div class="a-txt"><strong>Produção:</strong> <strong>hospedar o cofre</strong> e ligar
+        <code>KEY_PROVIDER=vault</code> — o adaptador já existe — e considerar pentest externo.
+        <span class="refs">C11, C12</span></div></li>
       </ol>
     </div>
   </main>

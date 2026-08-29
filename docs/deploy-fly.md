@@ -88,17 +88,19 @@ fly ssh console --app sereno-piloto-api -C "python scripts/seed_demo.py"
 > (`docker compose`, `APP_ENV=dev`, `EMAIL_DEV_CONSOLE=1`) ou pelo túnel — não na Fly de
 > produção. Para testar o login na Fly, configure o SMTP real (seção "Antes de participantes").
 
-## 3.1. Agendar o expurgo de OTP (retenção, E2/ADR-091)
+## 3.1. Agendar o expurgo de transitórios (retenção, E2/ADR-091/094)
 
 A política de retenção classifica os desafios de OTP como **transitórios** (expurgo diário, nunca
-> 24 h). O mecanismo está pronto e testado — **falta alguém chamá-lo periodicamente**. Enquanto não
-for agendado, o expurgo simplesmente não acontece, e o item E2 do checklist LGPD segue aberto.
+> 24 h). O mesmo job também apaga os **tokens de convite/redefinição de senha de staff**
+(`staff_setup_token`, ADR-094). O mecanismo está pronto e testado — **falta alguém chamá-lo
+periodicamente**. Enquanto não for agendado, o expurgo simplesmente não acontece, e o item E2 do
+checklist LGPD segue aberto.
 
 ```powershell
 # Execução manual / verificação (não apaga nada com --dry-run):
 fly ssh console --app sereno-piloto-api -C "python scripts/purge_otp.py --dry-run"
 fly ssh console --app sereno-piloto-api -C "python scripts/purge_otp.py"
-# Saída: {"deleted": N, "remaining": M, "grace_min": 60, "dry_run": false}
+# Saída: {"deleted": N, "remaining": M, "staff_tokens_deleted": K, "grace_min": 60, "dry_run": false}
 ```
 
 **Opções de agendamento** (escolher uma, `[a definir com o mantenedor]`):
@@ -109,6 +111,30 @@ fly ssh console --app sereno-piloto-api -C "python scripts/purge_otp.py"
 
 O script sai com **código ≠ 0 em falha**, então qualquer agendador consegue alertar. É idempotente
 — rodar duas vezes seguidas apaga 0 na segunda; rodar com frequência maior que a diária é inofensivo.
+
+## 3.2. Ligar alertas, worker de e-mail e cofre (F3.7–F3.9)
+
+Três mecanismos prontos que **só valem se alguém os ligar no ambiente**. Nenhum é obrigatório para
+subir; todos importam antes de dado real.
+
+```powershell
+# Alertas automáticos (ADR-093) — sem destino, o aviso só vai para o log:
+fly secrets set --app sereno-piloto-api TEAM_NOTIFY_EMAIL="equipe@uninta.edu.br"
+
+# Fila durável de e-mail (ADR-092) — precisa de Redis E de um processo worker:
+fly secrets set --app sereno-piloto-api EMAIL_DELIVERY=queue
+#   No fly.toml, um [processes] extra:  worker = "python scripts/email_worker.py"
+#   ATENÇÃO: com EMAIL_DELIVERY=queue e NENHUM worker, os e-mails ficam parados na fila
+#   e o OTP nunca chega — verifique o worker antes de trocar o modo.
+
+# Custódia da chave de PII no cofre (ADR-095) — exige um Vault hospedado:
+#   vault write -f transit/keys/sereno-pii-kek derived=true   <- sem derived=true a
+#   amarração participante+campo some SEM ERRO VISÍVEL
+fly secrets set --app sereno-piloto-api KEY_PROVIDER=vault VAULT_ADDR=... VAULT_TOKEN=...
+```
+
+> ⚠️ O deploy da Fly **não tem Redis nem Vault** hoje (`fly.toml` sobe 1 instância sem Redis).
+> `EMAIL_DELIVERY=queue` e `KEY_PROVIDER=vault` pressupõem que essa infraestrutura exista.
 
 ## 4. Reconstruir o app apontando para a API pública
 

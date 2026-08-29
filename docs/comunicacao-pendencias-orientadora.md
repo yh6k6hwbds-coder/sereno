@@ -1,7 +1,12 @@
 # Sereno — o que falta para o piloto começar
 
 > **Para:** Dra. Bianca Régia Silva (orientadora) · **De:** Augusto André
-> **Data:** 22 de julho de 2026 · **Assunto:** pendências para iniciar a coleta do estudo-piloto
+> **Data:** 29 de agosto de 2026 (atualiza a versão de 22 de julho) · **Assunto:** pendências para
+> iniciar a coleta do estudo-piloto
+>
+> **Nada foi resolvido desde julho:** todas as pendências abaixo continuam abertas, e a primeira
+> delas segue bloqueando a coleta. No período, trabalhei apenas em reforços técnicos que não
+> dependiam de decisão de ninguém (seção 8).
 
 **Resumo:** o desenvolvimento do aplicativo e do servidor está concluído e testado. O que impede o
 piloto de começar não é software — são decisões institucionais, éticas e jurídicas que não posso
@@ -22,7 +27,7 @@ registrado com versão e data, questionários de linha de base, sorteio dos grup
 de áudio, diário de sono, questionários de seguimento, registro de eventos adversos, exportação de
 dados sem identificação e relatório de análise cego.
 
-- **349 testes automatizados** (307 no servidor, 42 no aplicativo), todos passando.
+- **393 testes automatizados** (351 no servidor, 42 no aplicativo), todos passando.
 - Dados de identificação **criptografados e separados** dos dados da pesquisa; análise feita sobre
   dados pseudonimizados (sem nome).
 - Sorteio duplo-cego: nem o participante nem a equipe sabem o grupo durante o estudo.
@@ -118,6 +123,23 @@ Posso enviar qualquer um deles, ou todos, no formato que preferir.
 - **3º — Submissão ao CEP**, com o termo revisto e as salvaguardas de convite.
 - **4º — DPO e prazos de guarda**, que podem correr em paralelo.
 - **5º — Operacional** (comigo), quando houver o que colocar no ar.
+
+## 8. O que foi reforçado desde julho (não altera nenhuma pendência)
+
+Aproveitei o período de espera para fechar quatro melhorias de segurança e operação que **não
+dependiam de decisão de ninguém**. Nenhuma delas destrava a coleta — só reduz risco quando ela
+começar:
+
+| Melhoria | Por que importa para o estudo |
+|---|---|
+| **Aviso automático quando algo dá errado** | Se o e-mail de um evento adverso não for entregue, a equipe agora é avisada. Antes, isso passaria despercebido — era o risco R-06 do relatório de impacto |
+| **Envio de e-mail mais resistente a falhas** | O código de acesso do participante não se perde se o servidor reiniciar no meio do envio; endereço inválido passa a ser identificado como tal |
+| **Convite e recuperação de senha da equipe** | Cada pesquisador define a própria senha por um link de uso único. **Nem eu, como administrador, conheço a senha de outra pessoa** — o registro de quem fez o quê passa a ser confiável |
+| **Guarda da chave de criptografia em cofre** | O código já está pronto para que a chave que protege os dados pessoais fique num cofre externo, em vez de ficar junto ao servidor. **Falta hospedar esse cofre** |
+
+Os três primeiros dependem apenas de configuração quando o sistema for publicado; o quarto depende
+de decidirmos se vale operar um cofre próprio. Detalhes técnicos ficaram registrados no projeto
+(decisões 092 a 095).
 
 Fico à disposição para detalhar qualquer ponto, apresentar o sistema funcionando ou acompanhar uma
 reunião com o NIT.
