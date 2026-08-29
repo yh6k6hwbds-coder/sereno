@@ -1,9 +1,8 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemNavigator;
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../core/url_scrub.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/wave_mark.dart';
 
@@ -43,13 +42,9 @@ class _SetupPasswordScreenState extends State<SetupPasswordScreen> {
   /// O token equivale à senha durante sua janela de validade: deixá-lo na URL o expõe ao
   /// histórico do navegador e ao cabeçalho `Referer` de qualquer requisição que a página
   /// venha a fazer. Trocar a URL não invalida o token (isso quem faz é o consumo no
-  /// servidor), mas encurta bastante o rastro.
-  void _scrubUrl() {
-    if (!kIsWeb) return;
-    final limpa = Uri.base.replace(
-        queryParameters: Map<String, String>.from(Uri.base.queryParameters)..remove('token'));
-    SystemNavigator.routeInformationUpdated(uri: limpa, replace: true);
-  }
+  /// servidor), mas encurta bastante o rastro. Ver `core/url_scrub.dart` — e a nota de por
+  /// que `SystemNavigator.routeInformationUpdated` NÃO serve para isto.
+  void _scrubUrl() => scrubQueryParam('token');
 
   @override
   void dispose() {

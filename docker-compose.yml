@@ -53,6 +53,10 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-no-reply@sereno.example}
       TEAM_NOTIFY_EMAIL: ${TEAM_NOTIFY_EMAIL:-}
+      # Página que recebe o link de convite/redefinição de senha da equipe (ADR-096): é a
+      # raiz do app web. Sem ela, o e-mail carrega o token cru. O backend acrescenta
+      # `?token=` — ou `&token=` se a URL já tiver query (ex.: `?api=<túnel>/v1`).
+      STAFF_SETUP_URL: ${STAFF_SETUP_URL:-}
     ports:
       - "8000:8000"
 

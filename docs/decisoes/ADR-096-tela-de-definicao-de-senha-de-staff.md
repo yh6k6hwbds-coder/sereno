@@ -35,10 +35,18 @@ sem navegação e sem dado de pesquisa.
    um botão "entrar" que não leva a lugar nenhum.
 5. **Validação local antes de chamar** (mínimo de 8 e confirmação igual): erro de digitação não
    pode **gastar o token de uso único** nem uma tentativa do rate limit do endpoint público.
-6. **O token sai da barra de endereço** assim que a tela abre (`routeInformationUpdated`, só na
-   web). O token equivale à senha durante sua janela: deixá-lo na URL o expõe ao histórico do
-   navegador e ao `Referer` de qualquer requisição da página. Isso **não invalida** o token — quem
-   o queima é o consumo no servidor —, só encurta o rastro.
+6. **O token sai da barra de endereço** assim que a tela abre (só na web). O token equivale à
+   senha durante sua janela: deixá-lo na URL o expõe ao histórico do navegador e ao `Referer` de
+   qualquer requisição da página. Isso **não invalida** o token — quem o queima é o consumo no
+   servidor —, só encurta o rastro.
+
+   > **Correção de 2026-08-29 (mesmo dia).** A primeira implementação usava
+   > `SystemNavigator.routeInformationUpdated` e **não funcionava**: com a estratégia de URL
+   > padrão do Flutter web (hash), aquela chamada escreve a rota no **fragmento**. O teste
+   > ponta a ponta no navegador mostrou `?…&token=abc#/sereno/?…` — token intacto e um `#` a
+   > mais. A limpeza agora é `history.replaceState` via import condicional
+   > (`core/url_scrub.dart`; no-op fora da web). **Nenhum teste pegaria isso**: `kIsWeb` é
+   > falso no `flutter test`, então o caminho web nunca roda na suíte.
 7. **A tela repete que o MFA não muda** (antes e depois de enviar). É a invariante do ADR-094; se a
    pessoa concluir que "redefinir a senha" reiniciou o segundo fator, ela vai tentar entrar sem ele
    e achar que a conta quebrou.
@@ -72,8 +80,13 @@ a ter um destino real (a raiz do app publicado); o token deixa de ficar na barra
 - **Depende de `STAFF_SETUP_URL` apontar para a versão publicada** do app. Apontar para um build
   antigo (sem esta tela) faz o link abrir o login do participante — sintoma confuso. Ficou
   registrado no `.env.example`.
-- A limpeza da URL usa `routeInformationUpdated`, que é API de plataforma da web: se o app um dia
-  adotar `go_router` (ADR-050), esse ponto precisa ser reavaliado junto.
+- **A limpeza da URL não é coberta por teste automatizado.** `kIsWeb` é falso no `flutter test`, e
+  o caminho web só existe no build de verdade — foi assim que a primeira versão quebrada passou no
+  CI. A verificação é manual, no navegador, ao mexer nessa área.
+- `url_scrub_web.dart` usa `dart:html` (legado) para não acrescentar dependência ao `pubspec` por
+  duas linhas. O build web deste projeto é JS; **migrar para `package:web` é pré-requisito se o
+  alvo virar wasm**.
+- Se o app adotar `go_router` (ADR-050), a limpeza da URL precisa ser reavaliada junto.
 - O app publicado passa a **poder** falar com o endpoint de staff. Não é privilégio novo (o endpoint
   é público e limitado por IP por desenho), mas é superfície que antes só existia via API.
 
