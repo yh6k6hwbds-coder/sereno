@@ -52,6 +52,22 @@ class AppLocalizations {
       'otpEnter': 'Entrar',
       'otpBack': 'Voltar',
       'otpSent': 'Se o código de estudo existir, enviamos um código ao seu e-mail.',
+      // Definição de senha da EQUIPE (staff) — só acessível pelo link do e-mail (ADR-096)
+      'staffSetupTitle': 'Definir sua senha',
+      'staffSetupPrompt': 'Você chegou aqui por um link de uso único enviado à equipe do estudo. '
+          'Escolha uma senha para a sua conta.',
+      'staffSetupPasswordLabel': 'Nova senha',
+      'staffSetupPasswordHelp': 'Ao menos 8 caracteres.',
+      'staffSetupConfirmLabel': 'Repita a nova senha',
+      'staffSetupShowPassword': 'Mostrar ou ocultar a senha',
+      'staffSetupSubmit': 'Definir senha',
+      'staffSetupTooShort': 'A senha precisa ter ao menos 8 caracteres.',
+      'staffSetupMismatch': 'As duas senhas não são iguais.',
+      'staffSetupMfaNote': 'Definir a senha não altera o seu segundo fator (MFA).',
+      'staffSetupDoneTitle': 'Senha definida',
+      'staffSetupDoneBody': 'Sua senha foi registrada. Você já pode usá-la para acessar a API '
+          'de pesquisa. Este aplicativo é do participante — não há painel da equipe aqui.',
+      'staffSetupDoneMfa': 'Seu segundo fator (MFA) continua ativo e seguirá sendo pedido no login.',
       // Preparar sessão (fones)
       'prepSession': 'Preparar sessão',
       'useStereoHeadphones': 'Use fones estéreo',
@@ -167,6 +183,21 @@ class AppLocalizations {
       'otpEnter': 'Enter',
       'otpBack': 'Back',
       'otpSent': 'If the study code exists, we sent a code to your e-mail.',
+      'staffSetupTitle': 'Set your password',
+      'staffSetupPrompt': 'You arrived here through a single-use link sent to the study team. '
+          'Choose a password for your account.',
+      'staffSetupPasswordLabel': 'New password',
+      'staffSetupPasswordHelp': 'At least 8 characters.',
+      'staffSetupConfirmLabel': 'Repeat the new password',
+      'staffSetupShowPassword': 'Show or hide the password',
+      'staffSetupSubmit': 'Set password',
+      'staffSetupTooShort': 'The password must have at least 8 characters.',
+      'staffSetupMismatch': 'The two passwords do not match.',
+      'staffSetupMfaNote': 'Setting the password does not change your second factor (MFA).',
+      'staffSetupDoneTitle': 'Password set',
+      'staffSetupDoneBody': 'Your password has been saved. You can now use it to access the '
+          'research API. This application is the participant app — there is no team panel here.',
+      'staffSetupDoneMfa': 'Your second factor (MFA) remains enabled and will still be required at login.',
       'prepSession': 'Prepare session',
       'useStereoHeadphones': 'Use stereo headphones',
       'headphoneBody': 'Sessions use two-channel audio. Connect wired headphones, set a '
@@ -386,6 +417,19 @@ class AppLocalizations {
   String get otpEnter => _t('otpEnter');
   String get otpBack => _t('otpBack');
   String get otpSent => _t('otpSent');
+  String get staffSetupTitle => _t('staffSetupTitle');
+  String get staffSetupPrompt => _t('staffSetupPrompt');
+  String get staffSetupPasswordLabel => _t('staffSetupPasswordLabel');
+  String get staffSetupPasswordHelp => _t('staffSetupPasswordHelp');
+  String get staffSetupConfirmLabel => _t('staffSetupConfirmLabel');
+  String get staffSetupShowPassword => _t('staffSetupShowPassword');
+  String get staffSetupSubmit => _t('staffSetupSubmit');
+  String get staffSetupTooShort => _t('staffSetupTooShort');
+  String get staffSetupMismatch => _t('staffSetupMismatch');
+  String get staffSetupMfaNote => _t('staffSetupMfaNote');
+  String get staffSetupDoneTitle => _t('staffSetupDoneTitle');
+  String get staffSetupDoneBody => _t('staffSetupDoneBody');
+  String get staffSetupDoneMfa => _t('staffSetupDoneMfa');
   // Preparar sessão
   String get prepSession => _t('prepSession');
   String get useStereoHeadphones => _t('useStereoHeadphones');

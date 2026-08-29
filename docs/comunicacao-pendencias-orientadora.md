@@ -27,7 +27,7 @@ registrado com versão e data, questionários de linha de base, sorteio dos grup
 de áudio, diário de sono, questionários de seguimento, registro de eventos adversos, exportação de
 dados sem identificação e relatório de análise cego.
 
-- **393 testes automatizados** (351 no servidor, 42 no aplicativo), todos passando.
+- **400 testes automatizados** (351 no servidor, 49 no aplicativo), todos passando.
 - Dados de identificação **criptografados e separados** dos dados da pesquisa; análise feita sobre
   dados pseudonimizados (sem nome).
 - Sorteio duplo-cego: nem o participante nem a equipe sabem o grupo durante o estudo.
@@ -134,7 +134,7 @@ começar:
 |---|---|
 | **Aviso automático quando algo dá errado** | Se o e-mail de um evento adverso não for entregue, a equipe agora é avisada. Antes, isso passaria despercebido — era o risco R-06 do relatório de impacto |
 | **Envio de e-mail mais resistente a falhas** | O código de acesso do participante não se perde se o servidor reiniciar no meio do envio; endereço inválido passa a ser identificado como tal |
-| **Convite e recuperação de senha da equipe** | Cada pesquisador define a própria senha por um link de uso único. **Nem eu, como administrador, conheço a senha de outra pessoa** — o registro de quem fez o quê passa a ser confiável |
+| **Convite e recuperação de senha da equipe** | Cada pesquisador define a própria senha por um link de uso único, numa tela própria do aplicativo. **Nem eu, como administrador, conheço a senha de outra pessoa** — o registro de quem fez o quê passa a ser confiável |
 | **Guarda da chave de criptografia em cofre** | O código já está pronto para que a chave que protege os dados pessoais fique num cofre externo, em vez de ficar junto ao servidor. **Falta hospedar esse cofre** |
 
 Os três primeiros dependem apenas de configuração quando o sistema for publicado; o quarto depende

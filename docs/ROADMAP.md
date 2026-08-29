@@ -19,14 +19,14 @@
 ## Estado atual (baseline deste roadmap)
 
 > ### ⛳ Marco (2026-08-29): **A–E `DONE` + 4 itens da F4 construídos com sign-off do mantenedor.**
-> CI-espelho verde: **351 testes de backend a 90% de cobertura**, **42 widget tests** (Flutter),
-> **5 migrações** Alembic, bateria FFT aprovada, contrato OpenAPI válido. ADRs **041–095**.
+> CI-espelho verde: **351 testes de backend a 90% de cobertura**, **49 widget tests** (Flutter),
+> **5 migrações** Alembic, bateria FFT aprovada, contrato OpenAPI válido. ADRs **041–096**.
 >
 > Construídos em 2026-08-29 (fora do MVP, autorizados item a item): **F4.5** entrega de e-mail
 > durável + bounces (ADR-092), **F4.6** alertas automáticos (ADR-093), **F4.7** convite e
-> redefinição de senha de staff (ADR-094), **F4.1** custódia em Vault Transit (ADR-095). Os quatro
-> entregam **código**; os três primeiros ainda dependem de um passo de **ops** para valer em
-> produção, e o quarto, de um Vault hospedado.
+> redefinição de senha de staff (ADR-094) **com a tela que recebe o link** (ADR-096), **F4.1**
+> custódia em Vault Transit (ADR-095). Todos entregam **código**; cada um ainda depende de um passo
+> de **ops** para valer em produção (F3.7–F3.10).
 >
 > **O que falta para o piloto rodar não se resolve escrevendo código** — depende de base legal,
 > CEP, DPO e prazos institucionais. O backlog dessas pendências está na **Fase F**, ao fim deste
@@ -499,7 +499,7 @@ Depende de infraestrutura no ar ou de credencial, não de escrever código.
 | F3.7 | **Ligar os alertas**: `TEAM_NOTIFY_EMAIL` no ambiente (sem ele o alerta só vai para o log) | ✅ Detector pronto (ADR-093) |
 | F3.8 | **Subir o worker de e-mail** (`EMAIL_DELIVERY=queue` + `python scripts/email_worker.py`) — sem worker a fila enche e nada é enviado | ✅ Adaptador pronto (ADR-092) |
 | F3.9 | **Hospedar um Vault** e ligar `KEY_PROVIDER=vault` (chave com `derived=true`) | ✅ Adaptador pronto (ADR-095) |
-| F3.10 | Ao publicar o painel de staff: definir `STAFF_SETUP_URL`; até lá o convite manda o token cru | ✅ Fluxo pronto (ADR-094) |
+| F3.10 | Definir `STAFF_SETUP_URL` com a raiz do app publicado; sem ela o convite manda o token cru | ✅ Fluxo **e tela** prontos (ADR-094/096) |
 | F3.6 | Com **≥2 réplicas**: trocar o health check do `fly.toml` de `/health` para `/ready` | ✅ `/ready` real (ADR-090); com 1 réplica derrubaria a app num soluço do Postgres |
 
 ### F4 — Construção pós-piloto (código, **exige sign-off**) · P2 · `TODO`
@@ -514,7 +514,7 @@ já está preparado", não redesenhar.
 | F4.4 | **Persistência cifrada** de vestíveis | `WearableSink` (ADR-084) |
 | F4.5 | ✅ **FEITO** (2026-08-29, ADR-092) — adaptador **RQ/Redis** + worker + bounce separado de falha transitória. Falta o **passo de ops**: `EMAIL_DELIVERY=queue` e um worker no deploy | `EmailDelivery` (ADR-085) |
 | F4.6 | ✅ **FEITO** (2026-08-29, ADR-093) — 4 regras (falha de e-mail, rajada de 401, 5xx em série, volume atípico em `/research`) com janela, cooldown e aviso sem PII. Falta ops: `TEAM_NOTIFY_EMAIL` no ambiente | `/metrics` (ADR-080) — fecha detecção de RIPD R-03/R-06 |
-| F4.7 | ✅ **FEITO** (2026-08-29, ADR-094) — convite e redefinição por token de uso único; o admin destrava sem ver o token nem contornar o MFA. **Sem página de "definir senha"** (o app é do participante): hoje o staff chama `POST /v1/staff/setup-password` direto | C3 (ADR-081) |
+| F4.7 | ✅ **FEITO** (2026-08-29, ADR-094 + **ADR-096**) — convite e redefinição por token de uso único; o admin destrava sem ver o token nem contornar o MFA. A tela que recebe o link vive no app web (`?token=`), então o fluxo fecha ponta a ponta | C3 (ADR-081) |
 | F4.8 | Exibir o **texto integral** também em inglês, ou restringir o estudo ao pt-BR | `tcle-rascunho.md` §N4.6 |
 
 ---

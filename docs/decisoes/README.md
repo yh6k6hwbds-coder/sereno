@@ -98,5 +98,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 093 | **Alertas automáticos** em processo (falha de e-mail, rajada de 401, 5xx em série, volume atípico em `/research`): janela + cooldown, sem PII no aviso, laço de realimentação quebrado — fecha detecção de R-03/R-06 **[novo]** |
 | 094 | **Convite e redefinição de senha de staff** por token de uso único (só hash no banco): o admin destrava, **não** escolhe a senha nem vê o token; redefinir **não** desliga o MFA **[novo]** |
 | 095 | Custódia da chave de PII em **Vault Transit** (`KEY_PROVIDER=vault`): a KEK não sai do cofre, AAD vira `context` de *derived key*, dado antigo segue legível pelo env — fecha C11 no código **[novo]** |
+| 096 | **Tela de definir senha de staff** no app web, alcançável só por `?token=` (rota antes do AuthGate; não existe no mobile); token sai da barra de endereço — fecha a ponta que faltava do ADR-094 **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

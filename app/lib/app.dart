@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/api_client.dart';
+import 'core/config.dart';
 import 'core/theme.dart';
 import 'l10n/app_localizations.dart';
 import 'services/participant_repository.dart';
 import 'services/session_store.dart';
 import 'features/auth/otp_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/staff/setup_password_screen.dart';
 
 /// Raiz do app. Compõe os serviços (store → api → repositório) e decide a tela inicial
 /// pela sessão persistida (auto-login). À medida que crescer, considerar Riverpod +
@@ -17,7 +19,13 @@ class SerenoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = SessionStore();
-    final repo = ParticipantRepository(ApiClient(store), store);
+    final api = ApiClient(store);
+    final repo = ParticipantRepository(api, store);
+    // Link de convite/redefinição de senha da EQUIPE (ADR-096): só existe na web e só
+    // quando há token na URL. Vem ANTES do AuthGate de propósito — quem chega por esse
+    // link não é participante e não deve cair no login por código de estudo, nem ver a
+    // Home de uma sessão que porventura esteja guardada neste navegador.
+    final setupToken = staffSetupToken;
     return MaterialApp(
       title: 'Sereno',
       debugShowCheckedModeBanner: false,
@@ -29,7 +37,9 @@ class SerenoApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: AuthGate(store: store, repo: repo),
+      home: setupToken != null
+          ? SetupPasswordScreen(api: api, token: setupToken)
+          : AuthGate(store: store, repo: repo),
     );
   }
 }

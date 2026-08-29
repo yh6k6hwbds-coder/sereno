@@ -21,6 +21,20 @@ String get apiBaseUrl {
   return _compiledApiBaseUrl;
 }
 
+/// Token de definição de senha de staff vindo do link do e-mail (`?token=…`), só na **web**.
+///
+/// O convite/redefinição (ADR-094) manda um link; esta é a ponta que o recebe (ADR-096). No
+/// mobile `Uri.base` não traz query, então devolve `null` e o app abre normalmente para o
+/// participante — a tela de staff nunca aparece para quem não veio pelo link.
+///
+/// Não valida o formato além do tamanho: quem julga o token é o servidor, com resposta
+/// genérica. Filtrar aqui só serve para não abrir a tela com lixo de URL.
+String? get staffSetupToken {
+  final t = Uri.base.queryParameters['token'];
+  if (t == null || t.length < 20 || t.length > 200) return null;
+  return t;
+}
+
 /// Versão vigente do TCLE — deve casar com `TCLE_CURRENT` no backend (divergente → 409).
 /// O sufixo `-rascunho` marca texto que ainda NÃO passou pelo CEP (`docs/tcle-rascunho.md`);
 /// ao sair o parecer, vira `1.0.0` aqui, no backend e no resumo de `app_localizations.dart`.

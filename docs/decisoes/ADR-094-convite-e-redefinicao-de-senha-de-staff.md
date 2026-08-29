@@ -76,10 +76,10 @@ recuperação sem editar banco; o MFA não é contornável por reset; a nova cre
 nasce com expurgo e auditoria. **+14 testes** (suíte 328→342).
 
 **Negativas / a vigiar:**
-- **Não há página de "definir senha" no app.** O cliente Flutter é do participante; o staff usa a
-  API direto. Sem `STAFF_SETUP_URL` configurada, o e-mail carrega o token cru e a pessoa precisa
-  chamar `POST /v1/staff/setup-password` na mão. **Enquanto não houver painel de staff, este é o
-  procedimento** — está declarado, não escondido.
+- ~~**Não há página de "definir senha" no app.**~~ **Resolvido no mesmo dia pelo ADR-096:** a tela
+  vive no app web e é alcançada por `?token=`. Resta apontar `STAFF_SETUP_URL` para a raiz do app
+  publicado; sem essa variável, o e-mail ainda carrega o token cru e a pessoa precisaria chamar
+  `POST /v1/staff/setup-password` na mão.
 - **Depende de e-mail funcionando** (F3.2). Sem SMTP real, o convite não chega: em dev o token sai
   no console, o que é aceitável só em dev.
 - O token no corpo do e-mail herda a exposição do canal e-mail — mitigado por TTL curto, uso único e

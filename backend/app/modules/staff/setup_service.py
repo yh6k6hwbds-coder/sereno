@@ -70,8 +70,14 @@ def issue(db: Session, staff: StaffUser, *, purpose: str) -> tuple[str, dt.datet
 
 def deliver(staff: StaffUser, token: str, *, purpose: str, expires_at: dt.datetime) -> None:
     """Envia o link ao e-mail do PRÓPRIO staff. Best-effort (porta `EmailDelivery`)."""
-    base = os.getenv("STAFF_SETUP_URL", "").strip().rstrip("/")
-    alvo = f"{base}?token={token}" if base else f"Token: {token}"
+    base = os.getenv("STAFF_SETUP_URL", "").strip()
+    # A URL do app web já pode carregar query (ex.: `?api=<túnel>/v1`, ADR-072): concatenar
+    # `?token=` cegamente produziria dois `?` e um link quebrado. O token é `token_urlsafe`,
+    # então não precisa de escape.
+    if base:
+        alvo = f"{base}{'&' if '?' in base else '?'}token={token}"
+    else:
+        alvo = f"Token: {token}"
     convite = purpose == "invite"
     assunto = ("Convite para o painel do Sereno" if convite
                else "Redefinição de senha — Sereno")

@@ -249,6 +249,25 @@ def test_expurgo_alcanca_tokens_expirados(api):
         assert purge_expired_staff_tokens(s, grace_min=60) == 0      # idempotente
 
 
+def test_link_do_email_respeita_query_ja_existente(api, monkeypatch):
+    client, TestSession = api
+    caixa = MemoryEmailSender(); set_email_sender(caixa)
+    _uid, admin = _admin(TestSession)
+
+    # Base sem query: entra com `?`.
+    monkeypatch.setenv("STAFF_SETUP_URL", "https://app.exemplo/sereno/")
+    client.post(STAFF, headers=admin, json={"email": "l1@uninta.edu.br", "role": "researcher"})
+    assert "https://app.exemplo/sereno/?token=" in caixa.outbox[-1].body
+
+    # Base que JÁ carrega query (o app web usa `?api=<túnel>/v1`): tem de entrar com `&`,
+    # senão o link sai com dois `?` e o navegador não enxerga o token.
+    monkeypatch.setenv("STAFF_SETUP_URL", "https://app.exemplo/sereno/?api=https://t.dev/v1")
+    client.post(STAFF, headers=admin, json={"email": "l2@uninta.edu.br", "role": "researcher"})
+    corpo = caixa.outbox[-1].body
+    assert "?api=https://t.dev/v1&token=" in corpo
+    assert corpo.count("?") == 1
+
+
 def test_token_guardado_so_como_hash(api):
     client, TestSession = api
     caixa = MemoryEmailSender(); set_email_sender(caixa)
