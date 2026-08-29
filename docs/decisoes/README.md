@@ -101,4 +101,8 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 096 | **Tela de definir senha de staff** no app web, alcançável só por `?token=` (rota antes do AuthGate; não existe no mobile); token sai da barra de endereço — fecha a ponta que faltava do ADR-094 **[novo]** |
 | 097 | **Piloto só em pt-BR:** `supportedLocales` fica só com `pt` (o TCLE existe só em português — ninguém consente por interface traduzida sem documento correspondente); tradução `en` preservada em `translatedLocales` **[novo]** |
 
+| 098 | **Fase F fecha com documento de cobrança por dono:** NIT, pesquisadora e CEP recebem cada um um pedido com perguntas objetivas, opções mapeadas e **folha de resposta** — descrever a pendência não a fazia andar. Registra também o achado do `prescribed=20` na taxa de adesão **[novo]** |
+
+| 099 | **Versão do TCLE verificada no CI** (`scripts/tcle_version.py --check`): backend e app declaravam-na em linguagens diferentes e nada checava que concordam — divergir só apareceria como 409 na cara do participante. Trocar vira um comando; F3.4 não era "uma linha em cada" **[novo]** |
+
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

@@ -20,7 +20,7 @@
 
 > ### ⛳ Marco (2026-08-29): **A–E `DONE` + 4 itens da F4 construídos com sign-off do mantenedor.**
 > CI-espelho verde: **352 testes de backend a 90% de cobertura**, **49 widget tests** (Flutter),
-> **5 migrações** Alembic, bateria FFT aprovada, contrato OpenAPI válido. ADRs **041–097**.
+> **5 migrações** Alembic, bateria FFT aprovada, contrato OpenAPI válido. ADRs **041–099**.
 >
 > Construídos em 2026-08-29 (fora do MVP, autorizados item a item): **F4.5** entrega de e-mail
 > durável + bounces (ADR-092), **F4.6** alertas automáticos (ADR-093), **F4.7** convite e
@@ -32,6 +32,11 @@
 > CEP, DPO e prazos institucionais. O backlog dessas pendências está na **Fase F**, ao fim deste
 > documento, organizada **por dono**. Antes de abrir qualquer fatia nova, olhe lá: a maior parte
 > do que resta **não é sua para executar, é para cobrar**.
+>
+> 📤 **E agora há com o que cobrar (ADR-098):** cada dono tem um documento próprio, com perguntas
+> objetivas e **folha de resposta** — `solicitacao-nit-base-legal.md` (F1), `dossie-submissao-cep.md`
+> (F2.1/F2.3/F2.4/F2.5) e `formulario-protocolo-clinico.md` (F2.2). PDF e DOCX gerados.
+> **Falta enviá-los** — esse passo é do mantenedor, e nenhum item da Fase F anda sem ele.
 
 <details>
 <summary>Histórico do baseline anterior (2026-07-22)</summary>
@@ -462,6 +467,10 @@ modularidade para isso).
 ### F1 — Bloqueadores institucionais (NIT / assessoria / DPO) · P0 · `TODO`
 Nenhum depende de desenvolvimento. **O primeiro bloqueia todos os outros.**
 
+> 📤 **Documento de cobrança pronto:** `docs/solicitacao-nit-base-legal.md` — os seis itens abaixo
+> redigidos como perguntas objetivas, com as opções mapeadas e uma **folha de resposta** (§8).
+> Fecha quando a folha voltar preenchida.
+
 | # | Pendência | Item | Insumo pronto |
 |---|---|---|---|
 | F1.1 | **Base legal** do tratamento de dado sensível de saúde (Art. 7 / Art. 11) | A2 | RIPD §4, ROPA (base por operação) |
@@ -475,10 +484,15 @@ Nenhum depende de desenvolvimento. **O primeiro bloqueia todos os outros.**
 > pode avançar em paralelo, isso não.
 
 ### F2 — Aprovação ética (CEP) · P0 · `TODO`
+
+> 📤 **Documentos de cobrança prontos:** `docs/dossie-submissao-cep.md` (estado da submissão + as
+> **5 perguntas** F2.1–F2.5 reunidas para uma consulta só) e `docs/formulario-protocolo-clinico.md`
+> (os 14 campos do **F2.2**, que só o protocolo tem, com o que cada um muda no sistema).
+
 | # | Pendência | Onde |
 |---|---|---|
 | F2.1 | **Aprovar o TCLE**; preencher `[a preencher]` (título, contatos, CEP, DPO) | `tcle-rascunho.md` §N2 |
-| F2.2 | **Detalhes do protocolo clínico** — critérios de inclusão/exclusão, nº de sessões por semana, tempo total. **Não existem em nenhum lugar do repositório**; hoje são `[a confirmar com o protocolo]` no TCLE §4/§5 | `tcle-rascunho.md` §4, §5 |
+| F2.2 | **Detalhes do protocolo clínico** — critérios de inclusão/exclusão, nº de sessões por semana, tempo total. **Não existem em nenhum lugar do repositório**; hoje são `[a confirmar com o protocolo]` no TCLE §4/§5. ⚠️ O nº de sessões **não é só texto**: `adherence_metrics(prescribed=20, weeks=4)` já usa 20 como denominador da adesão — número herdado do roteiro de julho, não de protocolo aprovado | `formulario-protocolo-clinico.md`; `tcle-rascunho.md` §4, §5 |
 | F2.3 | **Via digital basta?** — se o registro no app substitui a assinatura, e como a via é entregue | `tcle-rascunho.md` §16, §N2 |
 | F2.4 | **Eliminação do dado de pesquisa já coletado** a pedido do titular: permitida, e em que condições | D3, RIPD R-10 |
 | F2.5 | **Salvaguardas de recrutamento** contra assimetria de poder: convite por pessoa **sem vínculo de avaliação** com o candidato; desistência que não passe pelo pesquisador | **RIPD R-09** |
@@ -489,17 +503,21 @@ Nenhum depende de desenvolvimento. **O primeiro bloqueia todos os outros.**
 ### F3 — Operacional (mantenedor / ops) · P0/P1 · `TODO`
 Depende de infraestrutura no ar ou de credencial, não de escrever código.
 
+> 🔧 **Sequência pronta:** `docs/deploy-fly.md` abre com a **ordem de execução dos dez itens**, com
+> o que destrava cada um, onde está a receita e o que acontece se ficar de fora. Os itens 1–8 são de
+> infraestrutura e podem ser feitos já; **nenhum deles autoriza coletar dado real** — isso é F1.1.
+
 | # | Pendência | Estado do código |
 |---|---|---|
 | F3.1 | **Agendar o expurgo de transitórios** (cron ou máquina agendada da Fly) — hoje cobre OTP **e** tokens de convite/senha de staff | ✅ Mecanismo pronto e testado (ADR-091/094). **Enquanto ninguém agendar, não roda** — receita em `deploy-fly.md` §3.1 |
 | F3.2 | **SMTP real** (sem ele o OTP não é entregue em produção) | ✅ Código pronto (ADR-063/085); falta credencial em cofre |
 | F3.3 | **Deploy na Fly** | ✅ `fly.toml` + runbook prontos (ADR-076); depende de cartão |
-| F3.4 | Ao aprovar o TCLE: trocar a versão para `1.0.0` em **3 lugares** — `TCLE_CURRENT` (backend), `tcleVersion` (`app/lib/core/config.dart`) e conferir o resumo do app | Testes e seed importam a constante → **uma linha em cada** |
+| F3.4 | Ao aprovar o TCLE: trocar a versão para `1.0.0` — `python scripts/tcle_version.py 1.0.0` | ✅ Script pronto (ADR-099). ⚠️ **Não é "uma linha em cada"**, como esta linha dizia: são **4 literais** em 3 linguagens (incl. o `examples` do contrato e o cabeçalho do `.md`) + um **teste de widget que guarda o estado de rascunho e vai falhar de propósito**. O script faz o mecânico e lista o que exige julgamento; `--check` roda no CI |
 | F3.5 | **Pentest externo** antes de dado real | ⬜ C12 |
 | F3.7 | **Ligar os alertas**: `TEAM_NOTIFY_EMAIL` no ambiente (sem ele o alerta só vai para o log) | ✅ Detector pronto (ADR-093) |
 | F3.8 | **Subir o worker de e-mail** (`EMAIL_DELIVERY=queue` + `python scripts/email_worker.py`) — sem worker a fila enche e nada é enviado | ✅ Adaptador pronto (ADR-092) |
 | F3.9 | **Hospedar um Vault** e ligar `KEY_PROVIDER=vault` (chave com `derived=true`) | ✅ Adaptador pronto (ADR-095) |
-| F3.10 | Definir `STAFF_SETUP_URL` com a raiz do app publicado; sem ela o convite manda o token cru | ✅ Fluxo **e tela** prontos (ADR-094/096) |
+| F3.10 | Definir `STAFF_SETUP_URL` com a raiz do app publicado; sem ela o convite manda o token cru | ✅ Fluxo **e tela** prontos (ADR-094/096); receita em `deploy-fly.md` §3.3 |
 | F3.6 | Com **≥2 réplicas**: trocar o health check do `fly.toml` de `/health` para `/ready` | ✅ `/ready` real (ADR-090); com 1 réplica derrubaria a app num soluço do Postgres |
 
 ### F4 — Construção pós-piloto (código, **exige sign-off**) · P2 · `TODO`

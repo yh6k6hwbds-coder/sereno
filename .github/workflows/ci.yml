@@ -54,6 +54,10 @@ jobs:
         run: python -c "import yaml,openapi_spec_validator as v; v.validate(yaml.safe_load(open('shared-contracts/openapi.yaml'))); print('OpenAPI ok')"
       - name: TCLE do app em sincronia com o rascunho que vai ao CEP
         run: python scripts/sync_tcle.py --check
+      - name: Versão do TCLE igual no backend, no app e no documento
+        # Backend e app declaram a versão em linguagens diferentes: divergir aqui não quebra
+        # nenhum teste, só produz 409 no participante que acabou de ler o termo inteiro.
+        run: python scripts/tcle_version.py --check
   app:                           # BLOQUEANTE: flutter test trava em erro de compilação/teste.
     runs-on: ubuntu-latest        # analyze bloqueia só em ERROS (lint/estilo é informativo,
     steps:                        # para limpeza incremental sem travar o merge).

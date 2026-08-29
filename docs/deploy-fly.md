@@ -8,6 +8,34 @@ Decisão e ressalvas em `docs/decisoes/ADR-076-deploy-fly-residencia.md`.
 > rode cada um com o prefixo `! ` para a saída cair aqui e eu te ajudar se algo falhar.
 > Todos os `fly …` rodam a partir da pasta `sereno/` (onde está o `fly.toml`).
 
+## Ordem de execução (a Fase F3 inteira, em sequência)
+
+As dez pendências operacionais do `ROADMAP.md` §F3 nesta ordem — cada uma com o que a destrava e
+onde está a receita. **Todo o código já existe e está testado**; o que falta aqui é credencial,
+infraestrutura ou alguém agendar. Marque conforme for.
+
+| Ordem | Item | Depende de | Onde | Sem isto |
+|---|---|---|---|---|
+| 1 | **SMTP real** (F3.2) | Credencial — o NIT pode indicar um provedor já contratado | "Antes de participantes reais" | O OTP não chega e **ninguém consegue entrar** |
+| 2 | **Deploy na Fly** (F3.3) | Cartão na conta Fly | §0–§3 | Só existe o ambiente local/túnel |
+| 3 | **Chave selada A/B** (`ARM_CONDITION_MAP`) | Sorteio decidido e custodiado fora do sistema | §2 | O guard **recusa subir** em produção |
+| 4 | **`STAFF_SETUP_URL`** (F3.10) | App publicado no GitHub Pages | §3.3 | O convite da equipe manda o token cru |
+| 5 | **`TEAM_NOTIFY_EMAIL`** (F3.7) | Um endereço da equipe | §3.2 | O alerta só vai para o log — ninguém vê |
+| 6 | **Agendar o expurgo** (F3.1) | Deploy no ar (ou um host externo) | §3.1 | O mecanismo existe e **nunca roda**; item E2 do checklist LGPD segue aberto |
+| 7 | **Worker de e-mail** (F3.8) | Redis + processo `worker` no `fly.toml` | §3.2 | ⚠️ Ligar `EMAIL_DELIVERY=queue` **sem worker** para o OTP de vez |
+| 8 | **Vault** (F3.9) | Um Vault hospedado, chave com `derived=true` | §3.2 | A custódia da chave **não mudou** na prática (C11 aberto) |
+| 9 | **Pentest externo** (F3.5) | Decisão/contratação do NIT | — | Nenhuma revisão independente antes de dado real |
+| 10 | **Versão `1.0.0` do TCLE** (F3.4) | **Parecer do CEP** | `python scripts/tcle_version.py 1.0.0` | O termo segue marcado como rascunho, corretamente |
+
+> **Os itens 1–8 são de infraestrutura e podem ser feitos a qualquer momento** — inclusive antes das
+> aprovações, para que o ambiente esteja pronto. **Nenhum deles autoriza coletar dado real:** isso
+> depende da base legal (F1.1), que não se resolve aqui. Ver `solicitacao-nit-base-legal.md`.
+>
+> **O item 10 não é "uma linha em cada arquivo"**, como o roadmap dizia. São quatro literais em três
+> linguagens, mais um teste de widget que guarda o estado de rascunho de propósito e **vai falhar**.
+> `scripts/tcle_version.py` faz a parte mecânica e imprime o resto; `--check` roda no CI e impede
+> que backend e app se separem sem ninguém notar.
+
 ## 0. Instalar o flyctl (uma vez) e entrar
 
 ```powershell
@@ -135,6 +163,32 @@ fly secrets set --app sereno-piloto-api KEY_PROVIDER=vault VAULT_ADDR=... VAULT_
 
 > ⚠️ O deploy da Fly **não tem Redis nem Vault** hoje (`fly.toml` sobe 1 instância sem Redis).
 > `EMAIL_DELIVERY=queue` e `KEY_PROVIDER=vault` pressupõem que essa infraestrutura exista.
+
+## 3.3. Apontar o convite de staff para o app publicado (F3.10)
+
+O convite e a redefinição de senha da equipe são feitos por **link de uso único** (ADR-094), e a
+tela que recebe esse link vive no **próprio app web** (ADR-096): com `?token=` na URL, o app abre a
+tela de definir senha em vez do login do participante. **Sem `STAFF_SETUP_URL`, o e-mail sai com o
+token cru** e a pessoa precisa montar um `POST` na mão — o fluxo existe, mas ninguém que não seja
+técnico consegue usá-lo.
+
+```powershell
+# Aponte para a RAIZ do app publicado (GitHub Pages), com a barra final:
+fly secrets set --app sereno-piloto-api `
+  STAFF_SETUP_URL="https://<usuario>.github.io/sereno/" `
+  STAFF_SETUP_PEPPER="<cole um segredo forte — mesma disciplina do OTP_PEPPER>"
+```
+
+> **Não monte o `?token=` você mesmo.** O backend acrescenta o parâmetro respeitando query já
+> existente (`?api=<túnel>/v1` da demo vira `...&token=...`). Uma URL terminada em `?` ou já com
+> `token=` produz link quebrado.
+>
+> **A URL tem de ser a versão publicada do app.** Apontar para um build local ou para uma versão
+> antiga entrega ao convidado uma tela que não fala com esta API — e o token queima na tentativa.
+
+Verificação ponta a ponta (depois do SMTP configurado): crie um staff sem senha
+(`POST /v1/staff` sem `password`), confirme que o e-mail chegou **com link clicável**, abra-o e
+defina a senha. O token some da barra de endereços ao carregar a tela.
 
 ## 4. Reconstruir o app apontando para a API pública
 
