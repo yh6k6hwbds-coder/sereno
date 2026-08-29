@@ -57,6 +57,37 @@ DOCUMENTOS: dict[str, tuple[str, str, str, str, str]] = {
         "Os documentos citados são <strong>rascunhos técnicos</strong>; nenhum foi aprovado.",
         "Sereno · Pendências para o início do piloto · {date}",
     ),
+    "solicitacao-nit": (
+        "solicitacao-nit-base-legal.md",
+        "Sereno_Solicitacao_NIT",
+        "SOLICITAÇÃO DE DECISÃO — AGUARDA RESPOSTA DO NIT / ASSESSORIA",
+        "Seis decisões institucionais de proteção de dados, redigidas como perguntas objetivas com "
+        "as opções já mapeadas. A <strong>folha de resposta está na seção 8</strong>. As opções são "
+        "<strong>mapeamento técnico, não parecer jurídico</strong>: a escolha e a fundamentação são "
+        "da assessoria. <strong>A decisão nº 1 (base legal) bloqueia o início da coleta.</strong>",
+        "Sereno · Solicitação ao NIT/assessoria — decisões de proteção de dados · {date}",
+    ),
+    "formulario-protocolo": (
+        "formulario-protocolo-clinico.md",
+        "Sereno_Formulario_Protocolo",
+        "FORMULÁRIO PARA PREENCHIMENTO — CAMPOS QUE SÓ O PROTOCOLO TEM",
+        "14 informações que <strong>não existem em nenhum documento do projeto</strong> porque vêm "
+        "do desenho da pesquisa, e sem as quais o termo de consentimento não fecha. Preencher a "
+        "coluna &ldquo;Resposta&rdquo;; a adaptação para a linguagem acessível exigida pela "
+        "resolução fica por conta do responsável técnico. <strong>Três campos alteram o "
+        "sistema</strong>, não só o texto — ver seção 4.",
+        "Sereno · Formulário do protocolo clínico — campos pendentes do TCLE · {date}",
+    ),
+    "dossie-cep": (
+        "dossie-submissao-cep.md",
+        "Sereno_Dossie_CEP",
+        "DOCUMENTO DE TRABALHO — PREPARAÇÃO DA SUBMISSÃO",
+        "Estado da submissão ao CEP documento a documento, as <strong>cinco perguntas</strong> que "
+        "só o comitê resolve e o que declarar sobre proteção de dados. Substitui as seções 5 e 8 do "
+        "<em>Roteiro de Submissão</em> de julho. <strong>Não substitui os modelos e exigências do "
+        "CEP local</strong>, e nada aqui foi aprovado.",
+        "Sereno · Dossiê de submissão ao CEP — documento de trabalho · {date}",
+    ),
     "tcle": (
         "tcle-rascunho.md",
         "Sereno_TCLE_rascunho",

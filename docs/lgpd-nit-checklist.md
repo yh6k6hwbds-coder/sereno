@@ -92,6 +92,10 @@ Referências entre parênteses apontam para o arquivo de código ou o ADR (`docs
 
 ## Ações recomendadas ao NIT (priorizadas)
 
+> 📤 As ações 1, 2, 4, 5 e 7 abaixo estão redigidas como **perguntas objetivas, com as opções
+> mapeadas e uma folha de resposta**, em `docs/solicitacao-nit-base-legal.md` — é o documento a
+> enviar ao NIT. Este checklist é o anexo técnico que o sustenta.
+
 1. **Definir a base legal** do tratamento de dado sensível de saúde e refletir no TCLE (A2, B2). — *bloqueia o piloto com dados reais.*
 2. **Designar o Encarregado (DPO)** e o canal de atendimento ao titular (G1, D4).
 3. **Política de retenção/descarte** com prazos e expurgo (E1, E2).

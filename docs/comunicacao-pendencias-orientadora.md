@@ -110,6 +110,26 @@ comitê de ética:
 
 Posso enviar qualquer um deles, ou todos, no formato que preferir.
 
+**Preparei também três documentos de cobrança — um para cada dono das pendências.** Ao contrário dos
+anteriores, que descrevem, estes **pedem uma resposta**: cada um termina com campos a preencher, e a
+pendência fecha quando a folha volta preenchida.
+
+| Documento | Para quem | O que pede |
+|---|---|---|
+| **Solicitação ao NIT** | NIT / assessoria / DPO | As seis decisões da seção 4 desta carta, como perguntas objetivas, com as opções já mapeadas e uma folha de resposta ao final. **A primeira é a base legal, que bloqueia a coleta** |
+| **Formulário do protocolo clínico** | À senhora | Os 14 campos da seção 2 desta carta, com o formato esperado de cada resposta. Não é preciso redigir em linguagem de termo — eu adapto |
+| **Dossiê de submissão ao CEP** | Comitê de ética | O estado da submissão documento a documento e as **cinco perguntas** da seção 3, reunidas para uma consulta só |
+
+Se concordar com o teor, posso enviá-los diretamente ou encaminhá-los à senhora para que sigam com
+sua assinatura — o que for mais adequado.
+
+> **Uma correção que veio da preparação desses documentos.** Ao verificar onde cada informação do
+> protocolo entra no sistema, encontrei que a **taxa de adesão** — um dos desfechos primários do
+> piloto — é calculada hoje contra **20 sessões prescritas**, número que herdei do roteiro de julho
+> ("5 sessões por semana × 4 semanas") e não de um protocolo aprovado. Se a frequência real for
+> outra, o percentual sai errado **sem denunciar o erro**, porque continua parecendo plausível. É a
+> pergunta 9 do formulário, e o ajuste é imediato assim que houver o número correto.
+
 > **Observação importante sobre estes materiais.** Sou o responsável técnico do projeto, não
 > profissional do direito nem membro do comitê de ética. Os documentos acima **sinalizam** o que a
 > legislação e as normas costumam exigir e mostram o que o sistema já faz a respeito — mas as
