@@ -2,7 +2,11 @@
 modules/staff/router.py — Gestão de staff (admin) + cadastro de MFA (TOTP).
 
 - POST /v1/staff (admin `user:manage`): cria pesquisador/admin (senha argon2id). NÃO há
-  auto-registro público. E-mail único (409). Auditado, sem senha/segredo.
+  auto-registro público. E-mail único (409). Auditado, sem senha/segredo. **Sem `password`
+  no corpo, cria por CONVITE**: a pessoa define a própria senha por link (ADR-094).
+- POST /v1/staff/{id}/password-reset (admin): manda ao e-mail do staff um link de uso único
+  para ele redefinir a senha. O admin não vê o token nem escolhe a senha; o MFA não muda.
+- POST /v1/staff/setup-password (público, rate-limited): consome o link e grava a senha.
 - GET /v1/staff (admin): lista o estado operacional (papel, MFA, ativo, último login).
 - POST /v1/staff/{id}/deactivate|activate (admin): lifecycle — desativar suspende o acesso
   imediatamente (o RBAC confere `is_active` no banco); admin não desativa a si mesmo.
@@ -17,7 +21,7 @@ import datetime as dt
 import re
 import uuid
 from typing import Literal
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
@@ -29,7 +33,9 @@ from app.core.token_revocation import get_denylist
 from app.core.problem import ProblemException
 from app.core.models import StaffUser
 from app.core import auth
+from app.core.rate_limit import enforce as rate_limit
 from app.modules.audit.service import record_event
+from app.modules.staff import setup_service
 
 router = APIRouter(prefix="/staff", tags=["staff"])
 _bearer = HTTPBearer(auto_error=False)
@@ -40,7 +46,8 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 class StaffCreateIn(BaseModel):
     email: str = Field(min_length=3, max_length=120)
     role: Literal["researcher", "admin"]
-    password: str = Field(min_length=8, max_length=200)
+    # Opcional (ADR-094): sem senha, a conta é criada por CONVITE e a pessoa define a dela.
+    password: str | None = Field(default=None, min_length=8, max_length=200)
 
     @field_validator("email")
     @classmethod
@@ -48,6 +55,11 @@ class StaffCreateIn(BaseModel):
         if not _EMAIL_RE.match(v):
             raise ValueError("e-mail inválido")
         return v
+
+
+class SetupPasswordIn(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+    new_password: str = Field(min_length=8, max_length=200)
 
 
 class MfaConfirmIn(BaseModel):
@@ -159,22 +171,72 @@ async def create_staff(body: StaffCreateIn, db: Session = Depends(get_db),
                        admin: dict = Depends(require("user:manage"))):
     if db.scalar(select(StaffUser.id).where(StaffUser.email == body.email)) is not None:
         raise ProblemException(409, "E-mail já cadastrado", "Já existe staff com este e-mail.")
-    staff = StaffUser(email=body.email, password_hash=auth.hash_password(body.password),
+    convite = body.password is None
+    # Convite: nasce com hash de senha aleatória DESCONHECIDA — nem o admin pode entrar
+    # como a pessoa que acabou de cadastrar (ADR-094).
+    password_hash = (setup_service.unusable_password_hash() if convite
+                     else auth.hash_password(body.password))
+    staff = StaffUser(email=body.email, password_hash=password_hash,
                       role=body.role, mfa_enabled=False)
     db.add(staff)
     db.flush()
 
-    actor_id = None
-    try:
-        actor_id = uuid.UUID(str(admin["id"]))
-    except (KeyError, ValueError, TypeError):
-        pass
+    actor_id = _actor_id(admin)
     # Auditoria SEM PII/segredo: só o papel criado (o e-mail não entra no log).
     record_event(db, action="staff.created", resource_type="staff_user",
                  actor_type="staff", actor_id=actor_id, resource_id=staff.id,
-                 meta={"role": staff.role})
+                 meta={"role": staff.role, "invited": convite})
 
-    return {"id": staff.id, "email": staff.email, "role": staff.role}
+    if convite:
+        token, expires_at = setup_service.issue(db, staff, purpose="invite")
+        record_event(db, action="staff.invited", resource_type="staff_user",
+                     actor_type="staff", actor_id=actor_id, resource_id=staff.id,
+                     meta={"purpose": "invite"})   # nunca o token, nunca o e-mail
+        setup_service.deliver(staff, token, purpose="invite", expires_at=expires_at)
+
+    return {"id": staff.id, "email": staff.email, "role": staff.role, "invited": convite}
+
+
+@router.post("/{staff_id}/password-reset")
+async def request_password_reset(staff_id: str, db: Session = Depends(get_db),
+                                 admin: dict = Depends(require("user:manage"))):
+    """Manda ao e-mail do staff um link de uso único para ele mesmo redefinir a senha.
+
+    O admin não escolhe a senha nem vê o token: destrava quem perdeu o acesso **sem** ganhar
+    um caminho para assumir a conta (ADR-094). Não toca no MFA."""
+    target = setup_service.staff_by_id(db, staff_id)
+    if target is None:
+        raise ProblemException(404, "Staff não encontrado",
+                               "Não existe staff com este identificador.")
+    if not target.is_active:
+        # Conta suspensa não ganha caminho de volta — reative antes, deliberadamente.
+        raise ProblemException(409, "Conta desativada",
+                               "Reative a conta antes de redefinir a senha.")
+    token, expires_at = setup_service.issue(db, target, purpose="reset")
+    record_event(db, action="staff.password_reset_requested", resource_type="staff_user",
+                 actor_type="staff", actor_id=_actor_id(admin), resource_id=target.id,
+                 meta={"purpose": "reset"})        # sem token, sem e-mail
+    setup_service.deliver(target, token, purpose="reset", expires_at=expires_at)
+    return {"status": "reset_email_sent", "expires_at": expires_at}
+
+
+@router.post("/setup-password")
+async def setup_password(body: SetupPasswordIn, request: Request, db: Session = Depends(get_db)):
+    """Define a senha a partir do token do convite/redefinição. Público e limitado por IP.
+
+    Resposta genérica (401) para token inexistente, expirado, já usado ou de conta
+    desativada — os quatro casos são indistinguíveis de fora, de propósito."""
+    rate_limit(request, bucket="staff_setup", default_limit=10)
+    staff = setup_service.consume(db, body.token)
+    if staff is None:
+        raise ProblemException(401, "Link inválido",
+                               "Link inválido, expirado ou já utilizado.")
+    staff.password_hash = auth.hash_password(body.new_password)
+    db.flush()
+    # O MFA fica como estava: redefinir senha não pode virar atalho para pular o 2º fator.
+    record_event(db, action="staff.password_set", resource_type="staff_user",
+                 actor_type="staff", actor_id=staff.id, resource_id=staff.id)
+    return {"status": "password_set", "mfa_enabled": staff.mfa_enabled}
 
 
 @router.post("/me/mfa/enroll")

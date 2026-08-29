@@ -253,6 +253,24 @@ class AuditLog(Base):                           # append-only (guard ORM + trigg
     occurred_at: Mapped[dt.datetime] = TS()
 
 
+class StaffSetupToken(Base):                     # convite / redefinição de senha de staff (ADR-094)
+    """Token de uso único para o staff DEFINIR a própria senha (convite ou redefinição).
+
+    Guardado só como hash (sha256+pepper), como o OTP: nem o admin que disparou nem quem lê o
+    banco consegue usar o link. `purpose` distingue convite de redefinição só para auditoria e
+    texto do e-mail — o efeito é o mesmo."""
+    __tablename__ = "staff_setup_token"
+    id: Mapped[uuid.UUID] = UUID_PK()
+    staff_id: Mapped[uuid.UUID] = fk("staff_user.id")
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(16), nullable=False)
+    expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    created_at: Mapped[dt.datetime] = TS()
+    __table_args__ = (CheckConstraint("purpose in ('invite','reset')",
+                                      name="ck_staff_setup_purpose"),)
+
+
 class OtpChallenge(Base):                        # login de participante por código de uso único
     __tablename__ = "otp_challenge"
     id: Mapped[uuid.UUID] = UUID_PK()

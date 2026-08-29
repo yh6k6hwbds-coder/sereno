@@ -88,7 +88,10 @@ def test_staff_creation_is_audited_without_pii(api):
                 json={"email": "sigilo@uninta.edu.br", "role": "researcher", "password": "Senha-Forte-123"})
     with TestSession() as s:
         ev = s.scalars(select(AuditLog).where(AuditLog.action == "staff.created")).one()
-        assert ev.resource_type == "staff_user" and ev.meta == {"role": "researcher"}
+        # `invited` distingue conta com senha definida pelo admin de conta por convite
+        # (ADR-094) — segue sem PII: papel e um booleano, nada mais.
+        assert ev.resource_type == "staff_user"
+        assert ev.meta == {"role": "researcher", "invited": False}
         assert "sigilo" not in f"{ev.meta}".lower()      # e-mail não entra no log
 
 

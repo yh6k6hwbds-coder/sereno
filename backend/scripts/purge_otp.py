@@ -1,9 +1,11 @@
 """
 scripts/purge_otp.py — Expurgo agendado dos desafios de OTP expirados (E2).
 
-Ponto de entrada do job de retenção. Apaga de `otp_challenge` o que **já expirou** há mais
-de `OTP_PURGE_GRACE_MIN` minutos (padrão 60) e registra a contagem na auditoria. Só toca em
-dado **transitório** — nada de pesquisa, nada de PII (ver `modules/retention/service.py`).
+Ponto de entrada do job de retenção. Apaga o que **já expirou** há mais de
+`OTP_PURGE_GRACE_MIN` minutos (padrão 60) e registra a contagem na auditoria. Duas tabelas,
+mesma política de transitórios: `otp_challenge` (E2/ADR-091) e `staff_setup_token`
+(convite/redefinição de senha de staff, ADR-094). Só toca em dado **transitório** — nada de
+pesquisa, nada de PII (ver `modules/retention/service.py`).
 
 Uso:
     python scripts/purge_otp.py                # usa OTP_PURGE_GRACE_MIN (padrão 60)
@@ -32,11 +34,14 @@ from sqlalchemy.orm import Session  # noqa: E402
 
 from app.core.db import get_engine  # noqa: E402
 from app.core.models import OtpChallenge  # noqa: E402
-from app.modules.retention.service import purge_expired_otp, DEFAULT_GRACE_MIN  # noqa: E402
+from app.modules.retention.service import (purge_expired_otp,  # noqa: E402
+                                           purge_expired_staff_tokens, DEFAULT_GRACE_MIN)
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Expurga desafios de OTP expirados (E2).")
+    ap = argparse.ArgumentParser(
+        description="Expurga credenciais transitórias expiradas: OTP (E2) e tokens de "
+                    "convite/redefinição de senha de staff (ADR-094).")
     ap.add_argument("--grace-min", type=int,
                     default=int(os.getenv("OTP_PURGE_GRACE_MIN", str(DEFAULT_GRACE_MIN))),
                     help="Minutos APÓS a expiração antes de apagar (padrão 60).")
@@ -45,16 +50,17 @@ def main() -> int:
 
     with Session(get_engine()) as db:
         total = db.scalar(select(func.count()).select_from(OtpChallenge)) or 0
+        # Reusa os serviços em transação descartada no dry-run: conta pelo MESMO critério do
+        # expurgo real, sem duplicar a regra aqui (duas regras divergiriam com o tempo).
+        deleted = purge_expired_otp(db, grace_min=args.grace_min)
+        deleted_tokens = purge_expired_staff_tokens(db, grace_min=args.grace_min)
         if args.dry_run:
-            # Reusa o serviço em transação descartada: conta pelo MESMO critério do expurgo
-            # real, sem duplicar a regra aqui (duas regras divergiriam com o tempo).
-            deleted = purge_expired_otp(db, grace_min=args.grace_min)
             db.rollback()
         else:
-            deleted = purge_expired_otp(db, grace_min=args.grace_min)
             db.commit()
 
     print(json.dumps({"deleted": deleted, "remaining": total - (0 if args.dry_run else deleted),
+                      "staff_tokens_deleted": deleted_tokens,
                       "grace_min": args.grace_min, "dry_run": args.dry_run}))
     return 0
 

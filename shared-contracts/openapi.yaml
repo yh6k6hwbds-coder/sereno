@@ -559,7 +559,11 @@ paths:
     post:
       summary: Criar usuário de staff (admin) — sem auto-registro público
       operationId: createStaff
-      description: Cria pesquisador/admin. Somente admin (`user:manage`); a senha é cifrada (argon2id).
+      description: >
+        Cria pesquisador/admin. Somente admin (`user:manage`); a senha é cifrada (argon2id).
+        Omitir `password` **convida** a pessoa: a conta nasce sem senha utilizável e um link
+        de definição de senha vai por e-mail (`invited: true` na resposta). O admin nunca vê
+        o token — não pode, portanto, assumir a conta que criou.
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/StaffCreateIn' } } }
@@ -569,6 +573,40 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /staff/{id}/password-reset:
+    parameters: [ { $ref: '#/components/parameters/PathId' } ]
+    post:
+      summary: Disparar redefinição de senha de um staff (admin)
+      operationId: requestStaffPasswordReset
+      description: >
+        Envia ao **e-mail do próprio staff** um link de uso único para redefinir a senha.
+        O admin não escolhe nem recebe a senha e não vê o token: o objetivo é destravar quem
+        perdeu o acesso, **não** dar ao admin um caminho para assumir a conta. Não altera o
+        MFA — quem tinha segundo fator continua precisando dele. Conta desativada: 409.
+        Auditado sem token e sem e-mail no registro.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PasswordResetRequested' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /staff/setup-password:
+    post:
+      summary: Definir a senha com o token do convite/redefinição (público, sem autenticação)
+      operationId: setupStaffPassword
+      description: >
+        Consome o token recebido por e-mail (convite ou redefinição) e grava a nova senha.
+        Uso único, expira e tem limite de tentativas por IP. Resposta genérica em token
+        inválido/expirado/consumido (401), para não revelar se existe. **Não** ativa nem
+        desativa MFA. Auditado sem token e sem senha.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SetupPasswordIn' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PasswordSet' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /staff/{id}/deactivate:
     parameters: [ { $ref: '#/components/parameters/PathId' } ]
     post:
@@ -993,18 +1031,44 @@ components:
         contact: { type: [object, "null"], additionalProperties: true }
     StaffCreateIn:
       type: object
+      description: >
+        `password` é opcional: sem ela, a conta é criada por CONVITE (link de definição de
+        senha por e-mail) e nasce sem senha utilizável.
       properties:
         email: { type: string, format: email, minLength: 3, maxLength: 120 }
         role: { type: string, enum: [researcher, admin] }
-        password: { type: string, minLength: 8, maxLength: 200 }
-      required: [email, role, password]
+        password: { type: string, minLength: 8, maxLength: 200, nullable: true }
+      required: [email, role]
     StaffCreated:
       type: object
       properties:
         id: { type: string, format: uuid }
         email: { type: string }
         role: { type: string, enum: [researcher, admin] }
-      required: [id, email, role]
+        invited:
+          type: boolean
+          description: "true quando a conta foi criada por convite (senha definida pela própria pessoa)."
+      required: [id, email, role, invited]
+    PasswordResetRequested:
+      type: object
+      description: "Link de redefinição enviado ao e-mail do staff. O token não aparece na resposta."
+      properties:
+        status: { type: string, enum: [reset_email_sent] }
+        expires_at: { type: string, format: date-time }
+      required: [status, expires_at]
+    SetupPasswordIn:
+      type: object
+      properties:
+        token: { type: string, minLength: 20, maxLength: 200 }
+        new_password: { type: string, minLength: 8, maxLength: 200 }
+      required: [token, new_password]
+    PasswordSet:
+      type: object
+      description: "Senha definida. Se a conta tinha MFA, ele continua exigido no login."
+      properties:
+        status: { type: string, enum: [password_set] }
+        mfa_enabled: { type: boolean }
+      required: [status, mfa_enabled]
     StaffSummary:
       type: object
       description: "Estado operacional do staff — sem senha, sem segredo de MFA."

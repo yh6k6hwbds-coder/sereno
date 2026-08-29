@@ -24,7 +24,7 @@ import datetime as dt
 from sqlalchemy import delete, select, func
 from sqlalchemy.orm import Session
 
-from app.core.models import OtpChallenge
+from app.core.models import OtpChallenge, StaffSetupToken
 from app.modules.audit.service import record_event
 
 # Carência após a expiração. Não é o prazo de retenção — é folga para não competir com uma
@@ -52,5 +52,28 @@ def purge_expired_otp(db: Session, *, grace_min: int = DEFAULT_GRACE_MIN,
     # Evidência de que o controle rodou (RIPD R-10). Sem PII e sem participante: só a
     # contagem e a janela aplicada. `actor_type="system"` — não houve operador humano.
     record_event(db, action="otp.purged", resource_type="otp_challenge",
+                 actor_type="system", meta={"deleted": n, "grace_min": grace_min})
+    return n
+
+
+def purge_expired_staff_tokens(db: Session, *, grace_min: int = DEFAULT_GRACE_MIN,
+                               now: dt.datetime | None = None) -> int:
+    """Apaga tokens de convite/redefinição de senha **expirados** (F4.7/ADR-094).
+
+    Mesma família dos desafios de OTP: credencial transitória de autenticação, guardada só
+    como hash, com prazo técnico e **não** sujeita à aprovação do CEP. Mesmo critério
+    absoluto (``expires_at``) e mesma carência — inclusive para os já consumidos, que não
+    têm por que sobreviver à própria janela. Uma tabela nova sem expurgo seria exatamente o
+    tipo de acúmulo que o R-10 cobra."""
+    now = now or dt.datetime.now(dt.timezone.utc)
+    cutoff = now - dt.timedelta(minutes=max(grace_min, 0))
+
+    n = db.scalar(select(func.count()).select_from(StaffSetupToken)
+                  .where(StaffSetupToken.expires_at < cutoff)) or 0
+    if n == 0:
+        return 0
+
+    db.execute(delete(StaffSetupToken).where(StaffSetupToken.expires_at < cutoff))
+    record_event(db, action="staff_setup_token.purged", resource_type="staff_setup_token",
                  actor_type="system", meta={"deleted": n, "grace_min": grace_min})
     return n
