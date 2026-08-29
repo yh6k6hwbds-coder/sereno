@@ -19,8 +19,8 @@
 ## Estado atual (baseline deste roadmap)
 
 > ### ⛳ Marco (2026-08-29): **A–E `DONE` + 4 itens da F4 construídos com sign-off do mantenedor.**
-> CI-espelho verde: **351 testes de backend a 90% de cobertura**, **49 widget tests** (Flutter),
-> **5 migrações** Alembic, bateria FFT aprovada, contrato OpenAPI válido. ADRs **041–096**.
+> CI-espelho verde: **352 testes de backend a 90% de cobertura**, **49 widget tests** (Flutter),
+> **5 migrações** Alembic, bateria FFT aprovada, contrato OpenAPI válido. ADRs **041–097**.
 >
 > Construídos em 2026-08-29 (fora do MVP, autorizados item a item): **F4.5** entrega de e-mail
 > durável + bounces (ADR-092), **F4.6** alertas automáticos (ADR-093), **F4.7** convite e
@@ -515,7 +515,7 @@ já está preparado", não redesenhar.
 | F4.5 | ✅ **FEITO** (2026-08-29, ADR-092) — adaptador **RQ/Redis** + worker + bounce separado de falha transitória. Falta o **passo de ops**: `EMAIL_DELIVERY=queue` e um worker no deploy | `EmailDelivery` (ADR-085) |
 | F4.6 | ✅ **FEITO** (2026-08-29, ADR-093) — 4 regras (falha de e-mail, rajada de 401, 5xx em série, volume atípico em `/research`) com janela, cooldown e aviso sem PII. Falta ops: `TEAM_NOTIFY_EMAIL` no ambiente | `/metrics` (ADR-080) — fecha detecção de RIPD R-03/R-06 |
 | F4.7 | ✅ **FEITO** (2026-08-29, ADR-094 + **ADR-096**) — convite e redefinição por token de uso único; o admin destrava sem ver o token nem contornar o MFA. A tela que recebe o link vive no app web (`?token=`), então o fluxo fecha ponta a ponta | C3 (ADR-081) |
-| F4.8 | Exibir o **texto integral** também em inglês, ou restringir o estudo ao pt-BR | `tcle-rascunho.md` §N4.6 |
+| F4.8 | ✅ **RESOLVIDO** (2026-08-29, ADR-097) — o mantenedor optou por **restringir ao pt-BR**: o app não oferece mais inglês (`supportedLocales = [pt]`) e "compreender português" entra como critério de elegibilidade no §4 do TCLE, com redação a confirmar pelo CEP | `tcle-rascunho.md` §N4.6 |
 
 ---
 

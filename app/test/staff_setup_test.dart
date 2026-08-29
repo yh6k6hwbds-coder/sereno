@@ -163,15 +163,16 @@ void main() {
     expect(find.text('Definir senha'), findsOneWidget); // botão voltou ao normal
   });
 
-  testWidgets('a tela também existe em inglês', (tester) async {
+  testWidgets('aparelho em inglês vê a tela em pt-BR (ADR-097)', (tester) async {
     final mock = MockClient((_) async =>
         http.Response(jsonEncode({'status': 'password_set', 'mfa_enabled': false}), 200));
 
+    // O estudo é pt-BR: o app não oferece inglês, nem para a equipe.
     await _montar(tester, _app(_api(mock), locale: const Locale('en')));
-    expect(find.text('Set your password'), findsOneWidget);
-    expect(find.text('Definir senha'), findsNothing);
-    await _preencher(tester, 'Senha-Forte-123', 'Senha-Forte-123', botao: 'Set password');
-    expect(find.text('Password set'), findsOneWidget);
+    expect(find.text('Definir sua senha'), findsOneWidget);
+    expect(find.text('Set your password'), findsNothing);
+    await _preencher(tester, 'Senha-Forte-123', 'Senha-Forte-123');
+    expect(find.text('Senha definida'), findsOneWidget);
   });
 
   testWidgets('a senha começa oculta e o olho revela', (tester) async {

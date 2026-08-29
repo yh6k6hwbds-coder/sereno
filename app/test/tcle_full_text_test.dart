@@ -111,16 +111,16 @@ void main() {
     expect(find.textContaining(tcleVersion), findsOneWidget);
   });
 
-  testWidgets('em inglês, avisa que o termo oficial é em português', (t) async {
+  testWidgets('aparelho em inglês vê o termo — e a tela — em pt-BR (ADR-097)', (t) async {
+    // O estudo é pt-BR: o app resolve qualquer idioma para pt, de modo que ninguém consinta
+    // a partir de uma interface traduzida cujo documento correspondente não existe.
     await t.pumpWidget(_app(TcleFullTextScreen(loadText: _fake), locale: const Locale('en')));
     await t.pumpAndSettle();
 
-    expect(find.text('Full consent form'), findsOneWidget);
-    expect(find.textContaining('Portuguese'), findsOneWidget);
-    // O aviso de rascunho não pode existir só em pt: quem lê em inglês também precisa
-    // saber que o termo ainda não foi aprovado.
-    expect(find.textContaining('DRAFT'), findsOneWidget);
-    // O corpo do termo segue em pt-BR (é o texto que vai ao CEP).
+    expect(find.text('Termo completo'), findsOneWidget);
+    expect(find.text('Full consent form'), findsNothing);
+    // O aviso de rascunho continua, em pt: ninguém pode ler isto como termo vigente.
+    expect(find.textContaining('RASCUNHO'), findsOneWidget);
     expect(find.textContaining('Termo de Consentimento'), findsWidgets);
   });
 

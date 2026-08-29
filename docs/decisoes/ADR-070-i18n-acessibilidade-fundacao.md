@@ -1,6 +1,9 @@
 # ADR-070 — i18n + acessibilidade (fundação no cliente)
 
-- **Status:** Aceito
+- **Status:** Aceito · **parcialmente superado pelo [ADR-097](ADR-097-estudo-restrito-ao-pt-br.md)**
+  — a máquina de i18n continua valendo, mas o app **não oferece mais o inglês** enquanto o estudo
+  for pt-BR (o TCLE só existe em português). As strings `en` seguem no código, sob
+  `translatedLocales`.
 - **Data:** 2026-07-09
 - **Decisores:** Mantenedor (Augusto) + arquiteto (Claude)
 - **Etapas relacionadas:** 3 (UX/identidade e cliente)

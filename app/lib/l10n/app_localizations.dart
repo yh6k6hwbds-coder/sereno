@@ -11,6 +11,12 @@ import 'package:flutter/widgets.dart';
 /// pt-BR é o idioma do piloto (padrão/fallback); `en` prova a internacionalização.
 /// As strings pt-BR são idênticas às originais das telas — assim widgets testados sem
 /// localização na árvore seguem passando pelo fallback pt-BR.
+///
+/// **O PILOTO RODA SÓ EM pt-BR (ADR-097).** O TCLE que vincula o participante existe apenas em
+/// português: apresentar a interface em inglês faria alguém consentir a partir de um resumo
+/// traduzido cujo documento correspondente não existe. Por isso `supportedLocales` traz **só
+/// `pt`** — a tradução `en` continua aqui, pronta, mas não é oferecida enquanto o estudo for
+/// em português. Reabrir é acrescentar `Locale('en')` de volta, junto com a versão do termo.
 class AppLocalizations {
   final Locale locale;
   const AppLocalizations(this.locale);
@@ -24,7 +30,15 @@ class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-  static const List<Locale> supportedLocales = [Locale('pt'), Locale('en')];
+  /// O que o app **oferece** hoje. Aparelho em qualquer outro idioma cai aqui (o
+  /// `WidgetsApp` resolve contra esta lista), então todo participante vê pt-BR — o mesmo
+  /// idioma do termo que ele assina.
+  static const List<Locale> supportedLocales = [Locale('pt')];
+
+  /// O que está **traduzido** (ADR-070). Maior que `supportedLocales` de propósito: a
+  /// máquina de i18n segue viva e testada; o que o piloto não faz é *oferecer* o inglês
+  /// sem um TCLE correspondente (ADR-097).
+  static const List<Locale> translatedLocales = [Locale('pt'), Locale('en')];
 
   static const Map<String, Map<String, String>> _values = {
     'pt': {
@@ -533,6 +547,8 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 
   @override
   bool isSupported(Locale locale) =>
+      // Deliberadamente `supportedLocales` (só pt), não `translatedLocales`: existir
+      // tradução não é o mesmo que o estudo aceitar aquele idioma (ADR-097).
       AppLocalizations.supportedLocales.any((l) => l.languageCode == locale.languageCode);
 
   @override

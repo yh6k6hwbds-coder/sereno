@@ -99,5 +99,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 | 094 | **Convite e redefinição de senha de staff** por token de uso único (só hash no banco): o admin destrava, **não** escolhe a senha nem vê o token; redefinir **não** desliga o MFA **[novo]** |
 | 095 | Custódia da chave de PII em **Vault Transit** (`KEY_PROVIDER=vault`): a KEK não sai do cofre, AAD vira `context` de *derived key*, dado antigo segue legível pelo env — fecha C11 no código **[novo]** |
 | 096 | **Tela de definir senha de staff** no app web, alcançável só por `?token=` (rota antes do AuthGate; não existe no mobile); token sai da barra de endereço — fecha a ponta que faltava do ADR-094 **[novo]** |
+| 097 | **Piloto só em pt-BR:** `supportedLocales` fica só com `pt` (o TCLE existe só em português — ninguém consente por interface traduzida sem documento correspondente); tradução `en` preservada em `translatedLocales` **[novo]** |
 
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

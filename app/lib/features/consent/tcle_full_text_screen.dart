@@ -200,6 +200,10 @@ class _DraftNotice extends StatelessWidget {
       const SizedBox(height: 10),
       Text('${t.tcleVersionLabel}: $tcleVersion',
           style: const TextStyle(fontSize: 12, color: SerenoColors.muted)),
+      // Rede de segurança, hoje inalcançável: desde o ADR-097 o app resolve qualquer idioma
+      // para pt-BR, então esta condição não se cumpre. Fica de pé para que, se `en` voltar a
+      // `supportedLocales`, o aviso de que o termo oficial é em português reapareça sozinho —
+      // em vez de silenciosamente não existir na hora em que voltaria a ser necessário.
       if ((Localizations.maybeLocaleOf(context)?.languageCode ?? 'pt') != 'pt') ...[
         const SizedBox(height: 6),
         Text(t.tcleOnlyPortuguese,

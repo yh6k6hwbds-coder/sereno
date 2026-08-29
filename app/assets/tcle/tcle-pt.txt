@@ -18,7 +18,7 @@ P|Também vamos observar, de forma exploratória (ou seja, apenas para gerar hip
 P|Participarão aproximadamente 40 pessoas, ao longo de 4 semanas.
 H|4. Quem pode participar
 P|[a confirmar com o protocolo — critérios de inclusão e exclusão]
-P|Para participar, será necessário ter [idade mínima] anos ou mais e [demais critérios]. Não poderão participar pessoas que [critérios de exclusão, incluindo condições de saúde que contraindiquem a participação].
+P|Para participar, será necessário ter [idade mínima] anos ou mais, compreender português e [demais critérios]. Não poderão participar pessoas que [critérios de exclusão, incluindo condições de saúde que contraindiquem a participação].
 P|Antes de entrar no estudo, você responderá a algumas perguntas para verificar se atende a esses critérios. Se não atender, você será informado(a) e não participará — isso não é um julgamento sobre você, apenas uma exigência do desenho do estudo.
 H|5. O que vai acontecer se você participar
 B|No início: você responderá a questionários sobre qualidade do sono e sobre sintomas de ansiedade nas últimas semanas, além de algumas informações básicas.

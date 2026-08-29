@@ -78,9 +78,9 @@ Participarão aproximadamente **40 pessoas**, ao longo de **4 semanas**.
 
 `[a confirmar com o protocolo — critérios de inclusão e exclusão]`
 
-Para participar, será necessário ter **`[idade mínima]`** anos ou mais e `[demais critérios]`.
-Não poderão participar pessoas que `[critérios de exclusão, incluindo condições de saúde que
-contraindiquem a participação]`.
+Para participar, será necessário ter **`[idade mínima]`** anos ou mais, **compreender português**
+e `[demais critérios]`. Não poderão participar pessoas que `[critérios de exclusão, incluindo
+condições de saúde que contraindiquem a participação]`.
 
 Antes de entrar no estudo, você responderá a algumas perguntas para verificar se atende a esses
 critérios. Se não atender, você será informado(a) e não participará — isso não é um julgamento
@@ -364,10 +364,18 @@ Duas seções existem por causa de riscos identificados no `relatorio-impacto-pr
 5. **Registro do aceite:** o sistema grava versão, data/hora, aceite/recusa, hash do conteúdo e
    endereço IP (`consent_record`), e a retirada é self-service (ADR-089). Isso dá evidência do
    consentimento, mas **não decide** se o CEP aceita a via digital como suficiente.
-6. **Bilíngue:** o app é pt-BR/en. Se o estudo admitir participante que use a interface em inglês,
-   o TCLE precisa de versão correspondente `[a confirmar — provavelmente restringir ao pt-BR]`.
 7. **Ao sair o parecer do CEP:** trocar a versão para `1.0.0` nos três lugares (backend, config do
-   app, e conferência do resumo) e revisar a tradução en — ou restringir ao pt-BR, conforme o item 6.
+   app, e conferência do resumo).
+
+**Resolvido:**
+6. ~~**Bilíngue:** o app é pt-BR/en…~~ **Decidido em 2026-08-29 (ADR-097): o estudo é pt-BR.** O
+   app deixou de oferecer inglês — qualquer aparelho é resolvido para pt-BR —, de modo que ninguém
+   consinta a partir de uma interface traduzida sem TCLE correspondente. A tradução `en` continua
+   no código, não oferecida. Consequência para o protocolo: **compreender português** entra como
+   critério de elegibilidade (§4), com redação a confirmar pelo CEP — não é preferência de
+   interface, é a condição para que o consentimento seja informado. **A justificativa fica aqui,
+   nas notas: dentro do termo ela vira um destaque dirigido ao participante, que não é o público
+   dessa explicação** (o gerador do asset converte citação em bloco de destaque).
 
 ### N5. Antes de submeter ao CEP
 

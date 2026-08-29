@@ -48,6 +48,7 @@ eles o termo de consentimento fica incompleto:
 | Informação | Onde faz falta |
 |---|---|
 | **Critérios de inclusão e exclusão** (quem pode participar; idade mínima; condições que impeçam a participação) | Seção 4 do termo de consentimento e regra de triagem do sistema |
+| **Compreender português** — já incluí como critério na seção 4, para a senhora e o CEP avaliarem a redação. O aplicativo e o termo existem **apenas em português**: sem o idioma, não há como o consentimento ser informado (antes o app também se apresentava em inglês, o que foi encerrado) | Seção 4 do termo |
 | **Número de sessões por semana** e duração total da participação | Seção 5 do termo de consentimento |
 | **Título oficial do estudo** e dados de contato da equipe | Cabeçalho e seção 15 do termo |
 | **Serviço de saúde de referência** para encaminhamento, caso um participante precise | Seção 8 do termo (junto de CVV 188 e SAMU 192) |
@@ -136,6 +137,7 @@ começar:
 | **Envio de e-mail mais resistente a falhas** | O código de acesso do participante não se perde se o servidor reiniciar no meio do envio; endereço inválido passa a ser identificado como tal |
 | **Convite e recuperação de senha da equipe** | Cada pesquisador define a própria senha por um link de uso único, numa tela própria do aplicativo. **Nem eu, como administrador, conheço a senha de outra pessoa** — o registro de quem fez o quê passa a ser confiável |
 | **Guarda da chave de criptografia em cofre** | O código já está pronto para que a chave que protege os dados pessoais fique num cofre externo, em vez de ficar junto ao servidor. **Falta hospedar esse cofre** |
+| **Estudo restrito ao português** | O aplicativo se apresentava também em inglês, mas o termo de consentimento só existe em português. Alguém com o celular em inglês poderia aceitar um documento que não teve como ler. O aplicativo passou a funcionar **somente em português** — e por isso proponho o critério de elegibilidade da seção 2 |
 
 Os três primeiros dependem apenas de configuração quando o sistema for publicado; o quarto depende
 de decidirmos se vale operar um cofre próprio. Detalhes técnicos ficaram registrados no projeto

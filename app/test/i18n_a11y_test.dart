@@ -19,7 +19,13 @@ import 'package:sereno/features/followup/followup_screen.dart';
 import 'package:sereno/features/adverse/adverse_event_screen.dart';
 import 'package:sereno/shared/breathing_wave.dart';
 
-/// E5/ADR-070 — i18n (pt-BR/en) + acessibilidade (semântica de botão, movimento reduzido).
+/// E5/ADR-070 — i18n + acessibilidade (semântica de botão, movimento reduzido).
+///
+/// **ADR-097 mudou o que se testa aqui.** O estudo é pt-BR: o TCLE que vincula o participante
+/// só existe em português, então o app **não oferece** inglês — resolve qualquer idioma de
+/// aparelho para pt-BR. Os testes de tela, portanto, provam a RESTRIÇÃO (aparelho em inglês →
+/// interface em pt-BR), e não mais a troca de idioma. A tradução `en` continua existindo e
+/// segue testada na camada de strings, para que reabrir o inglês seja mexer numa lista.
 
 Widget _app(Widget home, {Locale? locale}) => MaterialApp(
       locale: locale,
@@ -55,12 +61,33 @@ void main() {
     expect(find.textContaining('Não substitui'), findsOneWidget); // disclaimer persistente
   });
 
-  testWidgets('Home em inglês quando o locale é en', (t) async {
+  testWidgets('aparelho em inglês continua vendo pt-BR (ADR-097)', (t) async {
+    // O `WidgetsApp` resolve o locale pedido contra `supportedLocales`, que hoje só tem pt.
     await t.pumpWidget(_app(const HomeScreen(), locale: const Locale('en')));
     await t.pumpAndSettle();
-    expect(find.text('Start session'), findsOneWidget);
-    expect(find.text('Iniciar sessão'), findsNothing);
-    expect(find.textContaining('does not replace'), findsOneWidget);
+    expect(find.text('Iniciar sessão'), findsOneWidget);
+    expect(find.text('Start session'), findsNothing);
+    expect(find.textContaining('Não substitui'), findsOneWidget);
+  });
+
+  test('o app oferece só pt-BR, mas a tradução en segue viva (ADR-070/097)', () {
+    expect(AppLocalizations.supportedLocales, [const Locale('pt')]);
+    expect(AppLocalizations.translatedLocales, contains(const Locale('en')));
+    // A camada de strings continua completa: reabrir o inglês é devolver 'en' a
+    // `supportedLocales` — junto com um TCLE em inglês, que é o que falta de verdade.
+    const en = AppLocalizations(Locale('en'));
+    expect(en.startSession, 'Start session');
+    expect(en.consentTitle, 'Consent Form');
+    expect(en.tcleFullTitle, 'Full consent form');
+    expect(en.gad7Prompts, isNotEmpty);
+    expect(en.susPrompts, isNotEmpty);
+  });
+
+  test('o delegate RECUSA en enquanto o estudo for pt-BR', () {
+    // Se isto passar a aceitar `en`, alguém consentiria por uma interface traduzida cujo
+    // documento correspondente não existe — é o ponto do ADR-097.
+    expect(AppLocalizations.delegate.isSupported(const Locale('en')), isFalse);
+    expect(AppLocalizations.delegate.isSupported(const Locale('pt')), isTrue);
   });
 
   testWidgets('CTA de sessão expõe semântica de botão rotulada', (t) async {
@@ -73,58 +100,58 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('OTP: pt-BR por padrão, en quando locale=en', (t) async {
+  testWidgets('OTP: pt-BR, inclusive com o aparelho em inglês', (t) async {
     await t.pumpWidget(_app(OtpScreen(repo: _prepo()), locale: const Locale('pt')));
     await t.pumpAndSettle();
     expect(find.text('Enviar código'), findsOneWidget);
 
     await t.pumpWidget(_app(OtpScreen(repo: _prepo()), locale: const Locale('en')));
     await t.pumpAndSettle();
-    expect(find.text('Send code'), findsOneWidget);
-    expect(find.text('Study code'), findsOneWidget);
-    expect(find.text('Enviar código'), findsNothing);
+    expect(find.text('Enviar código'), findsOneWidget);
+    expect(find.text('Send code'), findsNothing);
   });
 
-  testWidgets('Consentimento em inglês', (t) async {
+  testWidgets('Consentimento em pt-BR, mesmo com o aparelho em inglês', (t) async {
     await t.pumpWidget(_app(ConsentScreen(repo: _prepo()), locale: const Locale('en')));
     await t.pumpAndSettle();
-    expect(find.text('Consent Form'), findsOneWidget);
-    expect(find.text('Agree and continue'), findsOneWidget);
-    expect(find.textContaining('binaural beats'), findsOneWidget); // resumo traduzido
-    // O acesso ao termo INTEGRAL precisa existir também em inglês: sem ele, o que a tela
-    // oferece é só o resumo — e resumo não é consentimento informado. Fica abaixo da
-    // dobra (o resumo tem 7 tópicos), então é preciso rolar — como o participante faz
-    // para chegar às confirmações, que vêm logo depois.
-    await t.scrollUntilVisible(find.text('Read the full consent form'), 200);
-    expect(find.text('Read the full consent form'), findsOneWidget);
+    expect(find.text('Termo de Consentimento'), findsOneWidget);
+    expect(find.text('Concordar e continuar'), findsOneWidget);
+    expect(find.textContaining('binaurais'), findsOneWidget);      // resumo em pt
+    expect(find.text('Agree and continue'), findsNothing);
+    // O acesso ao termo INTEGRAL precisa existir: sem ele, o que a tela oferece é só o
+    // resumo — e resumo não é consentimento informado. Fica abaixo da dobra (o resumo tem
+    // 7 tópicos), então é preciso rolar — como o participante faz para chegar às
+    // confirmações, que vêm logo depois.
+    await t.scrollUntilVisible(find.text('Ler o termo completo'), 200);
+    expect(find.text('Ler o termo completo'), findsOneWidget);
   });
 
-  testWidgets('Pós-sessão em inglês', (t) async {
+  testWidgets('Pós-sessão em pt-BR com o aparelho em inglês', (t) async {
     await t.pumpWidget(_app(
         PostSessionSurveyScreen(repo: _orepo(), sessionId: 's1'), locale: const Locale('en')));
     await t.pumpAndSettle();
     // Itens do topo (o ListView é lazy: botão/últimos itens ficam abaixo da dobra).
-    expect(find.text('How was the session'), findsOneWidget); // AppBar
-    expect(find.textContaining('How do you feel now'), findsOneWidget); // 1º prompt (en)
+    expect(find.text('Como foi a sessão'), findsOneWidget);              // AppBar
+    expect(find.textContaining('Como você se sente agora'), findsOneWidget); // 1º prompt
   });
 
-  testWidgets('B2–B6: títulos de AppBar em inglês', (t) async {
+  testWidgets('B2–B6: títulos de AppBar em pt-BR com o aparelho em inglês', (t) async {
     // Só os títulos (topo, sempre visíveis); o conteúdo fica em ListView lazy.
     await t.pumpWidget(_app(BaselineScreen(repo: _orepo()), locale: const Locale('en')));
     await t.pumpAndSettle();
-    expect(find.text('How you have been'), findsOneWidget);
+    expect(find.text('Como você tem estado'), findsOneWidget);
 
     await t.pumpWidget(_app(SleepDiaryScreen(repo: _orepo()), locale: const Locale('en')));
     await t.pumpAndSettle();
-    expect(find.text('Sleep diary'), findsOneWidget);
+    expect(find.text('Diário de sono'), findsOneWidget);
 
     await t.pumpWidget(_app(FollowupScreen(repo: _orepo()), locale: const Locale('en')));
     await t.pumpAndSettle();
-    expect(find.text('Follow-up'), findsOneWidget);
+    expect(find.text('Seguimento'), findsOneWidget);
 
     await t.pumpWidget(_app(AdverseEventScreen(repo: _orepo()), locale: const Locale('en')));
     await t.pumpAndSettle();
-    expect(find.text('Report a problem'), findsOneWidget);
+    expect(find.text('Relatar um problema'), findsOneWidget);
   });
 
   testWidgets('BreathingWave respeita movimento reduzido (assenta, sem repetir)', (t) async {
