@@ -111,4 +111,6 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 
 | 102 | **PHQ-9 de segurança** (não é desfecho; item 9 separado no resultado), **regra de risco versionada** (GAD-7 >= 15 / item 9 / relato) valendo igual na triagem e no seguimento, **retirada do protocolo** que para a sessão de fato, **ficha de encaminhamento** com confirmação de acolhimento e contagem no relatório ao CEP. Resposta ao participante **sem escore**, com orientação sempre **[novo]** |
 
+| 103 | **Entrega do áudio em FLAC** (sem perdas: mesmo PCM do WAV, 14% do tamanho — 230 MB viram ~33 MB), **servida do disco em janelas** (nem materializar nem transmitir carrega a sessão na memória) e **biblioteca local cifrada** no aparelho, revalidada por `If-None-Match`: as 20 sessões baixam o arquivo uma vez, sem deixar o estímulo em claro onde uma FFT revelaria o braço **[novo]** |
+
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

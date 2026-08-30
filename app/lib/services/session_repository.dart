@@ -1,8 +1,12 @@
-import 'dart:typed_data';
-import 'package:crypto/crypto.dart';
-
 import '../core/api_client.dart';
+import 'audio_bytes_source.dart';
+import 'audio_cache.dart';
+import 'audio_cache_key.dart';
 import 'session_store.dart';
+
+// Quem falava com o repositório para pegar o áudio já importava esta exceção daqui;
+// a definição mudou de casa junto com a verificação de integridade (ADR-103).
+export 'audio_cache.dart' show AudioIntegrityException;
 
 /// Resultado da verificação DICÓTICA de fones (G4), enviado ao iniciar a sessão.
 ///
@@ -36,21 +40,18 @@ class SessionStart {
   SessionStart({required this.sessionId, required this.protocolHandle, required this.contentHash});
 }
 
-/// O áudio baixado não bate com o ETag do servidor (corrupção/adulteração): a
-/// reprodução bit-a-bit é inegociável, então recusamos tocar.
-class AudioIntegrityException implements Exception {
-  final String message;
-  AudioIntegrityException(this.message);
-  @override
-  String toString() => message;
-}
-
 /// Fala com a API de sessão. A resolução ativo/sham é do servidor — o cliente
 /// nunca a conhece; apenas reproduz o arquivo referenciado por [contentHash].
 class SessionRepository {
   final ApiClient api;
   final SessionStore store;
-  SessionRepository(this.api, this.store);
+
+  /// Biblioteca local cifrada do áudio. O padrão é a de produção — cujas funções são
+  /// preguiçosas, então nada de plataforma é tocado até haver um download de verdade.
+  final AudioCache audioCache;
+
+  SessionRepository(this.api, this.store, {AudioCache? audioCache})
+      : audioCache = audioCache ?? productionAudioCache();
 
   Future<SessionStart> start({
     required String protocolHandle,
@@ -78,18 +79,40 @@ class SessionRepository {
           {'effective_seconds': effectiveSeconds, 'interruptions': interruptions},
           authenticated: true);
 
-  /// Baixa o áudio da sessão e VERIFICA a fidelidade bit-a-bit: o sha256 do corpo
-  /// deve igualar o ETag do servidor. Divergiu → [AudioIntegrityException] (não toca).
-  /// O cliente não conhece o braço: só reproduz os bytes referenciados pela sessão.
-  Future<Uint8List> downloadAudio(String sessionId) async {
-    final r = await api.getBytes('/sessions/$sessionId/audio', authenticated: true);
-    final etag = r.etag?.replaceAll('"', '');
-    if (etag != null && etag.isNotEmpty) {
-      final digest = sha256.convert(r.bytes).toString();
-      if (digest != etag) {
-        throw AudioIntegrityException('Falha de integridade do áudio (hash divergente).');
-      }
+  /// Devolve a fonte do áudio da sessão, baixando-o **uma vez por protocolo**.
+  ///
+  /// As 20 sessões do estudo usam o mesmo arquivo; rebaixá-lo a cada sessão gastaria
+  /// centenas de megabytes da rede móvel do participante (ADR-103). Então:
+  ///
+  ///   1. se há entrada no cache, ela é conferida (selo) e o servidor é consultado com
+  ///      `If-None-Match` — **304** significa "continua valendo" e nada trafega;
+  ///   2. se o artefato mudou (ou não havia cache), o corpo é gravado cifrado enquanto
+  ///      chega, com o sha256 do claro conferido contra o `ETag` — divergiu, não toca;
+  ///   3. se a rede falhar e houver entrada conferida, ela serve: o participante não
+  ///      perde a sessão do dia por causa de conectividade.
+  ///
+  /// O cliente segue sem conhecer o braço: [contentHash] é a identidade OPACA do protocolo,
+  /// que é também a chave do cache.
+  Future<AudioBytesSource> obtainAudio(String sessionId,
+      {required String contentHash}) async {
+    final guardado = await audioCache.lookup(contentHash);
+    StreamedBytes resposta;
+    try {
+      resposta = await api.getByteStream('/sessions/$sessionId/audio',
+          authenticated: true, ifNoneMatch: guardado?.etag);
+    } catch (_) {
+      if (guardado != null) return guardado.source; // offline: o arquivo conferido serve
+      rethrow;
     }
-    return r.bytes;
+    if (resposta.status == 304 && guardado != null) {
+      await resposta.stream.drain<void>();
+      return guardado.source;
+    }
+    return audioCache.store(
+      contentHash: contentHash,
+      corpo: resposta.stream,
+      etag: resposta.etag,
+      contentType: resposta.contentType ?? 'audio/flac',
+    );
   }
 }

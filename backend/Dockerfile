@@ -7,6 +7,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# libsndfile: motor de codificação do FLAC usado pelo 'soundfile' (ADR-103). As wheels
+# manylinux já trazem a biblioteca embutida; instalá-la também aqui evita que a imagem
+# quebre em arquitetura sem wheel — e o custo é uma camada pequena.
+RUN apt-get update     && apt-get install -y --no-install-recommends libsndfile1     && rm -rf /var/lib/apt/lists/*
+
 # Dependências primeiro (camada cacheável). Todos os pacotes têm wheels em manylinux;
 # se algum exigir build, adicionar build-essential aqui.
 COPY backend/requirements.txt ./requirements.txt

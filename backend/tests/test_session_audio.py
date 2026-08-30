@@ -7,8 +7,9 @@ Prova o "Pronto (DoD)" da fatia A1:
   (3) sem vazamento: braços opostos → MESMA forma de resposta/headers; os bytes/ETag
       diferem (opaco), mas nenhum header/metadado revela ativo/sham/beat/condição;
   (4) fidelidade: sha256(corpo) == ETag (bit-a-bit);
-  (5) FFT: o WAV SERVIDO tem picos corretos (ativo: L=portadora, R=portadora+Δf;
-      sham: ambos na portadora ⇒ Δf = 0);
+  (5) FFT: o ARQUIVO SERVIDO (decodificado) tem picos corretos (ativo: L=portadora,
+      R=portadora+Δf; sham: ambos na portadora ⇒ Δf = 0) — o formato de entrega (FLAC ou
+      WAV, ADR-103) não pode mudar o estímulo;
   (6) Range (bytes=) → 206 com o trecho correto; faixa insatisfazível → 416.
 Cobre ainda 401 (sem token) e 409 (protocolo indisponível).
 """
@@ -16,13 +17,18 @@ from __future__ import annotations
 import io
 import hashlib
 import uuid
-import wave
 
 import numpy as np
+import soundfile as sf
+
+from app.core.config import audio_format
+from app.modules.sessions.audio_render import MEDIA_TYPES
 
 from app.core.models import Participant, Allocation, AudioProtocol, Session as SessionModel
 from app.core import auth
 from tests.helpers import start_body
+
+MAGIC = {"wav": b"RIFF", "flac": b"fLaC"}
 
 START = "/v1/sessions"
 # Protocolos CURTOS (2 s) para manter a síntese rápida nos testes.
@@ -72,11 +78,12 @@ def test_download_own_audio_200_and_fidelity(api, monkeypatch, tmp_path):
 
     r = client.get(f"{START}/{sid}/audio", headers=hdr)
     assert r.status_code == 200
-    assert r.headers["content-type"] == "audio/wav"
+    assert r.headers["content-type"] == MEDIA_TYPES[audio_format()]
     assert r.headers["accept-ranges"] == "bytes"
     assert r.headers["cache-control"] == "private, no-store"
     body = r.content
-    assert body[:4] == b"RIFF" and len(body) > 44          # WAV válido, com conteúdo
+    # Assinatura do contêiner do formato em vigor (ADR-103): "fLaC" ou "RIFF".
+    assert body[:4] == MAGIC[audio_format()] and len(body) > 44
     # (4) fidelidade bit-a-bit: ETag == sha256(corpo)
     assert r.headers["etag"].strip('"') == hashlib.sha256(body).hexdigest()
 
@@ -131,7 +138,8 @@ def test_no_leak_same_shape_opposite_arms(api, monkeypatch, tmp_path):
     def shape(resp):
         return {k.lower() for k in resp.headers.keys()}
     assert shape(ra) == shape(rb)
-    assert ra.headers["content-type"] == rb.headers["content-type"] == "audio/wav"
+    esperado = MEDIA_TYPES[audio_format()]
+    assert ra.headers["content-type"] == rb.headers["content-type"] == esperado
 
     # (ii) Nenhum header revela o braço.
     for resp in (ra, rb):
@@ -143,13 +151,10 @@ def test_no_leak_same_shape_opposite_arms(api, monkeypatch, tmp_path):
     assert ra.headers["etag"] != rb.headers["etag"]
 
 
-def _decode_channel_peaks(wav_bytes: bytes) -> tuple[float, float, int]:
-    """Decodifica o WAV servido e devolve (pico_L_Hz, pico_R_Hz, taxa)."""
-    with wave.open(io.BytesIO(wav_bytes), "rb") as w:
-        fs = w.getframerate()
-        n = w.getnframes()
-        raw = w.readframes(n)
-    data = np.frombuffer(raw, dtype="<i2").reshape(-1, 2).astype(np.float64)
+def _decode_channel_peaks(corpo: bytes) -> tuple[float, float, int]:
+    """Decodifica o arquivo servido (WAV ou FLAC) e devolve (pico_L_Hz, pico_R_Hz, taxa)."""
+    data, fs = sf.read(io.BytesIO(corpo), dtype="int16", always_2d=True)
+    data = data.astype(np.float64)
     window = np.hanning(data.shape[0])
     freqs = np.fft.rfftfreq(data.shape[0], d=1.0 / fs)
     peak_l = float(freqs[int(np.argmax(np.abs(np.fft.rfft(data[:, 0] * window))))])
@@ -157,7 +162,7 @@ def _decode_channel_peaks(wav_bytes: bytes) -> tuple[float, float, int]:
     return peak_l, peak_r, fs
 
 
-def test_served_wav_fft_active_vs_sham(api, monkeypatch, tmp_path):
+def test_arquivo_servido_fft_active_vs_sham(api, monkeypatch, tmp_path):
     _isolate_cache(monkeypatch, tmp_path)
     client, TestSession = api
     _seed_short_library(TestSession)
@@ -199,3 +204,51 @@ def test_range_request_206(api, monkeypatch, tmp_path):
     # Faixa insatisfazível → 416.
     r3 = client.get(f"{START}/{sid}/audio", headers={**hdr, "Range": f"bytes={total + 10}-{total + 20}"})
     assert r3.status_code == 416
+
+# --------------------------------------------------------------- revalidação condicional
+def test_if_none_match_devolve_304_sem_corpo(api, monkeypatch, tmp_path):
+    """O app guarda o áudio e revalida: 20 sessões com o mesmo arquivo, um download só.
+
+    Sem isto, o participante rebaixaria dezenas de megabytes por sessão (ADR-103)."""
+    _isolate_cache(monkeypatch, tmp_path)
+    client, TestSession = api
+    _seed_short_library(TestSession)
+    _pid, hdr = _seed_participant(TestSession, "P-304", "A")
+    sid = _start(client, hdr)
+
+    r = client.get(f"{START}/{sid}/audio", headers=hdr)
+    etag = r.headers["etag"]
+
+    r304 = client.get(f"{START}/{sid}/audio", headers={**hdr, "If-None-Match": etag})
+    assert r304.status_code == 304
+    assert r304.content == b""
+    assert r304.headers["etag"] == etag
+    # Nada no 304 nomeia a condição — a resposta curta não pode ser um canal lateral.
+    blob = " ".join(f"{k}:{v}" for k, v in r304.headers.items()).lower()
+    assert not any(tok in blob for tok in FORBIDDEN)
+
+    # ETag de outro artefato (ou nenhum) → o corpo vem inteiro.
+    velho = '"' + "0" * 64 + '"'
+    assert client.get(f"{START}/{sid}/audio",
+                      headers={**hdr, "If-None-Match": velho}).status_code == 200
+
+
+def test_if_none_match_nao_vaza_o_braco(api, monkeypatch, tmp_path):
+    """Braços opostos revalidando: mesma forma de resposta, mesmos códigos."""
+    _isolate_cache(monkeypatch, tmp_path)
+    client, TestSession = api
+    _seed_short_library(TestSession)
+    _pa, hdr_a = _seed_participant(TestSession, "P-304-A", "A")   # ativo
+    _pb, hdr_b = _seed_participant(TestSession, "P-304-B", "B")   # sham
+    sid_a, sid_b = _start(client, hdr_a), _start(client, hdr_b)
+    etag_a = client.get(f"{START}/{sid_a}/audio", headers=hdr_a).headers["etag"]
+    etag_b = client.get(f"{START}/{sid_b}/audio", headers=hdr_b).headers["etag"]
+
+    ra = client.get(f"{START}/{sid_a}/audio", headers={**hdr_a, "If-None-Match": etag_a})
+    rb = client.get(f"{START}/{sid_b}/audio", headers={**hdr_b, "If-None-Match": etag_b})
+    assert ra.status_code == rb.status_code == 304
+    assert {k.lower() for k in ra.headers} == {k.lower() for k in rb.headers}
+
+    # E o ETag de um braço NÃO revalida o arquivo do outro (artefatos distintos).
+    cruzado = client.get(f"{START}/{sid_a}/audio", headers={**hdr_a, "If-None-Match": etag_b})
+    assert cruzado.status_code == 200

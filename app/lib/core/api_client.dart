@@ -15,11 +15,20 @@ class ApiException implements Exception {
   String toString() => detail ?? title;
 }
 
-/// Resposta binária (ex.: áudio da sessão): bytes do corpo + ETag (integridade).
-class BytesResponse {
-  final Uint8List bytes;
+/// Resposta binária em FLUXO (ex.: áudio da sessão): o corpo chega em blocos.
+///
+/// Nada aqui materializa o corpo inteiro: uma sessão do estudo tem 20 min e dezenas de
+/// megabytes (230 MB se o servidor estiver em WAV), e o aparelho de um participante não
+/// tem por que segurar isso na memória. [status] 304 significa "o que você tem em cache
+/// continua valendo" — resposta a um `If-None-Match`.
+class StreamedBytes {
+  final int status;
+  final Stream<List<int>> stream;
   final String? etag;
-  BytesResponse(this.bytes, this.etag);
+  final String? contentType;
+  final int? contentLength;
+  StreamedBytes(this.status, this.stream,
+      {this.etag, this.contentType, this.contentLength});
 }
 
 /// Cliente HTTP mínimo: injeta o token quando necessário e traduz erros
@@ -39,16 +48,23 @@ class ApiClient {
     return _handle(res);
   }
 
-  /// GET binário: baixa bytes (ex.: WAV da sessão) e devolve corpo + ETag.
-  Future<BytesResponse> getBytes(String path, {bool authenticated = false}) async {
-    var res = await _doGet(path, authenticated);
+  /// GET binário em fluxo (o áudio da sessão). Com [ifNoneMatch], o servidor pode
+  /// responder **304** e poupar o download inteiro — é o que evita rebaixar o mesmo
+  /// arquivo nas 20 sessões do estudo.
+  Future<StreamedBytes> getByteStream(String path,
+      {bool authenticated = false, String? ifNoneMatch}) async {
+    var res = await _doGetStream(path, authenticated, ifNoneMatch);
     if (authenticated && res.statusCode == 401 && await _tryRefresh()) {
-      res = await _doGet(path, authenticated);
+      await res.stream.drain<void>(); // não deixa a conexão do 401 pendurada
+      res = await _doGetStream(path, authenticated, ifNoneMatch);
     }
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      return BytesResponse(res.bodyBytes, res.headers['etag']);
+    if (res.statusCode == 304 || (res.statusCode >= 200 && res.statusCode < 300)) {
+      return StreamedBytes(res.statusCode, res.stream,
+          etag: res.headers['etag'],
+          contentType: res.headers['content-type'],
+          contentLength: res.contentLength);
     }
-    _throwProblem(res.statusCode, _decode(res.bodyBytes));
+    _throwProblem(res.statusCode, _decode(await res.stream.toBytes()));
   }
 
   Future<http.Response> _doPost(String path, Map<String, dynamic> body, bool authenticated) async {
@@ -57,10 +73,14 @@ class ApiClient {
     return _http.post(Uri.parse('$apiBaseUrl$path'), headers: headers, body: jsonEncode(body));
   }
 
-  Future<http.Response> _doGet(String path, bool authenticated) async {
-    final headers = <String, String>{};
-    await _maybeAuth(headers, authenticated);
-    return _http.get(Uri.parse('$apiBaseUrl$path'), headers: headers);
+  Future<http.StreamedResponse> _doGetStream(
+      String path, bool authenticated, String? ifNoneMatch) async {
+    final req = http.Request('GET', Uri.parse('$apiBaseUrl$path'));
+    await _maybeAuth(req.headers, authenticated);
+    if (ifNoneMatch != null && ifNoneMatch.isNotEmpty) {
+      req.headers['If-None-Match'] = '"$ifNoneMatch"';
+    }
+    return _http.send(req);
   }
 
   Future<void> _maybeAuth(Map<String, String> headers, bool authenticated) async {

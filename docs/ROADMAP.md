@@ -18,6 +18,12 @@
 
 ## Estado atual (baseline deste roadmap)
 
+> ### ⛳ Marco (2026-08-30): **o áudio do protocolo aprovado chega ao participante.**
+> ADR-100 a 103 fecharam G1, G3 (mecanismo), G4 e G5. CI-espelho verde: **396 testes de backend**,
+> **11 na pipeline de áudio**, 4 migrações novas, OpenAPI válido, TCLE em sincronia. Os testes de
+> widget novos (`headphone_check_test`, `safety_check_test`, `audio_cache_test`) são validados
+> **no CI** — não há SDK Flutter no ambiente de desenvolvimento.
+>
 > ### ⛳ Marco (2026-08-29): **A–E `DONE` + 4 itens da F4 construídos com sign-off do mantenedor.**
 > CI-espelho verde: **352 testes de backend a 90% de cobertura**, **49 widget tests** (Flutter),
 > **5 migrações** Alembic, bateria FFT aprovada, contrato OpenAPI válido. ADRs **041–099**.
@@ -550,7 +556,7 @@ já está preparado", não redesenhar.
 
 | # | Pendência | Estado | Onde |
 |---|---|---|---|
-| G1 | **Formato de entrega do áudio.** 20 min a 48 kHz/16 bits = **230 MB por arquivo**; o backend lê o corpo inteiro por requisição e o cliente guarda em memória (ADR-054). Recomendação: **FLAC** (sem perdas, decodificação bit-a-bit) — implica dependência de codificação. Alternativas: Range direto do disco (muda A1/E3) ou baixar a taxa de amostragem (**emenda de protocolo**) | ⬜ **exige decisão** | ADR-100, ADR-053/082 |
+| G1 | **Formato de entrega do áudio** — ✅ **FEITO** (2026-08-30, ADR-103): o artefato passou a **FLAC** (sem perdas; mesmo PCM do WAV, **14%** do tamanho — 230 MB viram ~33 MB), é **servido do disco em janelas** (nem materializar nem transmitir carrega a sessão na memória) e o aparelho guarda uma **biblioteca cifrada**, revalidada por `If-None-Match` → 304: as 20 sessões baixam o arquivo **uma vez**. Baixar a taxa de amostragem segue disponível, mas é **emenda de protocolo** | ✅ | ADR-103; ADR-053/054/082 |
 | G2 | **Leito ambiente** de baixa intensidade nos dois braços (o protocolo promete; e **rejeita** ruído rosa). O gate exige pureza espectral ≤ −60 dB — um leito reprovaria a bateria como está | ⬜ **exige decisão** | ADR-100, `binaural_instrument.py` |
 | G3 | **Limite de volume por software** — ✅ **MECANISMO FEITO** (2026-08-30, ADR-101): o app não oferece controle de volume, trava o ganho, declara-o ao iniciar e o servidor recusa acima de `AUDIO_MAX_GAIN`. ⚠️ **Falta o VALOR**: qual ganho corresponde a 60 dB(A) sai da calibração em acoplador de orelha (etapa (i)/F2.7) — até lá o padrão 1.0 não restringe nada | 🟡 | ADR-101; protocolo, "Intensidade e segurança auditiva" |
 | G4 | **Verificação dicótica de fones** — ✅ **FEITO** (2026-08-30, ADR-101): duas rodadas com orelha sorteada, errar reinicia o teste, `headphones_ok` saiu do contrato e a evidência (`rounds`/`errors`/`attempts`/`ears`) fica gravada por sessão | ✅ | ADR-101; protocolo, "Posologia e contexto de uso" |
@@ -563,11 +569,11 @@ já está preparado", não redesenhar.
 
 ## Ordem sugerida de execução
 
-**Código (Fase G), em paralelo:** ~~G4 (fones)~~, ~~G3 (mecanismo do limite de volume)~~ e
-~~G5 (PHQ-9/encaminhamento)~~ feitos em 2026-08-30 (ADR-101, ADR-102). Segue:
-`G1 (entrega do áudio — bloqueia tudo o mais) → G6 (T2) → G7/G8 → G9/G10`. G1 e G2 **começam por
-uma decisão do mantenedor**, não por código; o **valor** do teto de G3 depende da calibração em
-acoplador (F2.7).
+**Código (Fase G), em paralelo:** ~~G4 (fones)~~, ~~G3 (mecanismo do limite de volume)~~,
+~~G5 (PHQ-9/encaminhamento)~~ e ~~G1 (entrega do áudio)~~ feitos em 2026-08-30 (ADR-101 a 103).
+**Nada na Fase G bloqueia mais o piloto do lado do código.** Segue:
+`G6 (T2) → G7/G8 → G9/G10`, e **G2 continua exigindo decisão do mantenedor** (leito ambiente vs.
+gate de pureza espectral). O **valor** do teto de G3 depende da calibração em acoplador (F2.7).
 
 **Agora (Fase F):** `F1.1 (base legal) → F2.1/F2.2 (TCLE + protocolo, com o CEP) → F1.2 (DPO) →
 F1.3 (prazos) → F2.5 (recrutamento) → F3.2/F3.3 (SMTP + deploy) → F3.1 (agendar expurgo) →

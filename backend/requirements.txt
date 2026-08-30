@@ -13,6 +13,7 @@ rq
 prometheus-client
 numpy
 scipy
+soundfile          # codificação FLAC sem perdas do artefato de áudio (ADR-103)
 pytest
 pytest-cov
 ruff

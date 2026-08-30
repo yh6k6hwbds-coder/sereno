@@ -23,8 +23,15 @@ recebeu. Opaco de verdade só é opaco se não for reconstruível: um valor alea
 bytes, sorteado uma vez e guardado na linha, resolve isso sem custo.
 
 Uso (dentro do contêiner ou com DATABASE_URL apontado ao banco):
-    python scripts/seed_protocols.py            # semeia se faltar; não altera o que existe
-    python scripts/seed_protocols.py --check    # só confere; sai != 0 se faltar algo
+    python scripts/seed_protocols.py               # semeia se faltar; não altera o que existe
+    python scripts/seed_protocols.py --check       # só confere; sai != 0 se faltar algo
+    python scripts/seed_protocols.py --materialize # semeia E já grava os arquivos no cache
+
+``--materialize`` existe por causa do custo do estímulo do estudo: sintetizar e codificar
+20 min a 48 kHz leva dezenas de segundos (ADR-103). Sem isso, quem paga a conta é a PRIMEIRA
+requisição de áudio depois de cada deploy — ou seja, um participante esperando na tela de
+carregamento. Rodar logo após o deploy (ou depois de trocar ``AUDIO_FORMAT``, que invalida o
+cache) transfere essa espera para o operador.
 """
 from __future__ import annotations
 
@@ -80,7 +87,23 @@ def _verify_renderable(spec: dict) -> None:
     audio_render.validate_fft(seg, CARRIER_HZ, spec["beat_hz"], sample_rate=SAMPLE_RATE)
 
 
-def main(check_only: bool = False) -> int:
+def _materialize() -> None:
+    """Grava no cache o arquivo de cada protocolo da biblioteca (idempotente)."""
+    from app.modules.sessions.service import materialize_audio    # noqa: E402
+    with Session(get_engine()) as s:
+        for spec in LIBRARY:
+            proto = s.scalar(select(AudioProtocol).where(
+                AudioProtocol.protocol_id == spec["protocol_id"],
+                AudioProtocol.version == VERSION))
+            if proto is None:
+                print(f"FALTA   {spec['protocol_id']} v{VERSION} — semeie antes")
+                continue
+            r = materialize_audio(proto)
+            print(f"pronto  {spec['protocol_id']} v{VERSION} — "
+                  f"{r.size / 1e6:.1f} MB em {r.fmt}")
+
+
+def main(check_only: bool = False, materialize: bool = False) -> int:
     faltando, existentes = [], []
     with Session(get_engine()) as s:
         for spec in LIBRARY:

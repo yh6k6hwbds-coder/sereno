@@ -74,8 +74,11 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
 
   Future<void> _prepare() async {
     try {
-      final bytes = await widget.repo.downloadAudio(widget.session.sessionId);
-      await widget.player.loadBytes(bytes);
+      // Uma vez por protocolo, não por sessão: a fonte vem do cache cifrado do aparelho
+      // quando o servidor confirma que o artefato não mudou (ADR-103).
+      final fonte = await widget.repo.obtainAudio(widget.session.sessionId,
+          contentHash: widget.session.contentHash);
+      await widget.player.load(fonte);
       // Ganho TRAVADO (G3): a tela não tem controle de volume, e este é o mesmo valor
       // declarado ao servidor no início da sessão.
       await widget.player.setVolume(audioGain);

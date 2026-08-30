@@ -8,6 +8,7 @@ import 'package:sereno/core/api_client.dart';
 import 'package:sereno/core/config.dart';
 import 'package:sereno/services/session_store.dart';
 import 'package:sereno/services/session_repository.dart';
+import 'package:sereno/services/audio_bytes_source.dart';
 import 'package:sereno/services/audio_player_port.dart';
 import 'package:sereno/services/telemetry_queue.dart';
 import 'package:sereno/shared/breathing_wave.dart';
@@ -17,15 +18,24 @@ import 'package:sereno/features/session/session_player_screen.dart';
 class _FakePlayer implements AudioPlayerPort {
   bool loaded = false, playing = false, disposed = false;
   int playCalls = 0, pauseCalls = 0;
+  AudioBytesSource? lastSource;
   Uint8List? lastBytes;
   final List<double> volumes = [];
   final Completer<void> _done = Completer<void>();
 
   @override
-  Future<void> loadBytes(Uint8List bytes) async {
+  Future<void> load(AudioBytesSource source) async {
     loaded = true;
-    lastBytes = bytes;
+    lastSource = source;
+    final bytes = <int>[];
+    await for (final bloco in source.read(0, source.length)) {
+      bytes.addAll(bloco);
+    }
+    lastBytes = Uint8List.fromList(bytes);
   }
+
+  @override
+  Future<void> loadBytes(Uint8List bytes) => load(MemoryAudioSource(bytes));
 
   @override
   Future<void> setVolume(double gain) async => volumes.add(gain);
@@ -62,7 +72,9 @@ class _FakeRepo extends SessionRepository {
   int? lastInterruptions;
 
   @override
-  Future<Uint8List> downloadAudio(String sessionId) async => audio;
+  Future<AudioBytesSource> obtainAudio(String sessionId,
+          {required String contentHash}) async =>
+      MemoryAudioSource(audio, contentType: 'audio/flac');
 
   @override
   Future<void> complete(String sessionId,

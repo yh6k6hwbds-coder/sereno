@@ -14,6 +14,7 @@ dos parâmetros publicados no projeto.
 from __future__ import annotations
 
 import hashlib
+import pytest
 import numpy as np
 
 from app.core.models import Participant, Allocation, AudioProtocol, Session as SessionModel
@@ -68,14 +69,14 @@ def test_estimulo_semeado_passa_na_fft():
         sp._verify_renderable(spec)                    # levanta ValueError se reprovar
 
 
-def test_render_honra_taxa_e_rampas_do_protocolo():
+def test_render_honra_taxa_e_rampas_do_protocolo(tmp_path):
     """A linha do banco determina o artefato: taxa e rampas não são constantes de módulo."""
-    r = audio_render.render_protocol(carrier_hz=250.0, beat_hz=3.0, duration_s=1.0,
-                                     target_peak_dbfs=-12.0, sample_rate=48000,
-                                     fade_in_s=0.25, fade_out_s=0.5)
+    r = audio_render.render_protocol_to_file(
+        str(tmp_path / "p.wav"), carrier_hz=250.0, beat_hz=3.0, duration_s=1.0,
+        target_peak_dbfs=-12.0, sample_rate=48000, fade_in_s=0.25, fade_out_s=0.5, fmt="wav")
     assert r.sample_rate == 48000
     # 1 s a 48 kHz, estéreo, 16 bits = 192 000 bytes de dados + cabeçalho WAV
-    assert len(r.wav_bytes) > 192000
+    assert r.size > 192000
 
     seg = audio_render.synthesize_segment(250.0, 3.0, 1.0, -12.0, sample_rate=48000,
                                           fade_in_s=0.25, fade_out_s=0.5)
@@ -84,16 +85,20 @@ def test_render_honra_taxa_e_rampas_do_protocolo():
     assert np.max(np.abs(seg[24000:24480])) > 0.99 * amp   # regime permanente
 
 
-def test_sintese_em_blocos_nao_muda_um_bit():
-    """A síntese em janelas (que torna os 20 min viáveis) tem de dar o MESMO WAV."""
+@pytest.mark.parametrize("fmt", ["wav", "flac"])
+def test_sintese_em_blocos_nao_muda_um_bit(tmp_path, fmt):
+    """A síntese em janelas (que torna os 20 min viáveis) tem de dar o MESMO arquivo.
+
+    Vale para os dois formatos: o WAV é PCM concatenado e o libFLAC reblocá a entrada
+    antes de codificar, então o tamanho da janela de síntese não vaza para o artefato."""
     kw = dict(carrier_hz=250.0, beat_hz=3.0, duration_s=25.0, target_peak_dbfs=-12.0,
-              sample_rate=48000, fade_in_s=1.0, fade_out_s=2.0)
+              sample_rate=48000, fade_in_s=1.0, fade_out_s=2.0, fmt=fmt)
     original = audio_render.CHUNK_S
     try:
         audio_render.CHUNK_S = 30.0                    # uma janela só
-        inteiro = audio_render.render_protocol(**kw)
+        inteiro = audio_render.render_protocol_to_file(str(tmp_path / f"i.{fmt}"), **kw)
         audio_render.CHUNK_S = 2.0                     # treze janelas
-        fatiado = audio_render.render_protocol(**kw)
+        fatiado = audio_render.render_protocol_to_file(str(tmp_path / f"f.{fmt}"), **kw)
     finally:
         audio_render.CHUNK_S = original
     assert inteiro.sha256 == fatiado.sha256
@@ -158,3 +163,24 @@ def test_resposta_do_encerramento_nao_revela_o_braco(api):
     texto = str(corpo).lower()
     for proibido in ("active", "sham", "beat", "arm", "condition", "ativo", "delta"):
         assert proibido not in texto
+
+def test_materializar_a_biblioteca_deixa_os_arquivos_prontos(api, monkeypatch, tmp_path):
+    """`--materialize` transfere para o operador a espera da PRIMEIRA sessão (ADR-103).
+
+    Sintetizar e codificar 20 min a 48 kHz leva dezenas de segundos; sem este passo, quem
+    paga a conta depois de cada deploy é o participante na tela de carregamento."""
+    _client, TestSession = api
+    monkeypatch.setenv("AUDIO_CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(sp, "get_engine", lambda: TestSession.kw["bind"])
+    monkeypatch.setattr(sp, "DURATION_S", 8.0)     # o estímulo inteiro seria caro no CI
+
+    assert sp.main() == 0                          # semeia a biblioteca
+    sp._materialize()
+
+    arquivos = sorted(p.name for p in tmp_path.iterdir() if p.suffix in (".flac", ".wav"))
+    assert len(arquivos) == len(sp.LIBRARY)
+    antes = {p.name: p.stat().st_mtime_ns for p in tmp_path.iterdir()}
+
+    sp._materialize()                              # idempotente: relê o cache, não re-renderiza
+    assert {p.name: p.stat().st_mtime_ns for p in tmp_path.iterdir()} == antes
+

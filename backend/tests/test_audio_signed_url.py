@@ -5,7 +5,7 @@ Prova o "Pronto (DoD)":
   (1) modo padrão (inline) inalterado — coberto por test_session_audio; aqui garantimos
       que ligar AUDIO_DELIVERY=signed-url faz o endpoint da sessão responder 302 para
       /audio/{content_hash} com exp+sig;
-  (2) a URL assinada entrega o MESMO WAV bit-a-bit (ETag == sha256 do corpo) e suporta Range;
+  (2) a URL assinada entrega o MESMO arquivo bit-a-bit (ETag == sha256 do corpo) e suporta Range;
   (3) sem vazamento de braço: o Location e a resposta assinada são NEUTROS (nenhum termo de
       condição); braços opostos produzem a mesma FORMA de resposta;
   (4) capability: assinatura adulterada, ausente ou expirada → 403 (genérico, sem oráculo);
@@ -16,10 +16,14 @@ from __future__ import annotations
 import hashlib
 import time
 
+from app.core.config import audio_format
+from app.modules.sessions.audio_render import MEDIA_TYPES
 from app.core.models import Participant, Allocation, AudioProtocol
 from app.core import auth
 from app.modules.sessions import storage
 from tests.helpers import start_body
+
+MAGIC = {"wav": b"RIFF", "flac": b"fLaC"}
 
 START = "/v1/sessions"
 CARRIER, BEAT_ACTIVE, DUR = 200.0, 10.0, 2.0
@@ -86,10 +90,10 @@ def test_signed_url_delivers_same_bytes_and_fidelity(api, monkeypatch, tmp_path)
     loc = client.get(f"{START}/{sid}/audio", headers=hdr, follow_redirects=False).headers["location"]
     r = client.get(loc)
     assert r.status_code == 200
-    assert r.headers["content-type"] == "audio/wav"
+    assert r.headers["content-type"] == MEDIA_TYPES[audio_format()]
     assert r.headers["accept-ranges"] == "bytes"
     body = r.content
-    assert body[:4] == b"RIFF" and len(body) > 44
+    assert body[:4] == MAGIC[audio_format()] and len(body) > 44
     assert r.headers["etag"].strip('"') == hashlib.sha256(body).hexdigest()   # bit-a-bit
 
 
@@ -121,7 +125,8 @@ def test_signed_url_no_leak_same_shape_opposite_arms(api, monkeypatch, tmp_path)
     def shape(resp):
         return {k.lower() for k in resp.headers.keys()}
     assert shape(ra) == shape(rb)
-    assert ra.headers["content-type"] == rb.headers["content-type"] == "audio/wav"
+    esperado = MEDIA_TYPES[audio_format()]
+    assert ra.headers["content-type"] == rb.headers["content-type"] == esperado
     for resp in (ra, rb):
         blob = " ".join(f"{k}:{v}" for k, v in resp.headers.items()).lower()
         assert not any(tok in blob for tok in FORBIDDEN)

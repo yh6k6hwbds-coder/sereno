@@ -293,7 +293,9 @@ paths:
         é re-resolvido aqui e nenhum header/metadado revela a condição. Suporta Range
         para retomada. ETag = sha256 do corpo (integridade bit-a-bit) — distinto do
         content_hash, que é a identidade OPACA do protocolo. Cache-Control: private,
-        no-store (o cliente não persiste o áudio em claro).
+        no-store (nenhum intermediário guarda o áudio; a biblioteca local do app é
+        cifrada em repouso e não é um cache HTTP — ADR-103).
+        Aceita If-None-Match: com o ETag do artefato já guardado, responde 304 sem corpo.
         Se a entrega por URL assinada estiver ligada (AUDIO_DELIVERY=signed-url), responde
         302 com Location para uma URL de curta duração em /audio/{content_hash} (E3/ADR-082).
       parameters:
@@ -303,14 +305,27 @@ paths:
           required: false
           schema: { type: string }
           description: 'Faixa de bytes para retomada (ex.: bytes=0-1048575).'
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
+          description: >
+            ETag do artefato que o cliente já tem. Se ainda for o vigente, a resposta é
+            304 sem corpo — é o que permite guardar o áudio uma vez e usá-lo nas 20
+            sessões do estudo sem rebaixá-lo (ADR-103).
       responses:
         '200':
-          description: Áudio completo (WAV PCM 16-bit, estéreo)
+          description: |
+            Áudio completo, sem perdas, estéreo 16 bits. O formato é o do servidor
+            (`AUDIO_FORMAT`, ADR-103): FLAC por padrão — que decodifica para o MESMO PCM
+            do WAV, amostra a amostra. O cliente segue o `Content-Type`; o `ETag` é o
+            sha256 do corpo servido e muda se o formato mudar.
           headers:
             ETag: { description: sha256 hex do corpo (bit-a-bit), schema: { type: string } }
             Accept-Ranges: { schema: { type: string } }
             Cache-Control: { schema: { type: string } }
           content:
+            audio/flac: { schema: { type: string, format: binary } }
             audio/wav: { schema: { type: string, format: binary } }
         '206':
           description: Conteúdo parcial (resposta a Range)
@@ -319,7 +334,16 @@ paths:
             ETag: { schema: { type: string } }
             Accept-Ranges: { schema: { type: string } }
           content:
+            audio/flac: { schema: { type: string, format: binary } }
             audio/wav: { schema: { type: string, format: binary } }
+        '304':
+          description: >
+            O artefato que o cliente já guardou continua vigente (resposta a
+            If-None-Match). Sem corpo; mesma forma nos dois braços.
+          headers:
+            ETag: { schema: { type: string } }
+            Accept-Ranges: { schema: { type: string } }
+            Cache-Control: { schema: { type: string } }
         '302':
           description: >
             Redireciona para uma URL assinada de curta duração (entrega por URL, E3).
@@ -364,19 +388,31 @@ paths:
           in: header
           required: false
           schema: { type: string }
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
       responses:
         '200':
-          description: Áudio completo (WAV PCM 16-bit, estéreo)
+          description: |
+            Áudio completo, sem perdas, estéreo 16 bits. O formato é o do servidor
+            (`AUDIO_FORMAT`, ADR-103): FLAC por padrão — que decodifica para o MESMO PCM
+            do WAV, amostra a amostra. O cliente segue o `Content-Type`; o `ETag` é o
+            sha256 do corpo servido e muda se o formato mudar.
           headers:
             ETag: { schema: { type: string } }
             Accept-Ranges: { schema: { type: string } }
             Cache-Control: { schema: { type: string } }
           content:
+            audio/flac: { schema: { type: string, format: binary } }
             audio/wav: { schema: { type: string, format: binary } }
         '206':
           description: Conteúdo parcial (resposta a Range)
           content:
+            audio/flac: { schema: { type: string, format: binary } }
             audio/wav: { schema: { type: string, format: binary } }
+        '304':
+          description: O artefato já guardado continua vigente (If-None-Match).
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '416': { $ref: '#/components/responses/Problem' }

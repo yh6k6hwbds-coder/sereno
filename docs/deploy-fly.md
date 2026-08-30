@@ -190,6 +190,26 @@ Verificação ponta a ponta (depois do SMTP configurado): crie um staff sem senh
 (`POST /v1/staff` sem `password`), confirme que o e-mail chegou **com link clicável**, abra-o e
 defina a senha. O token some da barra de endereços ao carregar a tela.
 
+## 3.4. Áudio: formato, disco e primeira materialização (ADR-103)
+
+Nada a configurar no caminho feliz — mas três coisas quebram em produção se passarem batido:
+
+1. **`AUDIO_FORMAT` fica em `flac`** (padrão). Em `wav` cada participante baixa **230 MB por
+   protocolo**; use-o só para depurar. Trocar o valor **invalida o cache** (a extensão faz parte
+   do nome do arquivo) e muda o `ETag`, então todo aparelho rebaixa o áudio uma vez.
+2. **`libsndfile` precisa existir na imagem** — o `backend/Dockerfile` já instala `libsndfile1`,
+   e as wheels de `soundfile` trazem a biblioteca embutida. Faltando, a materialização **falha
+   alto** (`EncoderUnavailable`) em vez de servir WAV gigante em silêncio.
+3. **Disco para o cache.** `AUDIO_CACHE_DIR` (padrão `<backend>/.audio_cache`) guarda um arquivo
+   por protocolo: ~33 MB cada em FLAC, mais o sidecar `.sha256`. Em máquina com sistema de
+   arquivos efêmero o primeiro acesso de cada boot **rematerializa** (síntese de 20 min ≈ dezenas
+   de segundos e um pico de CPU); para evitar isso, monte um volume ou rode
+   `python scripts/seed_protocols.py` e faça um `GET` de cada protocolo logo após o deploy.
+
+```bash
+fly ssh console -C "python -c 'import soundfile; print(soundfile.__libsndfile_version__)'"
+```
+
 ## 4. Reconstruir o app apontando para a API pública
 
 O CI já injeta a URL. O default (`https://sereno-piloto-api.fly.dev/v1`) casa com o

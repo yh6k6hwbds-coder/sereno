@@ -28,6 +28,13 @@ DEV_ARM_CONDITION_MAP = "A:active,B:sham"
 # ambiente, e não uma constante escondida no código.
 DEFAULT_AUDIO_MAX_GAIN = 1.0
 
+# G1 — formato do artefato de áudio servido. FLAC é sem perdas (o PCM decodificado é
+# idêntico ao do WAV, inegociável #3) e derruba os 230 MB de uma sessão de 20 min para
+# ~33 MB, o que é a diferença entre o piloto rodar em 4G e não rodar. ``wav`` continua
+# disponível para depuração e para ambiente sem o codificador.
+DEFAULT_AUDIO_FORMAT = "flac"
+AUDIO_FORMATS = ("flac", "wav")
+
 # G4 — a verificação dicótica de fones precisa de mais de uma rodada: com uma só, quem
 # chutasse acertaria metade das vezes. Duas rodadas deixam o acerto por acaso em 25%.
 MIN_HEADPHONE_CHECK_ROUNDS = 2
@@ -45,6 +52,15 @@ def audio_max_gain() -> float:
     if not 0.0 < valor <= 1.0:
         raise InsecureConfigError("AUDIO_MAX_GAIN deve estar em (0, 1].")
     return valor
+
+
+def audio_format() -> str:
+    """Formato do áudio materializado e servido (``flac`` por padrão)."""
+    raw = (os.getenv("AUDIO_FORMAT") or DEFAULT_AUDIO_FORMAT).strip().lower()
+    if raw not in AUDIO_FORMATS:
+        raise InsecureConfigError(
+            f"AUDIO_FORMAT inválido: {raw!r} (esperado {' ou '.join(AUDIO_FORMATS)}).")
+    return raw
 
 
 class InsecureConfigError(RuntimeError):

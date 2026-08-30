@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../../services/participant_repository.dart';
 import '../../services/session_repository.dart';
 import '../../services/outcomes_repository.dart';
+import '../../services/audio_cache_key.dart';
 import '../../services/session_store.dart';
 import '../../shared/disclaimer_banner.dart';
 import '../auth/otp_screen.dart';
@@ -30,6 +31,10 @@ class HomeScreen extends StatelessWidget {
   Future<void> _logout(BuildContext context) async {
     final store = SessionStore();
     await store.clear(); // encerra a sessão (armazenamento seguro limpo)
+    // O áudio guardado no aparelho sai junto: sem a chave ele já seria ilegível, mas
+    // deixar o arquivo para trás não tem propósito — e ele é dado do estudo (ADR-103).
+    await productionAudioCache().clear();
+    await AudioCacheKey().forget();
     if (!context.mounted) return;
     final repo = ParticipantRepository(ApiClient(store), store);
     Navigator.of(context).pushAndRemoveUntil(

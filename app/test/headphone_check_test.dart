@@ -9,6 +9,7 @@ import 'package:sereno/core/api_client.dart';
 import 'package:sereno/core/config.dart';
 import 'package:sereno/features/session/headphone_check_screen.dart';
 import 'package:sereno/features/session/headphone_test_tone.dart';
+import 'package:sereno/services/audio_bytes_source.dart';
 import 'package:sereno/services/audio_player_port.dart';
 import 'package:sereno/services/session_repository.dart';
 import 'package:sereno/services/session_store.dart';
@@ -27,7 +28,16 @@ class _FakePlayer implements AudioPlayerPort {
   final Completer<void> _done = Completer<void>();
 
   @override
-  Future<void> loadBytes(Uint8List bytes) async => played.add(bytes);
+  Future<void> load(AudioBytesSource source) async {
+    final bytes = <int>[];
+    await for (final bloco in source.read(0, source.length)) {
+      bytes.addAll(bloco);
+    }
+    played.add(Uint8List.fromList(bytes));
+  }
+
+  @override
+  Future<void> loadBytes(Uint8List bytes) => load(MemoryAudioSource(bytes));
   @override
   Future<void> setVolume(double gain) async => volumes.add(gain);
   @override

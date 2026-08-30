@@ -12,7 +12,7 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 from fastapi import APIRouter, Depends, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
@@ -195,20 +195,47 @@ def _parse_range(header: str, total: int) -> tuple[int, int] | None:
     return (start, end)
 
 
+def _etag_atende(if_none_match: str, etag: str) -> bool:
+    """``If-None-Match`` casa com o ETag atual? (RFC 9110: lista, ``*``, prefixo ``W/``)."""
+    for candidato in if_none_match.split(","):
+        c = candidato.strip()
+        if c == "*":
+            return True
+        if c.startswith("W/"):
+            c = c[2:]
+        if c.strip('"') == etag:
+            return True
+    return False
+
+
 def _stream_audio(proto: AudioProtocol, request: Request) -> Response:
-    """Materializa e transmite o WAV do protocolo, bit-a-bit, com headers NEUTROS.
+    """Materializa e transmite o artefato do protocolo, bit-a-bit, com headers NEUTROS.
 
     Forma da resposta IDÊNTICA entre braços — só os bytes (opacos) diferem. ``ETag`` =
     sha256 do corpo (integridade). Suporta um único Range (206) ou 416 se insatisfazível.
-    Reusado pela entrega autenticada e pela entrega por URL assinada (E3)."""
+    Reusado pela entrega autenticada e pela entrega por URL assinada (E3).
+
+    O corpo sai do **disco em janelas** (ADR-103): uma sessão do estudo tem 20 min e, em
+    PCM cru, 230 MB — ler o corpo inteiro por requisição derrubaria o processo com poucos
+    participantes simultâneos. O ``Content-Type`` acompanha o formato materializado e é o
+    mesmo nos dois braços."""
     rendered = materialize_audio(proto)
-    body = rendered.wav_bytes
-    total = len(body)
+    total = rendered.size
     headers = {
         "ETag": f'"{rendered.sha256}"',
         "Accept-Ranges": "bytes",
         "Cache-Control": "private, no-store",
+        "Content-Length": str(total),
     }
+    # Revalidação condicional: o app guarda o arquivo (cifrado) e pergunta, a cada sessão,
+    # se ele continua valendo. São 20 sessões com o MESMO áudio — sem isto, o participante
+    # rebaixaria dezenas de megabytes por sessão (ADR-103). O 304 não tem corpo, então sai
+    # sem ``Content-Length``; a forma da resposta segue idêntica entre os braços.
+    if_none_match = request.headers.get("if-none-match")
+    if if_none_match and _etag_atende(if_none_match, rendered.sha256):
+        sem_corpo = {k: v for k, v in headers.items() if k != "Content-Length"}
+        return Response(status_code=304, headers=sem_corpo)
+
     range_header = request.headers.get("range")
     if range_header:
         rng = _parse_range(range_header, total)
@@ -217,9 +244,11 @@ def _stream_audio(proto: AudioProtocol, request: Request) -> Response:
                                    "O intervalo solicitado não pode ser satisfeito.")
         start, end = rng
         headers["Content-Range"] = f"bytes {start}-{end}/{total}"
-        return Response(content=body[start:end + 1], status_code=206,
-                        media_type="audio/wav", headers=headers)
-    return Response(content=body, status_code=200, media_type="audio/wav", headers=headers)
+        headers["Content-Length"] = str(end - start + 1)
+        return StreamingResponse(rendered.chunks(start, end), status_code=206,
+                                 media_type=rendered.media_type, headers=headers)
+    return StreamingResponse(rendered.chunks(), status_code=200,
+                             media_type=rendered.media_type, headers=headers)
 
 
 @router.get("/{session_id}/audio")
