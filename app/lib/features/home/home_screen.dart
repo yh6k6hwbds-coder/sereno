@@ -69,52 +69,61 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
+      // O aviso de escopo fica FORA da lista que rola: a postura científica pede um aviso
+      // "persistente na interface", e no fim de uma lista ele só existe para quem rola até
+      // lá — foi o que aconteceu quando a tela ganhou mais um atalho (ADR-102).
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          children: [
-            Text(t.greeting, style: const TextStyle(color: SerenoColors.muted)),
-            Text(t.ready, style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 20),
-            // CTA primário: semântica explícita de botão rotulado (acessibilidade).
-            Semantics(
-              button: true,
-              label: t.startSession,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => _open(context, HeadphoneCheckScreen(repo: _sessionRepo())),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(color: SerenoColors.teal, borderRadius: BorderRadius.circular(16)),
-                  child: Row(children: [
-                    const Icon(Icons.play_circle_fill, color: Colors.white, size: 40),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(t.startSession,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
-                        Text(t.sessionMeta, style: const TextStyle(color: Color(0xFFDCEFF2))),
+        child: Column(children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              children: [
+                Text(t.greeting, style: const TextStyle(color: SerenoColors.muted)),
+                Text(t.ready, style: Theme.of(context).textTheme.headlineMedium),
+                const SizedBox(height: 20),
+                // CTA primário: semântica explícita de botão rotulado (acessibilidade).
+                Semantics(
+                  button: true,
+                  label: t.startSession,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _open(context, HeadphoneCheckScreen(repo: _sessionRepo())),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(color: SerenoColors.teal, borderRadius: BorderRadius.circular(16)),
+                      child: Row(children: [
+                        const Icon(Icons.play_circle_fill, color: Colors.white, size: 40),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(t.startSession,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                            Text(t.sessionMeta, style: const TextStyle(color: Color(0xFFDCEFF2))),
+                          ]),
+                        ),
+                        const Icon(Icons.chevron_right, color: Colors.white),
                       ]),
                     ),
-                    const Icon(Icons.chevron_right, color: Colors.white),
-                  ]),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 24),
+                Text(t.records, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                const SizedBox(height: 10),
+                _navTile(context, Icons.assignment_outlined, t.baseline, BaselineScreen(repo: _outcomesRepo())),
+                _navTile(context, Icons.nightlight_outlined, t.sleepDiary, SleepDiaryScreen(repo: _outcomesRepo())),
+                _navTile(context, Icons.event_available_outlined, t.followup, FollowupScreen(repo: _outcomesRepo())),
+                _navTile(context, Icons.favorite_border, t.safetyTitle,
+                    SafetyCheckScreen(repo: _outcomesRepo())),
+                _navTile(context, Icons.report_gmailerrorred_outlined, t.reportProblem,
+                    AdverseEventScreen(repo: _outcomesRepo())),
+              ],
             ),
-            const SizedBox(height: 24),
-            Text(t.records, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            const SizedBox(height: 10),
-            _navTile(context, Icons.assignment_outlined, t.baseline, BaselineScreen(repo: _outcomesRepo())),
-            _navTile(context, Icons.nightlight_outlined, t.sleepDiary, SleepDiaryScreen(repo: _outcomesRepo())),
-            _navTile(context, Icons.event_available_outlined, t.followup, FollowupScreen(repo: _outcomesRepo())),
-            _navTile(context, Icons.favorite_border, t.safetyTitle,
-                SafetyCheckScreen(repo: _outcomesRepo())),
-            _navTile(context, Icons.report_gmailerrorred_outlined, t.reportProblem,
-                AdverseEventScreen(repo: _outcomesRepo())),
-            const SizedBox(height: 16),
-            const DisclaimerBanner(),
-          ],
-        ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 8, 24, 16),
+            child: DisclaimerBanner(),
+          ),
+        ]),
       ),
     );
   }

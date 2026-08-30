@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -38,8 +39,15 @@ OutcomesRepository _repo({required bool referral, List<String>? enviados}) {
   return OutcomesRepository(ApiClient(_Store(), client: client));
 }
 
+// Os quatro delegates: sem os Global*, o DefaultMaterialLocalizations só cobre `en` e
+// AppBar/ChoiceChip estouram "No MaterialLocalizations found" em pt-BR.
 Widget _app(Widget home) => MaterialApp(
-      localizationsDelegates: const [AppLocalizations.delegate],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       supportedLocales: AppLocalizations.supportedLocales,
       home: home,
     );
