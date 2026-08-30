@@ -54,7 +54,8 @@ def test_eligible_all_inclusions_no_exclusion(api):
         "participant_id": str(pid),
         "inclusion": {"idade_18_60": True, "queixa_alvo": True},
         "exclusion": {"gravidez": False, "epilepsia": False}})
-    assert r.status_code == 201 and r.json() == {"status": "screened", "eligible": True}
+    assert r.status_code == 201 and r.json() == {
+        "status": "screened", "eligible": True, "risk_detected": False, "referral_id": None}
     with TestSession() as s:
         sc = s.scalars(select(Screening).where(Screening.participant_id == pid)).one()
         assert sc.eligible is True and sc.criteria["version"] == "1.0.0"
@@ -82,7 +83,8 @@ def test_screening_is_audited_without_pii(api):
     _screen(client, hdr, pid, eligible=True)
     with TestSession() as s:
         ev = s.scalars(select(AuditLog).where(AuditLog.action == "screening.recorded")).one()
-        assert ev.resource_type == "screening" and ev.resource_id == pid and ev.meta == {"eligible": True}
+        assert (ev.resource_type == "screening" and ev.resource_id == pid
+                    and ev.meta == {"eligible": True, "risk_detected": False})
 
 
 def test_duplicate_screening_409(api):

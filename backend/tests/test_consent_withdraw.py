@@ -20,6 +20,7 @@ from sqlalchemy import select
 from app.core.models import Participant, Allocation, ConsentRecord, AuditLog, StaffUser
 from app.core import auth
 from app.modules.consent.router import TCLE_CURRENT   # versao vigente do termo (nao literal)
+from tests.helpers import start_body
 
 WITHDRAW = "/v1/participants/me/consent/withdraw"
 CONSENT = "/v1/participants/me/consent"
@@ -60,7 +61,7 @@ def test_withdraw_blocks_new_sessions(api):
     _consent(client, hdr)
     # Antes: alocado + consentido → o start passaria da checagem de consentimento.
     client.post(WITHDRAW, headers=hdr)
-    r = client.post(SESS, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": True})
+    r = client.post(SESS, headers=hdr, json=start_body("alpha"))
     assert r.status_code == 403
     assert "consentimento" in r.text.lower()
 

@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.core.models import Participant, Allocation, AudioProtocol, Session as SessionModel, AdverseEvent
 from app.core import auth
 from app.modules.adverse_events import router as ae_router
+from tests.helpers import start_body
 
 URL = "/v1/adverse-events"
 SESSIONS = "/v1/sessions"
@@ -75,7 +76,7 @@ def test_event_linked_to_own_session_ok(api, capture_notify):
     client, TestSession = api
     _seed_alpha(TestSession)
     _pid, hdr = _participant(TestSession, "P-AE4")
-    sid = client.post(SESSIONS, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": True}).json()["session_id"]
+    sid = client.post(SESSIONS, headers=hdr, json=start_body("alpha")).json()["session_id"]
     r = client.post(URL, headers=hdr, json={"type": "desconforto", "severity": "mild", "session_id": sid})
     assert r.status_code == 201
 
@@ -85,7 +86,7 @@ def test_event_linked_to_other_session_404(api, capture_notify):
     _seed_alpha(TestSession)
     _pa, hdr_a = _participant(TestSession, "P-AE-OWN", "A")
     _pb, hdr_b = _participant(TestSession, "P-AE-INT", "B")
-    sid = client.post(SESSIONS, headers=hdr_a, json={"protocol_handle": "alpha", "headphones_ok": True}).json()["session_id"]
+    sid = client.post(SESSIONS, headers=hdr_a, json=start_body("alpha")).json()["session_id"]
     r = client.post(URL, headers=hdr_b, json={"type": "cefaleia", "severity": "mild", "session_id": sid})
     assert r.status_code == 404
 

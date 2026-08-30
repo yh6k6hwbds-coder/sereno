@@ -3,3 +3,6 @@ Fonte: `anexos-docx/Etapa3_UX_Identidade.docx` (+ mockups.png, flow.png).
 - Identidade "Sereno" (noturna/calma); onda de interferência como assinatura.
 - **Tela de sessão idêntica nos 2 braços; visualização NÃO reativa** (cegamento).
 - Baixa fricção (adesão), acessibilidade (WCAG AA), tom de voz.
+- **Antes de cada sessão, verificação DICÓTICA de fones** (ADR-101): o app toca um sinal em uma
+  orelha sorteada e o participante diz qual — errar reinicia o teste e a sessão não é liberada.
+  **Não há controle de volume**: o ganho é travado pelo estudo.

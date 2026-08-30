@@ -40,6 +40,22 @@ String? get staffSetupToken {
 /// ao sair o parecer, vira `1.0.0` aqui, no backend e no resumo de `app_localizations.dart`.
 const String tcleVersion = '0.1.0-rascunho';
 
+/// Ganho digital da reprodução (G3 — "intensidade calibrada com limite imposto por software").
+///
+/// O aplicativo **não oferece controle de volume**: toca sempre com este ganho, declara-o ao
+/// iniciar a sessão e o servidor recusa acima do teto configurado (`AUDIO_MAX_GAIN`). Assim o
+/// participante não tem como ultrapassar o limite do estudo pelo app.
+///
+/// O valor absoluto em dB(A) **não** é decidido aqui: depende do transdutor e do aparelho, e
+/// sai da calibração em acoplador de orelha (etapa (i) do protocolo). É por isso que o ganho é
+/// fixado em build e não escolhido em código: quando a calibração disser qual valor
+/// corresponde a 60 dB(A), troca-se o build, não o programa.
+///
+/// Em milésimos porque `double.fromEnvironment` não existe em Dart — só `int`, `bool` e
+/// `String`. Ex.: `flutter build apk --dart-define=AUDIO_GAIN_MILLI=650` → ganho 0,65.
+const double audioGain =
+    int.fromEnvironment('AUDIO_GAIN_MILLI', defaultValue: 800) / 1000.0;
+
 /// Duração padrão da sessão em segundos (metadado neutro — igual nos dois braços).
 /// Futuro: receber do protocolo via campo neutro na resposta de início.
 const int sessionDurationSeconds = 1200; // 20 min

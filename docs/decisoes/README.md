@@ -105,4 +105,10 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 
 | 099 | **Versão do TCLE verificada no CI** (`scripts/tcle_version.py --check`): backend e app declaravam-na em linguagens diferentes e nada checava que concordam — divergir só apareceria como 409 na cara do participante. Trocar vira um comando; F3.4 não era "uma linha em cada" **[novo]** |
 
+| 100 | **O estímulo passa a ser o do protocolo aprovado:** 250 Hz / 253 Hz (Δf = 3 Hz, delta), 20 min, 48 kHz, rampas 30 s/60 s; controle = mesmo protocolo com `beat_hz = 0`; taxa e rampas viram colunas; equalização de energia entra no gate; adesão exige 80% da duração **[novo]** |
+
+| 101 | **Verificação DICÓTICA de fones** (o participante identifica a orelha; errar reinicia o teste) no lugar da caixa de seleção, com a evidência gravada por sessão; e **teto de volume por software** — ganho travado no app, declarado ao iniciar e recusado acima de `AUDIO_MAX_GAIN` **[novo]** |
+
+| 102 | **PHQ-9 de segurança** (não é desfecho; item 9 separado no resultado), **regra de risco versionada** (GAD-7 >= 15 / item 9 / relato) valendo igual na triagem e no seguimento, **retirada do protocolo** que para a sessão de fato, **ficha de encaminhamento** com confirmação de acolhimento e contagem no relatório ao CEP. Resposta ao participante **sem escore**, com orientação sempre **[novo]** |
+
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

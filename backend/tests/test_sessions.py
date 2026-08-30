@@ -14,6 +14,7 @@ import uuid
 from sqlalchemy import select
 from app.core.models import Participant, Allocation, AudioProtocol, Session as SessionModel
 from app.core import auth
+from tests.helpers import CHECK_FALHOU, GANHO, start_body
 
 START = "/v1/sessions"
 
@@ -52,8 +53,8 @@ def test_arm_never_leaks_but_server_resolves_internally(api):
     pid_a, hdr_a = _seed_participant(TestSession, "P-ARM-A", "A")   # A → active
     pid_b, hdr_b = _seed_participant(TestSession, "P-ARM-B", "B")   # B → sham
 
-    ra = client.post(START, headers=hdr_a, json={"protocol_handle": "alpha", "headphones_ok": True})
-    rb = client.post(START, headers=hdr_b, json={"protocol_handle": "alpha", "headphones_ok": True})
+    ra = client.post(START, headers=hdr_a, json=start_body("alpha"))
+    rb = client.post(START, headers=hdr_b, json=start_body("alpha"))
     assert ra.status_code == 201 and rb.status_code == 201
     ba, bb = ra.json(), rb.json()
 
@@ -84,7 +85,7 @@ def test_headphones_required_422(api):
     client, TestSession = api
     _seed_library(TestSession)
     _pid, hdr = _seed_participant(TestSession, "P-HP", "A")
-    r = client.post(START, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": False})
+    r = client.post(START, headers=hdr, json={"protocol_handle": "alpha", "headphone_check": CHECK_FALHOU, "audio_gain": GANHO})
     assert r.status_code == 422 and "fones" in r.json()["title"].lower()
 
 
@@ -94,7 +95,7 @@ def test_not_allocated_409(api):
     with TestSession() as s:                      # participante SEM alocação
         p = Participant(study_code="P-NOALLOC"); s.add(p); s.commit(); pid = p.id
     hdr = {"Authorization": f"Bearer {auth.issue_access(str(pid), 'participant')}"}
-    r = client.post(START, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": True})
+    r = client.post(START, headers=hdr, json=start_body("alpha"))
     assert r.status_code == 409
 
 
@@ -102,7 +103,7 @@ def test_unknown_band_409(api):
     client, TestSession = api
     _seed_library(TestSession)
     _pid, hdr = _seed_participant(TestSession, "P-BAND", "A")
-    r = client.post(START, headers=hdr, json={"protocol_handle": "theta", "headphones_ok": True})
+    r = client.post(START, headers=hdr, json=start_body("theta"))
     assert r.status_code == 409          # biblioteca não tem 'theta'
 
 
@@ -110,7 +111,7 @@ def test_complete_records_telemetry(api):
     client, TestSession = api
     _seed_library(TestSession)
     _pid, hdr = _seed_participant(TestSession, "P-DONE", "B")
-    sid = client.post(START, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": True}).json()["session_id"]
+    sid = client.post(START, headers=hdr, json=start_body("alpha")).json()["session_id"]
     r = client.post(f"{START}/{sid}/complete", headers=hdr, json={"effective_seconds": 1180, "interruptions": 1})
     assert r.status_code == 200 and r.json()["effective_seconds"] == 1180
     with TestSession() as s:
@@ -123,7 +124,7 @@ def test_complete_other_participants_session_404_idor(api):
     _seed_library(TestSession)
     _pid_a, hdr_a = _seed_participant(TestSession, "P-OWNER", "A")
     _pid_b, hdr_b = _seed_participant(TestSession, "P-INTRUDER", "B")
-    sid = client.post(START, headers=hdr_a, json={"protocol_handle": "alpha", "headphones_ok": True}).json()["session_id"]
+    sid = client.post(START, headers=hdr_a, json=start_body("alpha")).json()["session_id"]
     # participante B tenta encerrar a sessão de A → 404 (não vaza existência)
     r = client.post(f"{START}/{sid}/complete", headers=hdr_b, json={"effective_seconds": 100})
     assert r.status_code == 404
@@ -132,5 +133,5 @@ def test_complete_other_participants_session_404_idor(api):
 def test_no_token_401(api):
     client, TestSession = api
     _seed_library(TestSession)
-    r = client.post(START, json={"protocol_handle": "alpha", "headphones_ok": True})
+    r = client.post(START, json=start_body("alpha"))
     assert r.status_code == 401

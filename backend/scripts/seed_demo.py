@@ -38,14 +38,22 @@ def _sha(label: str) -> str:
 
 
 def _ensure_protocols(s: Session) -> None:
-    if s.scalar(select(AudioProtocol).where(AudioProtocol.band == "alpha")) is not None:
+    """Par CURTO na mesma faixa do estudo (delta, 250/253 Hz) — 30 s para a demo caber.
+
+    A duração é a única diferença deliberada em relação ao protocolo real (20 min): o resto
+    espelha ``scripts/seed_protocols.py`` para que a demo exercite o mesmo caminho do piloto,
+    inclusive o handle ``delta`` que o aplicativo envia. Isto é DEV — nenhum participante
+    ouve estes arquivos."""
+    if s.scalar(select(AudioProtocol).where(AudioProtocol.band == "delta")) is not None:
         return
-    s.add(AudioProtocol(protocol_id="demo-alpha-active", version="1.0.0", band="alpha",
-                        carrier_hz=200, beat_hz=10, duration_s=30, target_peak_dbfs=-12.0,
-                        content_hash=_sha("demo-active")))
-    s.add(AudioProtocol(protocol_id="demo-alpha-sham", version="1.0.0", band="alpha",
-                        carrier_hz=200, beat_hz=0, duration_s=30, target_peak_dbfs=-12.0,
-                        content_hash=_sha("demo-sham")))
+    s.add(AudioProtocol(protocol_id="demo-01", version="1.0.0", band="delta",
+                        carrier_hz=250, beat_hz=3, duration_s=30, target_peak_dbfs=-12.0,
+                        sample_rate=48000, fade_in_s=3.0, fade_out_s=3.0,
+                        content_hash=_sha("demo-01")))
+    s.add(AudioProtocol(protocol_id="demo-02", version="1.0.0", band="delta",
+                        carrier_hz=250, beat_hz=0, duration_s=30, target_peak_dbfs=-12.0,
+                        sample_rate=48000, fade_in_s=3.0, fade_out_s=3.0,
+                        content_hash=_sha("demo-02")))
 
 
 def main() -> None:

@@ -14,7 +14,8 @@ import math
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.models import Allocation, FollowupAssessment, AdverseEvent
+from app.core.models import (Allocation, FollowupAssessment, AdverseEvent, Participant,
+                             Referral)
 from app.modules.research import analysis_plan as ap
 from app.modules.research.export_service import gather_export_rows
 
@@ -56,6 +57,16 @@ def build_report(db: Session) -> dict:
         select(func.count(func.distinct(FollowupAssessment.participant_id)))) or 0)
     n_severe = int(db.scalar(select(func.count()).select_from(AdverseEvent)
                              .where(AdverseEvent.severity == "severe")) or 0)
+
+    # Segurança (G5/ADR-102): o protocolo manda comunicar os encaminhamentos ao CEP no
+    # relatório parcial. Contagens agregadas — sem código de participante, sem escore, sem braço.
+    n_fichas = int(db.scalar(select(func.count()).select_from(Referral)) or 0)
+    n_abertas = int(db.scalar(select(func.count()).select_from(Referral)
+                              .where(Referral.status.in_(("aberto", "encaminhado")))) or 0)
+    n_acolhidos = int(db.scalar(select(func.count()).select_from(Referral)
+                                .where(Referral.status == "acolhido")) or 0)
+    n_removidos = int(db.scalar(select(func.count()).select_from(Participant)
+                                .where(Participant.status == "removed")) or 0)
 
     rows = gather_export_rows(db)                 # casos completos, cegos (A/B)
     arm_a = [r for r in rows if r.arm_coded == "Grupo A"]
@@ -101,6 +112,12 @@ def build_report(db: Session) -> dict:
         "feasibility": {"adherence": adherence, "retention": retention,
                         "usability_sus": sus, "adherence_target_pct": ADHERENCE_TARGET_PCT},
         "blinding": {"bang_index": bang, "maintained": blinding_ok},
+        "seguranca": {
+            "eventos_adversos_graves": n_severe,
+            "encaminhamentos": {"total": n_fichas, "em_aberto": n_abertas,
+                                "com_acolhimento_confirmado": n_acolhidos},
+            "retirados_por_seguranca": n_removidos,
+        },
         "exploratory": exploratory,
         "progression": progression,
     })

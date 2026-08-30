@@ -42,7 +42,11 @@ class Participant(Base):
     status: Mapped[str] = mapped_column(String(12), nullable=False, server_default=text("'active'"))
     enrolled_at: Mapped[dt.datetime] = TS()
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    __table_args__ = (CheckConstraint("status in ('active','withdrawn','completed')", name="ck_participant_status"),)
+    # 'removed' = retirado do protocolo pela regra de segurança (G5/ADR-102): não é retirada
+    # de consentimento ('withdrawn') nem conclusão ('completed'), e o motivo fica na ficha de
+    # encaminhamento. Diferenciar importa: o relato ao CEP conta as três coisas separadamente.
+    __table_args__ = (CheckConstraint("status in ('active','withdrawn','completed','removed')",
+                                      name="ck_participant_status"),)
 
 
 class ContactInfo(Base):                       # PII separada e cifrada na aplicação
@@ -87,12 +91,68 @@ class AudioProtocol(Base):                     # versionado; identificador NEUTR
     beat_hz: Mapped[float] = mapped_column(Numeric(6, 3), nullable=False)
     duration_s: Mapped[float] = mapped_column(Numeric(7, 1), nullable=False)
     target_peak_dbfs: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
+    # Parâmetros de RENDER por protocolo (ADR-100): o estímulo do estudo é 48 kHz com rampas
+    # assimétricas (30 s / 60 s); os protocolos curtos de demo seguem em 44,1 kHz e 3 s. Se
+    # isso vivesse em constante de módulo, trocar a constante mudaria em silêncio o áudio de
+    # um protocolo já auditado — a linha tem de determinar o artefato por inteiro.
+    sample_rate: Mapped[int] = mapped_column(Integer, nullable=False, default=44100,
+                                             server_default=text("44100"))
+    fade_in_s: Mapped[float] = mapped_column(Numeric(5, 1), nullable=False, default=3.0,
+                                             server_default=text("3.0"))
+    fade_out_s: Mapped[float] = mapped_column(Numeric(5, 1), nullable=False, default=3.0,
+                                              server_default=text("3.0"))
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[dt.datetime] = TS()
     __table_args__ = (
         UniqueConstraint("protocol_id", "version", name="uq_protocol_version"),
         CheckConstraint("band in ('alpha','theta','delta')", name="ck_protocol_band"),
         CheckConstraint("carrier_hz > 0 and duration_s > 0", name="ck_protocol_positive"),
+        CheckConstraint("sample_rate > 0 and fade_in_s >= 0 and fade_out_s >= 0",
+                        name="ck_protocol_render"),
+    )
+
+
+class SafetyAssessment(Base):
+    """PHQ-9 de segurança (triagem ou intermediária). NÃO é desfecho — ver ADR-102."""
+    __tablename__ = "safety_assessment"
+    id: Mapped[uuid.UUID] = UUID_PK()
+    participant_id: Mapped[uuid.UUID] = fk("participant.id")
+    moment: Mapped[str] = mapped_column(String(14), nullable=False)
+    phq9_total: Mapped[int] = mapped_column(SmallInteger, nullable=True)
+    phq9_item9: Mapped[int] = mapped_column(SmallInteger, nullable=True)
+    gad7_total: Mapped[int] = mapped_column(SmallInteger, nullable=True)
+    risk_detected: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    reasons: Mapped[dict] = mapped_column(JSONB, nullable=True)     # lista de motivos acionados
+    score_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    rule_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    assessed_at: Mapped[dt.datetime] = TS()
+    __table_args__ = (
+        CheckConstraint("moment in ('triagem','intermediaria','espontanea')", name="ck_safety_moment"),
+        CheckConstraint("phq9_total is null or phq9_total between 0 and 27", name="ck_safety_phq9"),
+        CheckConstraint("gad7_total is null or gad7_total between 0 and 21", name="ck_safety_gad7"),
+    )
+
+
+class Referral(Base):
+    """A "ficha específica" do protocolo: encaminhamento documentado + confirmação de acolhimento.
+
+    Campos ESTRUTURADOS de propósito — sem texto livre. Uma ficha é lida por quem cuida da
+    operação do estudo; narrativa clínica aqui viraria dado sensível a mais, sem necessidade."""
+    __tablename__ = "referral"
+    id: Mapped[uuid.UUID] = UUID_PK()
+    participant_id: Mapped[uuid.UUID] = fk("participant.id")
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("safety_assessment.id", ondelete="SET NULL"), nullable=True)
+    reasons: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(String(12), nullable=False, server_default=text("'aberto'"))
+    service: Mapped[str] = mapped_column(String(24), nullable=True)
+    created_at: Mapped[dt.datetime] = TS()
+    referred_at: Mapped[dt.datetime] = TS(default=False)
+    acknowledged_at: Mapped[dt.datetime] = TS(default=False)
+    __table_args__ = (
+        CheckConstraint("status in ('aberto','encaminhado','acolhido')", name="ck_referral_status"),
+        CheckConstraint("service is null or service in "
+                        "('apoio_institucional','caps','urgencia','outro')", name="ck_referral_service"),
     )
 
 
@@ -164,8 +224,19 @@ class Session(Base):
     effective_seconds: Mapped[int] = mapped_column(Integer, nullable=True)
     interruptions: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     completed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    # DERIVADO da verificação dicótica (G4): o cliente não declara mais "tenho fones" — ele
+    # prova, identificando em qual orelha soou o sinal de teste. A evidência fica na coluna
+    # ao lado para que a auditoria do estudo possa conferir sessão a sessão.
     headphones_ok: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    headphone_check: Mapped[dict] = mapped_column(JSONB, nullable=True)
+    # Ganho digital travado com que o cliente reproduziu (G3). Como o app fixa o ganho e não
+    # oferece controle de volume, um valor por sessão descreve a exposição inteira.
+    audio_gain: Mapped[float] = mapped_column(Numeric(4, 3), nullable=True)
     device_info: Mapped[dict] = mapped_column(JSONB, nullable=True)
+    __table_args__ = (
+        CheckConstraint("audio_gain is null or (audio_gain > 0 and audio_gain <= 1)",
+                        name="ck_session_audio_gain"),
+    )
 
 
 class PostSessionSurvey(Base):

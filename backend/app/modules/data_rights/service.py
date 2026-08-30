@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.models import (Participant, ContactInfo, OtpChallenge, ConsentRecord, Screening,
                              BaselineAssessment, FollowupAssessment, Session as SessionModel,
-                             SleepDiary, AdverseEvent)
+                             SleepDiary, AdverseEvent, SafetyAssessment, Referral)
 from app.core import pii_crypto
 
 
@@ -26,7 +26,11 @@ def erase_personal_data(db: Session, participant_id: uuid.UUID) -> dict:
     otp_n = db.execute(
         delete(OtpChallenge).where(OtpChallenge.participant_id == participant_id)).rowcount
     p = db.get(Participant, participant_id)
-    p.status = "withdrawn"
+    # 'removed' (retirada por SEGURANÇA, ADR-102) não é rebaixado para 'withdrawn': a
+    # eliminação de PII é direito do titular, mas apagar POR QUE o estudo o retirou faria a
+    # contagem do relatório ao CEP encolher sozinha. O dado apagado é a PII, não o evento.
+    if p.status != "removed":
+        p.status = "withdrawn"
     db.flush()
     return {"contact_info": int(contact_n or 0), "otp_challenges": int(otp_n or 0)}
 
@@ -63,6 +67,12 @@ def export_subject_data(db: Session, participant_id: uuid.UUID) -> dict:
         "sleep_diary": rows(SleepDiary,
                             ["diary_date", "latency_min", "awakenings", "duration_h", "quality"]),
         "adverse_events": rows(AdverseEvent, ["type", "severity", "occurred_at"]),
+        # Segurança (ADR-102): é dado do titular e entra no acesso, ainda que o aplicativo
+        # não mostre escore ao participante — quem entrega esta exportação é a equipe.
+        "safety_checks": rows(SafetyAssessment,
+                              ["moment", "phq9_total", "gad7_total", "risk_detected", "assessed_at"]),
+        "referrals": rows(Referral, ["reasons", "status", "service", "created_at",
+                                     "referred_at", "acknowledged_at"]),
         "sessions_completed": int(db.scalar(select(func.count()).select_from(SessionModel).where(
             SessionModel.participant_id == participant_id, SessionModel.completed.is_(True))) or 0),
         # Nota: alocação/braço/condição são DELIBERADAMENTE omitidos (cegamento).

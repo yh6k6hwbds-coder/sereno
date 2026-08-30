@@ -22,6 +22,7 @@ import numpy as np
 
 from app.core.models import Participant, Allocation, AudioProtocol, Session as SessionModel
 from app.core import auth
+from tests.helpers import start_body
 
 START = "/v1/sessions"
 # Protocolos CURTOS (2 s) para manter a síntese rápida nos testes.
@@ -53,7 +54,7 @@ def _seed_participant(TestSession, code, arm):
 
 
 def _start(client, hdr) -> str:
-    r = client.post(START, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": True})
+    r = client.post(START, headers=hdr, json=start_body("alpha"))
     assert r.status_code == 201, r.text
     return r.json()["session_id"]
 

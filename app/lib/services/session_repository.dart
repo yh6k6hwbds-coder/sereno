@@ -4,6 +4,29 @@ import 'package:crypto/crypto.dart';
 import '../core/api_client.dart';
 import 'session_store.dart';
 
+/// Resultado da verificação DICÓTICA de fones (G4), enviado ao iniciar a sessão.
+///
+/// `errors` descreve a tentativa ACEITA (sempre 0 — o servidor recusa outra coisa);
+/// `attempts` diz quantas tentativas foram necessárias, que é o que interessa à auditoria
+/// quando alguém precisa refazer o teste (fone invertido, por exemplo).
+class HeadphoneCheckResult {
+  static const String version = '1.0.0';
+  final int rounds;
+  final int errors;
+  final int attempts;
+  final String ears;      // orelhas sorteadas na tentativa aceita, na ordem (ex.: "LR")
+  const HeadphoneCheckResult(
+      {required this.rounds, required this.errors, required this.attempts, required this.ears});
+
+  Map<String, dynamic> toJson() => {
+        'version': version,
+        'rounds': rounds,
+        'errors': errors,
+        'attempts': attempts,
+        'ears': ears,
+      };
+}
+
 /// Dados neutros devolvidos ao iniciar a sessão. Note que NÃO há braço/condição:
 /// apenas o id, o handle da banda (idêntico nos dois braços) e o hash do áudio.
 class SessionStart {
@@ -29,9 +52,18 @@ class SessionRepository {
   final SessionStore store;
   SessionRepository(this.api, this.store);
 
-  Future<SessionStart> start({required String protocolHandle, required bool headphonesOk}) async {
-    final d = await api.post('/sessions',
-        {'protocol_handle': protocolHandle, 'headphones_ok': headphonesOk},
+  Future<SessionStart> start({
+    required String protocolHandle,
+    required HeadphoneCheckResult headphoneCheck,
+    required double audioGain,
+  }) async {
+    final d = await api.post(
+        '/sessions',
+        {
+          'protocol_handle': protocolHandle,
+          'headphone_check': headphoneCheck.toJson(),
+          'audio_gain': audioGain,
+        },
         authenticated: true);
     return SessionStart(
       sessionId: d['session_id'] as String,

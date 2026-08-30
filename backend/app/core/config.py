@@ -21,6 +21,32 @@ import os
 DEV_ARM_CONDITION_MAP = "A:active,B:sham"
 
 
+# G3 — "limite máximo imposto por software" do protocolo. O ganho digital com que o cliente
+# reproduz é declarado ao iniciar a sessão e recusado acima deste teto; o participante não tem
+# como alterá-lo pelo aplicativo. O valor absoluto em dB(A) depende do transdutor e sai da
+# calibração em acoplador de orelha (etapa (i) do protocolo) — daí ser configurável por
+# ambiente, e não uma constante escondida no código.
+DEFAULT_AUDIO_MAX_GAIN = 1.0
+
+# G4 — a verificação dicótica de fones precisa de mais de uma rodada: com uma só, quem
+# chutasse acertaria metade das vezes. Duas rodadas deixam o acerto por acaso em 25%.
+MIN_HEADPHONE_CHECK_ROUNDS = 2
+
+
+def audio_max_gain() -> float:
+    """Teto de ganho digital aceito ao iniciar sessão (0 < g <= 1)."""
+    raw = os.getenv("AUDIO_MAX_GAIN")
+    if not raw:
+        return DEFAULT_AUDIO_MAX_GAIN
+    try:
+        valor = float(raw)
+    except ValueError:
+        raise InsecureConfigError(f"AUDIO_MAX_GAIN inválido: {raw!r}") from None
+    if not 0.0 < valor <= 1.0:
+        raise InsecureConfigError("AUDIO_MAX_GAIN deve estar em (0, 1].")
+    return valor
+
+
 class InsecureConfigError(RuntimeError):
     """Config que violaria uma decisão inegociável em produção (fail-fast no startup)."""
 

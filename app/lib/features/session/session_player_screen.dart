@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/config.dart';
 import '../../core/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/session_repository.dart';
@@ -75,6 +76,9 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
     try {
       final bytes = await widget.repo.downloadAudio(widget.session.sessionId);
       await widget.player.loadBytes(bytes);
+      // Ganho TRAVADO (G3): a tela não tem controle de volume, e este é o mesmo valor
+      // declarado ao servidor no início da sessão.
+      await widget.player.setVolume(audioGain);
       await widget.player.play();
       if (!mounted) return;
       setState(() => _loading = false);

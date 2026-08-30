@@ -86,7 +86,7 @@ def materialize_audio(proto: AudioProtocol) -> audio_render.RenderedAudio:
             sha = f.read().strip()
         return audio_render.RenderedAudio(
             wav_bytes=wav_bytes, sha256=sha,
-            sample_rate=audio_render.SAMPLE_RATE, channels=audio_render.CHANNELS,
+            sample_rate=int(proto.sample_rate), channels=audio_render.CHANNELS,
         )
 
     with _MATERIALIZE_LOCK:
@@ -96,6 +96,8 @@ def materialize_audio(proto: AudioProtocol) -> audio_render.RenderedAudio:
         rendered = audio_render.render_protocol(
             carrier_hz=float(proto.carrier_hz), beat_hz=float(proto.beat_hz),
             duration_s=float(proto.duration_s), target_peak_dbfs=float(proto.target_peak_dbfs),
+            sample_rate=int(proto.sample_rate), fade_in_s=float(proto.fade_in_s),
+            fade_out_s=float(proto.fade_out_s),
         )
         os.makedirs(cache_dir, exist_ok=True)
         # Escrita atômica (arquivo temporário + rename) para não servir um WAV parcial.

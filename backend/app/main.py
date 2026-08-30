@@ -37,6 +37,7 @@ from app.modules.diary.router import router as diary_router
 from app.modules.followup.router import router as followup_router
 from app.modules.adverse_events.router import router as adverse_events_router
 from app.modules.wearables.router import router as wearables_router
+from app.modules.safety.router import router as safety_router
 
 API_PREFIX = "/v1"
 
@@ -121,7 +122,7 @@ def create_app() -> FastAPI:
               sessions_router, audio_router, instruments_router, recommender_router,
               research_router, audit_router, participant_auth_router, staff_router,
               contact_router, data_rights_router, diary_router, followup_router,
-              adverse_events_router, wearables_router):
+              adverse_events_router, wearables_router, safety_router):
         app.include_router(r, prefix=API_PREFIX)
 
     return app

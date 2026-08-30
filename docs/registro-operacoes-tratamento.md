@@ -78,6 +78,23 @@ de saúde (Art. 11). PII fica **cifrada e separada**; braço sempre **codificado
 - **Segurança:** pseudonimização (`study_code`); RBAC; braço codificado; recomendador por regras
   (ML não decide ao vivo, ADR-068).
 
+### OP-04b · Rastreio de segurança e encaminhamento (ADR-102)
+- **Finalidade:** identificar risco (PHQ-9 item 9; GAD-7 >= 15; relato de sofrimento) e
+  **documentar o encaminhamento** ao apoio institucional/CAPS, como manda o protocolo. **Não é
+  desfecho do estudo** — é dever de cuidado.
+- **Titulares:** candidatos (na triagem) e participantes (avaliações intermediárias).
+- **Dados — sensíveis, pseudonimizados:** respostas e escore do **PHQ-9** e do GAD-7, com o item
+  de risco em campo próprio (`safety_assessment`); ficha de encaminhamento com motivo, serviço e
+  datas de encaminhamento/acolhimento (`referral`). **Sem texto livre** — a ficha é estruturada.
+- **Base legal `[a confirmar]`:** **Art. 11** (pesquisa em saúde) e, para o encaminhamento em si,
+  a **tutela da saúde/proteção da vida** (Art. 11, II, "e"/"f") — a confirmar com o Encarregado.
+- **Destinatários:** pesquisadora responsável e equipe. O aviso por e-mail leva **só o id da
+  ficha e o gatilho** — nunca escore nem identificação.
+- **Transferência internacional:** não (além da hospedagem).
+- **Retenção:** prazo do registro de pesquisa (política §4); a ficha documenta ato do estudo.
+- **Segurança:** pseudonimização; RBAC (a ficha é da equipe, o participante não a lê); a
+  resposta ao participante **não devolve escore**; auditoria append-only de abertura e registro.
+
 ### OP-05 · Randomização, alocação e cegamento
 - **Finalidade:** alocar o participante e manter o duplo-cego (integridade científica).
 - **Titulares:** participantes.

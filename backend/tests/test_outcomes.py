@@ -11,6 +11,7 @@ import uuid
 from sqlalchemy import select
 from app.core.models import Participant, Allocation, AudioProtocol, SleepDiary, PostSessionSurvey
 from app.core import auth
+from tests.helpers import start_body
 
 DIARY = "/v1/diary"
 SESSIONS = "/v1/sessions"
@@ -73,7 +74,7 @@ def test_diary_no_token_401(api):
 
 # -------------------- Questionário pós-sessão --------------------
 def _start_session(client, hdr):
-    return client.post(SESSIONS, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": True}).json()["session_id"]
+    return client.post(SESSIONS, headers=hdr, json=start_body("alpha")).json()["session_id"]
 
 
 def test_survey_ok_and_persists(api):

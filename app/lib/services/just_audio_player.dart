@@ -24,6 +24,10 @@ class JustAudioPlayer implements AudioPlayerPort {
       _player.setAudioSource(_BytesAudioSource(bytes));
 
   @override
+  Future<void> setVolume(double gain) =>
+      _player.setVolume(gain.clamp(0.0, 1.0).toDouble());
+
+  @override
   Future<void> play() => _player.play();
 
   @override

@@ -28,7 +28,10 @@ from app.core.models import (Allocation, Participant, BaselineAssessment,
                              FollowupAssessment, Session as SessionModel, AdverseEvent)
 from app.modules.instruments.instruments_scoring import ParticipantExport, build_export_csv
 
-PRESCRIBED_SESSIONS = 20
+PRESCRIBED_SESSIONS = 20          # 5 sessões/semana x 4 semanas (protocolo)
+# Uma sessão só CONTA para a adesão se rodou pelo menos 80% da duração prescrita — é a
+# definição do desfecho primário no protocolo, não uma heurística de engenharia.
+MIN_COMPLETION_RATIO = 0.8
 
 
 def _arm_label(arm_coded: str) -> str:

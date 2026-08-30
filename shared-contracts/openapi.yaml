@@ -184,6 +184,50 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /participants/me/safety-check:
+    post:
+      summary: Registrar avaliação de SEGURANÇA (PHQ-9) — não é desfecho do estudo
+      description: >-
+        PHQ-9 aplicado com finalidade de segurança (o protocolo é explícito: não constitui
+        desfecho). O item 9 identifica risco de autoextermínio; junto com GAD-7 >= 15, aciona o
+        fluxo de encaminhamento — abre uma ficha para a equipe, interrompe a participação no
+        protocolo e devolve orientação de cuidado. A resposta **não devolve escore**: um número
+        de gravidade na tela do participante, sem profissional junto, seria lido como
+        diagnóstico. O escore fica com a equipe.
+      operationId: submitSafetyCheck
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SafetyCheckIn' } } }
+      responses:
+        '201': { description: Registrado, content: { application/json: { schema: { $ref: '#/components/schemas/SafetyCheckOut' } } } }
+        '422': { $ref: '#/components/responses/Problem' }
+  /referrals:
+    get:
+      summary: Listar fichas de encaminhamento (equipe)
+      description: >-
+        A "ficha específica" do protocolo, pseudonimizada (código do estudo, motivos, datas,
+        situação). Alimenta o relatório parcial ao CEP. Nunca traz braço nem PII.
+      operationId: listReferrals
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ReferralPage' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
+  /referrals/{id}/record:
+    post:
+      summary: Registrar encaminhamento e confirmação de acolhimento
+      description: >-
+        Documenta a que serviço o participante foi encaminhado e, quando houver, a confirmação
+        de acolhimento — os dois passos que o protocolo exige por escrito.
+      operationId: recordReferral
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReferralRecordIn' } } }
+      responses:
+        '200': { description: Atualizada, content: { application/json: { schema: { $ref: '#/components/schemas/Referral' } } } }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /participants/me/baseline:
     post:
       summary: Enviar avaliação de linha de base (PSQI + GAD-7)
@@ -222,7 +266,9 @@ paths:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/SessionCompleteIn' } } }
       responses:
-        '200': { description: Encerrada }
+        '200':
+          description: Encerrada
+          content: { application/json: { schema: { $ref: '#/components/schemas/SessionCompleteOut' } } }
         '404': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
   /sessions/{id}/survey:
@@ -899,17 +945,102 @@ components:
         psqi_global: { type: integer }
         psqi_interpretation: { type: string }
         score_version: { type: string }
+    HeadphoneCheck:
+      type: object
+      description: >-
+        Resultado da VERIFICAÇÃO DICÓTICA de fones (o participante identifica em qual orelha
+        soou um sinal de teste). Substitui a antiga declaração `headphones_ok`: a condição
+        dicótica é pré-requisito do fenômeno binaural, então ela é testada, não declarada.
+        O servidor recusa (422) uma sessão cuja verificação tenha falhado ou tenha rodadas de
+        menos. O sinal de teste é o mesmo nos dois braços e não carrega informação de condição.
+      properties:
+        version: { type: string, description: "versão do procedimento (ex.: 1.0.0)" }
+        rounds: { type: integer, minimum: 1, description: "desafios apresentados" }
+        errors: { type: integer, minimum: 0, description: "respostas erradas NA TENTATIVA ACEITA (0)" }
+        attempts:
+          type: integer
+          minimum: 1
+          description: >-
+            Tentativas até passar. Errar reinicia o teste, então a tentativa aceita tem sempre
+            `errors: 0`; quantas foram necessárias é o que interessa à auditoria (fone invertido,
+            saída em mono) e fica registrado aqui.
+        ears:
+          type: [string, "null"]
+          description: "orelhas sorteadas, na ordem (ex.: \"LR\") — auditoria do sorteio"
+      required: [version, rounds, errors]
+    SafetyCheckIn:
+      type: object
+      properties:
+        phq9_items:
+          type: array
+          items: { type: integer, minimum: 0, maximum: 3 }
+          minItems: 9
+          maxItems: 9
+          description: "respostas 0–3 (o texto dos itens não vive no código)"
+        gad7_items:
+          type: [array, "null"]
+          items: { type: integer, minimum: 0, maximum: 3 }
+          minItems: 7
+          maxItems: 7
+          description: "opcional; GAD-7 >= 15 também aciona o fluxo de encaminhamento"
+        moment:
+          type: string
+          enum: [intermediaria, espontanea]
+          description: "T2 (intermediária) ou registro fora de janela"
+      required: [phq9_items]
+    SafetyCheckOut:
+      type: object
+      description: "Sem escore, de propósito — ver a descrição do endpoint."
+      properties:
+        status: { type: string, examples: [recorded] }
+        referral_opened: { type: boolean, description: "true = fluxo de encaminhamento acionado" }
+        guidance: { type: string, description: "orientação de cuidado, sempre presente" }
+      required: [status, referral_opened, guidance]
+    Referral:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        study_code: { type: string, description: "pseudônimo — nunca nome/e-mail" }
+        reasons:
+          type: array
+          items: { type: string, enum: [gad7_grave, phq9_item9, relato] }
+        status: { type: string, enum: [aberto, encaminhado, acolhido] }
+        service: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        referred_at: { type: [string, "null"], format: date-time }
+        acknowledged_at: { type: [string, "null"], format: date-time }
+      required: [id, study_code, reasons, status, created_at]
+    ReferralPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Referral' } }
+      required: [items]
+    ReferralRecordIn:
+      type: object
+      properties:
+        service: { type: string, enum: [apoio_institucional, caps, urgencia, outro] }
+        acknowledged: { type: boolean, description: "true = houve confirmação de acolhimento" }
+      required: [service]
     SessionIn:
       type: object
       properties:
         protocol_handle: { type: string, description: "handle neutro — não revela o braço" }
-        headphones_ok: { type: boolean }
+        headphone_check: { $ref: '#/components/schemas/HeadphoneCheck' }
+        audio_gain:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: >-
+            Ganho digital TRAVADO com que o cliente vai reproduzir (0..1). O servidor recusa
+            acima do teto configurado (`AUDIO_MAX_GAIN`) — é o "limite imposto por software"
+            do protocolo, e o participante não tem como alterá-lo pelo aplicativo. O nível
+            absoluto em dB(A) depende da calibração em acoplador de orelha.
         device_info: { type: object, additionalProperties: true }
         recommendation_id:
           type: [string, "null"]
           format: uuid
           description: "recomendação que originou a sessão (opcional; vincula p/ o relatório de coerência)"
-      required: [protocol_handle, headphones_ok]
+      required: [protocol_handle, headphone_check, audio_gain]
     SessionOut:
       type: object
       properties:
@@ -923,6 +1054,17 @@ components:
         effective_seconds: { type: integer, minimum: 0, maximum: 86400 }
         interruptions: { type: integer, minimum: 0 }
       required: [effective_seconds]
+    SessionCompleteOut:
+      type: object
+      description: >-
+        Resultado do encerramento. `counts_for_adherence` diz se a sessão atingiu 80% da
+        duração prescrita e portanto conta para a adesão (desfecho primário). A régua é
+        idêntica nos dois braços e nada aqui revela a condição.
+      properties:
+        status: { type: string, examples: [recorded] }
+        effective_seconds: { type: integer }
+        counts_for_adherence: { type: boolean }
+      required: [status, effective_seconds, counts_for_adherence]
     SurveyIn:
       type: object
       properties:
@@ -1009,13 +1151,28 @@ components:
         inclusion: { type: object, additionalProperties: { type: boolean } }
         exclusion: { type: object, additionalProperties: { type: boolean } }
         symptoms: { type: [object, "null"], additionalProperties: true }
+        phq9_items:
+          type: [array, "null"]
+          items: { type: integer, minimum: 0, maximum: 3 }
+          minItems: 9
+          maxItems: 9
+          description: >-
+            PHQ-9 de SEGURANÇA na triagem (não é desfecho). Item 9 positivo torna o candidato
+            INELEGÍVEL e abre ficha de encaminhamento, como manda o protocolo.
+        gad7_total:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 21
+          description: "GAD-7 da triagem; >= 15 é critério de exclusão e aciona encaminhamento"
       required: [participant_id, inclusion, exclusion]
     ScreeningResult:
       type: object
       properties:
         status: { type: string, enum: [screened] }
         eligible: { type: boolean }
-      required: [status, eligible]
+        risk_detected: { type: boolean, description: "gatilho de segurança acionado na triagem" }
+        referral_id: { type: [string, "null"], format: uuid }
+      required: [status, eligible, risk_detected]
     EraseResult:
       type: object
       properties:
@@ -1192,5 +1349,12 @@ components:
         enrollment: { type: object, additionalProperties: true }
         feasibility: { type: object, additionalProperties: true }
         blinding: { type: object, additionalProperties: true }
+        seguranca:
+          type: object
+          additionalProperties: true
+          description: >-
+            Eventos adversos graves, encaminhamentos (total/em aberto/com acolhimento
+            confirmado) e retirados por segurança — o que o protocolo manda comunicar ao CEP
+            no relatorio parcial. Só contagens agregadas.
         exploratory: { type: object, additionalProperties: true }
         progression: { type: object, additionalProperties: true }

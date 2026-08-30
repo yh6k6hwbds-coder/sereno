@@ -13,6 +13,7 @@ import '../baseline/baseline_screen.dart';
 import '../diary/sleep_diary_screen.dart';
 import '../followup/followup_screen.dart';
 import '../adverse/adverse_event_screen.dart';
+import '../safety/safety_check_screen.dart';
 
 /// Início pós-consentimento. CTA de sessão + acesso às telas de registro (baseline,
 /// diário, seguimento, relato de EA). Serviços a partir do armazenamento seguro.
@@ -101,6 +102,8 @@ class HomeScreen extends StatelessWidget {
             _navTile(context, Icons.assignment_outlined, t.baseline, BaselineScreen(repo: _outcomesRepo())),
             _navTile(context, Icons.nightlight_outlined, t.sleepDiary, SleepDiaryScreen(repo: _outcomesRepo())),
             _navTile(context, Icons.event_available_outlined, t.followup, FollowupScreen(repo: _outcomesRepo())),
+            _navTile(context, Icons.favorite_border, t.safetyTitle,
+                SafetyCheckScreen(repo: _outcomesRepo())),
             _navTile(context, Icons.report_gmailerrorred_outlined, t.reportProblem,
                 AdverseEventScreen(repo: _outcomesRepo())),
             const SizedBox(height: 16),

@@ -31,6 +31,18 @@ class OutcomesRepository {
         'duration_h': durationH, 'quality': quality,
       }, authenticated: true);
 
+  /// Avaliação de SEGURANÇA (G5): PHQ-9 (9 itens 0–3) e, opcionalmente, GAD-7.
+  ///
+  /// Não é desfecho do estudo. A resposta **não traz escore** de propósito — só diz se o
+  /// fluxo de encaminhamento foi acionado e a orientação de cuidado a exibir.
+  Future<Map<String, dynamic>> submitSafetyCheck(
+          {required List<int> phq9, List<int>? gad7, String moment = 'intermediaria'}) =>
+      api.post('/participants/me/safety-check', {
+        'phq9_items': phq9,
+        if (gad7 != null) 'gad7_items': gad7,
+        'moment': moment,
+      }, authenticated: true);
+
   /// Seguimento: GAD-7 + PSQI + SUS (10 itens 1–5) + palpite de cegamento (A/B/nao_sei).
   Future<Map<String, dynamic>> submitFollowup(
           {required List<int> gad7, required Map<String, dynamic> psqi,

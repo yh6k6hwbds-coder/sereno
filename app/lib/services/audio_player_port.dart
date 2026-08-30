@@ -10,6 +10,10 @@ abstract class AudioPlayerPort {
   /// Carrega os bytes do WAV (já verificados por sha256) para reprodução.
   Future<void> loadBytes(Uint8List bytes);
 
+  /// Fixa o ganho de reprodução (0..1). O app trava este valor e não expõe controle de
+  /// volume ao participante — é o "limite imposto por software" do protocolo (G3).
+  Future<void> setVolume(double gain);
+
   Future<void> play();
   Future<void> pause();
 

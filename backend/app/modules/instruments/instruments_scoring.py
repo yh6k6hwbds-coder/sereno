@@ -22,7 +22,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import csv, io
 
-SCORING_VERSIONS = {"gad7": "1.0.0", "psqi": "1.0.0", "sus": "1.0.0", "adherence": "1.0.0"}
+SCORING_VERSIONS = {"gad7": "1.0.0", "psqi": "1.0.0", "sus": "1.0.0", "adherence": "1.0.0",
+                    "phq9": "1.0.0"}
 
 
 # ----------------------------------------------------------------------------
@@ -38,6 +39,29 @@ def score_gad7(responses: list[int]) -> dict:
     else:            sev = "grave"
     return {"instrument": "GAD-7", "version": SCORING_VERSIONS["gad7"],
             "total": total, "severity": sev, "positive_screen": total >= 10}
+
+
+# ----------------------------------------------------------------------------
+# PHQ-9  (9 itens, 0-3; total 0-27)  — Kroenke, Spitzer & Williams, 2001
+#
+# NÃO é desfecho do estudo: entra só por SEGURANÇA, na triagem e nas avaliações
+# intermediárias. O item 9 (índice 8) rastreia risco de autoextermínio e é o que aciona
+# o fluxo de encaminhamento — por isso vem separado no resultado, e não diluído no total:
+# alguém com total baixo e item 9 positivo precisa do mesmo acolhimento.
+# ----------------------------------------------------------------------------
+def score_phq9(responses: list[int]) -> dict:
+    if len(responses) != 9 or any(r not in (0, 1, 2, 3) for r in responses):
+        raise ValueError("PHQ-9 requer 9 respostas inteiras de 0 a 3")
+    total = sum(responses)
+    if total <= 4:    sev = "mínima"
+    elif total <= 9:  sev = "leve"
+    elif total <= 14: sev = "moderada"
+    elif total <= 19: sev = "moderadamente grave"
+    else:             sev = "grave"
+    item9 = responses[8]
+    return {"instrument": "PHQ-9", "version": SCORING_VERSIONS["phq9"],
+            "total": total, "severity": sev,
+            "item9": item9, "item9_positive": item9 > 0}
 
 
 # ----------------------------------------------------------------------------

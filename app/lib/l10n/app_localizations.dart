@@ -85,9 +85,33 @@ class AppLocalizations {
       // Preparar sessão (fones)
       'prepSession': 'Preparar sessão',
       'useStereoHeadphones': 'Use fones estéreo',
-      'headphoneBody': 'As sessões usam áudio em dois canais. Conecte fones com fio, ajuste um '
-          'volume confortável e prefira um ambiente tranquilo.',
-      'headphonesConnected': 'Meus fones estéreo estão conectados',
+      'headphoneBody': 'As sessões usam áudio em dois canais. Conecte fones com fio nas duas '
+          'orelhas e prefira um ambiente tranquilo. O volume é fixado pelo estudo.',
+      'headphoneCheckIntro': 'Antes de começar, um teste rápido: vamos tocar um sinal em uma '
+          'das orelhas e você diz em qual ouviu.',
+      'headphoneCheckWhichEar': 'Em qual orelha você ouviu o sinal?',
+      'headphoneCheckPassed': 'Fones verificados. Você pode iniciar a sessão.',
+      'headphoneCheckFailed': 'O sinal soou na outra orelha. Confira se os fones estão nos '
+          'lados certos e refaça o teste.',
+      'headphoneCheckPlay': 'Tocar o sinal',
+      'headphoneCheckPlayAgain': 'Tocar o próximo sinal',
+      'headphoneCheckLeft': 'Esquerda',
+      'headphoneCheckRight': 'Direita',
+      // Avaliação de segurança (G5)
+      'safetyTitle': 'Como você está',
+      'safetyIntro': 'Estas perguntas são de SEGURANÇA, não fazem parte dos resultados do '
+          'estudo. Servem para a equipe saber se você precisa de apoio. Pense nas duas '
+          'últimas semanas.',
+      'safetyHelpNow': 'Se você precisa de ajuda agora: CVV 188 (24h, gratuito), SAMU 192 ou '
+          'a emergência mais próxima.',
+      'phq9GroupTitle': 'Nas últimas 2 semanas, com que frequência…',
+      'safetySubmit': 'Enviar',
+      'safetyThanksTitle': 'Registrado',
+      'safetyReferralTitle': 'Vamos falar com você',
+      'safetyReferralBody': 'A pesquisadora responsável vai entrar em contato para acolhimento '
+          'e encaminhamento. Suas sessões ficam pausadas até lá — isso não traz nenhum '
+          'prejuízo para você.',
+      'ok': 'Entendi',
       // Consentimento
       'consentTitle': 'Termo de Consentimento',
       'consentReadSummary': 'Leia o resumo em linguagem simples:',
@@ -214,9 +238,30 @@ class AppLocalizations {
       'staffSetupDoneMfa': 'Your second factor (MFA) remains enabled and will still be required at login.',
       'prepSession': 'Prepare session',
       'useStereoHeadphones': 'Use stereo headphones',
-      'headphoneBody': 'Sessions use two-channel audio. Connect wired headphones, set a '
-          'comfortable volume and prefer a quiet environment.',
-      'headphonesConnected': 'My stereo headphones are connected',
+      'headphoneBody': 'Sessions use two-channel audio. Connect wired headphones on both ears '
+          'and prefer a quiet environment. The volume is fixed by the study.',
+      'headphoneCheckIntro': 'Before we start, a quick test: we will play a signal in one ear '
+          'and you tell us which one you heard it in.',
+      'headphoneCheckWhichEar': 'Which ear did you hear the signal in?',
+      'headphoneCheckPassed': 'Headphones verified. You can start the session.',
+      'headphoneCheckFailed': 'The signal played in the other ear. Check that the headphones '
+          'are on the right sides and take the test again.',
+      'headphoneCheckPlay': 'Play the signal',
+      'headphoneCheckPlayAgain': 'Play the next signal',
+      'headphoneCheckLeft': 'Left',
+      'headphoneCheckRight': 'Right',
+      'safetyTitle': 'How are you',
+      'safetyIntro': 'These questions are about SAFETY and are not part of the study results. '
+          'They let the team know whether you need support. Think about the last two weeks.',
+      'safetyHelpNow': 'If you need help right now: CVV 188 (24h, free, Brazil), SAMU 192 or '
+          'your nearest emergency service.',
+      'phq9GroupTitle': 'Over the last 2 weeks, how often…',
+      'safetySubmit': 'Send',
+      'safetyThanksTitle': 'Recorded',
+      'safetyReferralTitle': "We'll get in touch",
+      'safetyReferralBody': 'The lead researcher will contact you for support and referral. '
+          'Your sessions are paused until then — this brings you no disadvantage.',
+      'ok': 'Got it',
       'consentTitle': 'Consent Form',
       'consentReadSummary': 'Read the plain-language summary:',
       'consentRead': 'I have read and understood the information',
@@ -324,6 +369,35 @@ class AppLocalizations {
           'pseudonymized (LGPD). If you withdraw, data already collected is kept without your name.',
       'Participation is voluntary. Refusing or leaving does not affect your grades, your '
           'institutional standing, or any care you receive.',
+    ],
+  };
+
+  /// PHQ-9 — enunciados PRÓPRIOS e curtos (nunca o texto verbatim; ver ADR-102 e a nota de
+  /// licenciamento em `instruments_scoring.py`). O item 9 é o do rastreio de risco: precisa
+  /// ser direto, sem eufemismo que o torne ambíguo, e a tela traz os contatos de ajuda logo
+  /// acima das perguntas.
+  static const Map<String, List<String>> _phq9 = {
+    'pt': [
+      'Teve pouco interesse ou pouco prazer em fazer as coisas?',
+      'Sentiu-se para baixo, deprimido(a) ou sem esperança?',
+      'Teve dificuldade para dormir ou dormiu demais?',
+      'Sentiu-se cansado(a) ou com pouca energia?',
+      'Teve falta de apetite ou comeu demais?',
+      'Sentiu-se mal consigo mesmo(a), um fracasso ou que decepcionou pessoas?',
+      'Teve dificuldade de concentração (ler, ver TV, estudar)?',
+      'Ficou lento(a) ou, ao contrário, agitado(a) a ponto de outras pessoas notarem?',
+      'Teve pensamentos de morte ou de se ferir de alguma forma?',
+    ],
+    'en': [
+      'Little interest or pleasure in doing things?',
+      'Feeling down, depressed or hopeless?',
+      'Trouble sleeping, or sleeping too much?',
+      'Feeling tired or having little energy?',
+      'Poor appetite or overeating?',
+      'Feeling bad about yourself, a failure, or that you let people down?',
+      'Trouble concentrating (reading, watching TV, studying)?',
+      'Moving or speaking slowly, or being so restless that others noticed?',
+      'Thoughts of death or of hurting yourself in some way?',
     ],
   };
 
@@ -448,7 +522,18 @@ class AppLocalizations {
   String get prepSession => _t('prepSession');
   String get useStereoHeadphones => _t('useStereoHeadphones');
   String get headphoneBody => _t('headphoneBody');
-  String get headphonesConnected => _t('headphonesConnected');
+  // G4 — verificação dicótica de fones
+  String get headphoneCheckIntro => _t('headphoneCheckIntro');
+  String get headphoneCheckWhichEar => _t('headphoneCheckWhichEar');
+  String get headphoneCheckPassed => _t('headphoneCheckPassed');
+  String get headphoneCheckFailed => _t('headphoneCheckFailed');
+  String get headphoneCheckPlay => _t('headphoneCheckPlay');
+  String get headphoneCheckPlayAgain => _t('headphoneCheckPlayAgain');
+  String get headphoneCheckLeft => _t('headphoneCheckLeft');
+  String get headphoneCheckRight => _t('headphoneCheckRight');
+  String headphoneCheckProgress(int feitas, int total) => locale.languageCode == 'en'
+      ? 'Step $feitas of $total'
+      : 'Etapa $feitas de $total';
   // Consentimento
   String get consentTitle => _t('consentTitle');
   String get consentReadSummary => _t('consentReadSummary');
@@ -499,6 +584,17 @@ class AppLocalizations {
   String get baselineThanks => _t('baselineThanks');
   String get baselineAlready => _t('baselineAlready');
   List<String> get gad7Prompts => _gad7[locale.languageCode] ?? _gad7['pt']!;
+  // G5 avaliação de segurança (PHQ-9)
+  String get safetyTitle => _t('safetyTitle');
+  String get safetyIntro => _t('safetyIntro');
+  String get safetyHelpNow => _t('safetyHelpNow');
+  String get phq9GroupTitle => _t('phq9GroupTitle');
+  String get safetySubmit => _t('safetySubmit');
+  String get safetyThanksTitle => _t('safetyThanksTitle');
+  String get safetyReferralTitle => _t('safetyReferralTitle');
+  String get safetyReferralBody => _t('safetyReferralBody');
+  String get ok => _t('ok');
+  List<String> get phq9Prompts => _phq9[locale.languageCode] ?? _phq9['pt']!;
   // B4 diário
   String get diaryTitle => _t('diaryTitle');
   String get diaryAwakenings => _t('diaryAwakenings');

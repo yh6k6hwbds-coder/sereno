@@ -19,6 +19,7 @@ import time
 from app.core.models import Participant, Allocation, AudioProtocol
 from app.core import auth
 from app.modules.sessions import storage
+from tests.helpers import start_body
 
 START = "/v1/sessions"
 CARRIER, BEAT_ACTIVE, DUR = 200.0, 10.0, 2.0
@@ -47,7 +48,7 @@ def _seed_participant(TestSession, code, arm):
 
 
 def _start(client, hdr) -> str:
-    r = client.post(START, headers=hdr, json={"protocol_handle": "alpha", "headphones_ok": True})
+    r = client.post(START, headers=hdr, json=start_body("alpha"))
     assert r.status_code == 201, r.text
     return r.json()["session_id"]
 

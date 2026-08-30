@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:sereno/core/api_client.dart';
+import 'package:sereno/core/config.dart';
 import 'package:sereno/services/session_store.dart';
 import 'package:sereno/services/session_repository.dart';
 import 'package:sereno/services/audio_player_port.dart';
@@ -17,6 +18,7 @@ class _FakePlayer implements AudioPlayerPort {
   bool loaded = false, playing = false, disposed = false;
   int playCalls = 0, pauseCalls = 0;
   Uint8List? lastBytes;
+  final List<double> volumes = [];
   final Completer<void> _done = Completer<void>();
 
   @override
@@ -24,6 +26,9 @@ class _FakePlayer implements AudioPlayerPort {
     loaded = true;
     lastBytes = bytes;
   }
+
+  @override
+  Future<void> setVolume(double gain) async => volumes.add(gain);
 
   @override
   Future<void> play() async {
@@ -79,7 +84,7 @@ class _MemQueue implements TelemetryQueue {
   Future<void> removeFor(String sessionId) async => _m.remove(sessionId);
 }
 
-final _session = SessionStart(sessionId: 's1', protocolHandle: 'alpha', contentHash: 'x');
+final _session = SessionStart(sessionId: 's1', protocolHandle: 'delta', contentHash: 'x');
 
 TelemetrySender _senderFor(_FakeRepo repo, TelemetryQueue q) => TelemetrySender(
       (i) => repo.complete(i.sessionId,
@@ -114,6 +119,9 @@ void main() {
     expect(player.loaded, isTrue);
     expect(player.isPlaying, isTrue);
     expect(find.text('Em sessão'), findsOneWidget);
+    // G3: o ganho é TRAVADO antes de tocar, e a tela não oferece controle de volume.
+    expect(player.volumes.single, audioGain);
+    expect(find.byType(Slider), findsNothing);
     await _teardown(tester);
   });
 

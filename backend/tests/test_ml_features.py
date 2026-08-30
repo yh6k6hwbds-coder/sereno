@@ -21,6 +21,7 @@ from sqlalchemy import select
 from app.core.models import (Participant, Allocation, AudioProtocol, StaffUser, AuditLog,
                              RecommendationLog)
 from app.core import auth
+from tests.helpers import start_body
 
 FEATURES = "/v1/research/ml-features"
 REC = "/v1/recommendations"
@@ -104,8 +105,7 @@ def test_linked_session_telemetry_present(api):
     _pid, hdr = _participant(TestSession, "P-LINK", arm="A")
     rid = client.post(REC, headers=hdr, json={"goal": "anxiety"}).json()["id"]
     client.post(f"{REC}/{rid}/accept", headers=hdr, json={"accepted": True})
-    sid = client.post(SESS, headers=hdr, json={
-        "protocol_handle": "alpha", "headphones_ok": True, "recommendation_id": rid}).json()["session_id"]
+    sid = client.post(SESS, headers=hdr, json=start_body("alpha", recommendation_id=rid)).json()["session_id"]
     client.post(f"{SESS}/{sid}/complete", headers=hdr, json={"effective_seconds": 1000, "interruptions": 1})
     client.post(f"{SESS}/{sid}/survey", headers=hdr, json={
         "feeling": 3, "relaxation": 4, "liked": 3, "intensity": 2, "would_repeat": True})

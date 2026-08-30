@@ -496,6 +496,8 @@ Nenhum depende de desenvolvimento. **O primeiro bloqueia todos os outros.**
 | F2.3 | **Via digital basta?** — se o registro no app substitui a assinatura, e como a via é entregue | `tcle-rascunho.md` §16, §N2 |
 | F2.4 | **Eliminação do dado de pesquisa já coletado** a pedido do titular: permitida, e em que condições | D3, RIPD R-10 |
 | F2.5 | **Salvaguardas de recrutamento** contra assimetria de poder: convite por pessoa **sem vínculo de avaliação** com o candidato; desistência que não passe pelo pesquisador | **RIPD R-09** |
+| F2.6 | **Registro no ReBEC antes do 1º participante** — o próprio protocolo condiciona o início da etapa (iii) ao registro público, com desfechos pré-especificados. Estava só no checklist do dossiê | `dossie-submissao-cep.md` §1, §5 |
+| F2.7 | **Liberação em três etapas** ((i) verificação técnica + calibração em acoplador de orelha; (ii) usabilidade com a equipe, sem randomização; (iii) piloto randomizado). A (i) e a (ii) não existem em nenhum plano operacional | protocolo, "Tipo de pesquisa" |
 
 > ⚠️ **F2.5 é o maior risco residual do RIPD (Alto) e nenhum código o reduz.** O TCLE §11 já diz que
 > recusar não traz prejuízo — necessário, mas não suficiente: o resto é procedimento de convite.
@@ -537,7 +539,35 @@ já está preparado", não redesenhar.
 
 ---
 
+## FASE G — Alinhamento ao protocolo aprovado (código) · P0/P1
+
+> **Por que esta fase existe.** O projeto de IC (agosto/2026) especificou o estímulo e a posologia
+> pela primeira vez. O **ADR-100** já aplicou o que era estímulo — 250/253 Hz, Δf 3 Hz, 20 min,
+> 48 kHz, rampas 30 s/60 s, controle com Δf = 0 e energia equalizada, handle `delta`, biblioteca
+> semeável em produção e adesão com régua de 80%. O que sobrou está aqui: cada item é uma promessa
+> do protocolo que o sistema **ainda não cumpre**. G1 é bloqueador — sem ele o áudio não chega ao
+> participante.
+
+| # | Pendência | Estado | Onde |
+|---|---|---|---|
+| G1 | **Formato de entrega do áudio.** 20 min a 48 kHz/16 bits = **230 MB por arquivo**; o backend lê o corpo inteiro por requisição e o cliente guarda em memória (ADR-054). Recomendação: **FLAC** (sem perdas, decodificação bit-a-bit) — implica dependência de codificação. Alternativas: Range direto do disco (muda A1/E3) ou baixar a taxa de amostragem (**emenda de protocolo**) | ⬜ **exige decisão** | ADR-100, ADR-053/082 |
+| G2 | **Leito ambiente** de baixa intensidade nos dois braços (o protocolo promete; e **rejeita** ruído rosa). O gate exige pureza espectral ≤ −60 dB — um leito reprovaria a bateria como está | ⬜ **exige decisão** | ADR-100, `binaural_instrument.py` |
+| G3 | **Limite de volume por software** — ✅ **MECANISMO FEITO** (2026-08-30, ADR-101): o app não oferece controle de volume, trava o ganho, declara-o ao iniciar e o servidor recusa acima de `AUDIO_MAX_GAIN`. ⚠️ **Falta o VALOR**: qual ganho corresponde a 60 dB(A) sai da calibração em acoplador de orelha (etapa (i)/F2.7) — até lá o padrão 1.0 não restringe nada | 🟡 | ADR-101; protocolo, "Intensidade e segurança auditiva" |
+| G4 | **Verificação dicótica de fones** — ✅ **FEITO** (2026-08-30, ADR-101): duas rodadas com orelha sorteada, errar reinicia o teste, `headphones_ok` saiu do contrato e a evidência (`rounds`/`errors`/`attempts`/`ears`) fica gravada por sessão | ✅ | ADR-101; protocolo, "Posologia e contexto de uso" |
+| G5 | **PHQ-9 de segurança + fluxo de encaminhamento** — ✅ **FEITO** (2026-08-30, ADR-102): escore com item 9 separado, regra de risco versionada valendo na triagem e no seguimento, status `removed` que **para a sessão**, ficha com confirmação de acolhimento, bloco `seguranca` no relatório ao CEP e tela do participante **sem escore**. ⚠️ Enunciados do PHQ-9 são próprios até a versão validada PT-BR ser licenciada; o aviso à equipe depende de `TEAM_NOTIFY_EMAIL` (F3.7) | ✅ | ADR-102; protocolo, "Fluxo de encaminhamento" |
+| G6 | **Avaliação intermediária T2 (2ª semana)** de segurança e adesão + **descontinuação** por adesão < 50% ao fim da semana 2 (mantendo o participante na análise por ITT). O instrumento e a tela já existem (G5); falta o **momento**: janela, lembrete e a parte de adesão | ⬜ | protocolo, "Instrumentos e desfechos" |
+| G7 | **Blocos permutados de tamanho VARIÁVEL (4 e 6).** `BLOCK_SIZE` é fixo: com bloco conhecido, o último da sequência fica previsível para quem souber os anteriores | ⬜ | ADR-045, `randomization.py` |
+| G8 | **Critérios de elegibilidade do protocolo** codificados na triagem (9 inclusões / 9 exclusões, GAD-7 entre 5 e 14, PSQI > 5). A meta-regra existe e é versionada; as chaves concretas, não | ⬜ | ADR-057, `screening/service.py` |
+| G9 | **Dose acumulada + alerta em 50%** da referência de audição segura (OMS/UIT), como o protocolo promete exibir. O `audio_gain` por sessão (G3) é o insumo que faltava | ⬜ | protocolo, "Intensidade e segurança auditiva" |
+| G10 | **Registro por sessão**: ✅ resultado da verificação de fones e ganho de reprodução já entram na linha da sessão (ADR-101); falta o **volume médio/máximo** quando houver algo que varie, e revisar o que mais o protocolo lista | 🟡 | protocolo, "Registro e monitoramento" |
+
 ## Ordem sugerida de execução
+
+**Código (Fase G), em paralelo:** ~~G4 (fones)~~, ~~G3 (mecanismo do limite de volume)~~ e
+~~G5 (PHQ-9/encaminhamento)~~ feitos em 2026-08-30 (ADR-101, ADR-102). Segue:
+`G1 (entrega do áudio — bloqueia tudo o mais) → G6 (T2) → G7/G8 → G9/G10`. G1 e G2 **começam por
+uma decisão do mantenedor**, não por código; o **valor** do teto de G3 depende da calibração em
+acoplador (F2.7).
 
 **Agora (Fase F):** `F1.1 (base legal) → F2.1/F2.2 (TCLE + protocolo, com o CEP) → F1.2 (DPO) →
 F1.3 (prazos) → F2.5 (recrutamento) → F3.2/F3.3 (SMTP + deploy) → F3.1 (agendar expurgo) →

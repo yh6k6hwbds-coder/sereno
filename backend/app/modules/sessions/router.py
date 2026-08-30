@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.db import get_db
+from app.core.config import audio_max_gain, MIN_HEADPHONE_CHECK_ROUNDS
 from app.core.security import require, current_participant
 from app.core.problem import ProblemException
 from app.core.rate_limit import enforce as rate_limit
@@ -26,15 +27,33 @@ from app.modules.allocation.service import resolve_arm
 from app.modules.sessions.service import condition_for_arm, resolve_protocol, materialize_audio
 from app.modules.sessions import storage
 from app.modules.recommender.service import link_session
+from app.modules.research.export_service import MIN_COMPLETION_RATIO
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 # Entrega por URL ASSINADA (E3): endpoint público-mas-assinado, fora do prefixo /sessions.
 audio_router = APIRouter(prefix="/audio", tags=["audio"])
 
 
+class HeadphoneCheckIn(BaseModel):
+    """Evidência da verificação DICÓTICA de fones (G4).
+
+    Substitui a antiga declaração ``headphones_ok``: a condição dicótica é pré-requisito do
+    fenômeno binaural, então é testada (o participante diz em qual orelha soou o sinal), não
+    declarada. O sinal de teste é idêntico nos dois braços e não carrega condição."""
+    version: str = Field(..., max_length=20)
+    rounds: int = Field(..., ge=1, le=20)
+    errors: int = Field(..., ge=0, le=20, description="erros NA TENTATIVA ACEITA (0)")
+    attempts: int = Field(default=1, ge=1, le=50,
+                          description="tentativas até passar (errar reinicia o teste)")
+    ears: str | None = Field(default=None, max_length=20,
+                             description="orelhas sorteadas, na ordem (auditoria do sorteio)")
+
+
 class SessionStartIn(BaseModel):
-    protocol_handle: str = Field(..., description="banda/handle NEUTRO quanto ao braço (ex.: 'alpha')")
-    headphones_ok: bool
+    protocol_handle: str = Field(..., description="banda/handle NEUTRO quanto ao braço (ex.: 'delta')")
+    headphone_check: HeadphoneCheckIn
+    audio_gain: float = Field(..., gt=0.0, le=1.0,
+                              description="ganho digital TRAVADO da reprodução (G3)")
     device_info: dict | None = None
     recommendation_id: uuid.UUID | None = Field(
         default=None, description="recomendação que originou esta sessão (opcional; p/ coerência)")
@@ -61,15 +80,31 @@ async def status():
 async def start_session(body: SessionStartIn, db: DbSession = Depends(get_db),
                         participant_id: uuid.UUID = Depends(current_participant),
                         _user: dict = Depends(require("session:write"))):
-    # Fidelidade (inegociável): sem fones verificados, não inicia.
-    if not body.headphones_ok:
+    # Fidelidade (inegociável): sem a verificação DICÓTICA aprovada, não inicia (G4).
+    check = body.headphone_check
+    if check.rounds < MIN_HEADPHONE_CHECK_ROUNDS:
+        raise ProblemException(422, "Verificação de fones insuficiente",
+                               "A verificação de fones precisa de pelo menos "
+                               f"{MIN_HEADPHONE_CHECK_ROUNDS} rodadas.")
+    if check.errors > 0:
         raise ProblemException(422, "Fones não verificados",
-                               "Verifique fones estéreo antes de iniciar a sessão.")
+                               "A verificação de fones falhou; refaça antes de iniciar a sessão.")
+    # Teto de volume imposto por software (G3): o participante não pode ultrapassá-lo.
+    teto = audio_max_gain()
+    if body.audio_gain > teto:
+        raise ProblemException(422, "Volume acima do limite",
+                               "O ganho de reprodução excede o limite do estudo.")
     # Consentimento retirado encerra a participação (LGPD; ADR-089) — não inicia sessão.
     p = db.get(Participant, participant_id)
     if p is not None and p.status == "withdrawn":
         raise ProblemException(403, "Consentimento retirado",
                                "Você retirou o consentimento; não é possível iniciar novas sessões.")
+    # Retirado do protocolo pelo fluxo de segurança (G5/ADR-102): a exposição para aqui, e a
+    # mensagem manda falar com a pesquisadora — não é punição nem diagnóstico na tela.
+    if p is not None and p.status == "removed":
+        raise ProblemException(403, "Participação interrompida",
+                               "Sua participação no protocolo foi interrompida pela equipe do "
+                               "estudo. Fale com a pesquisadora responsável.")
     # Resolução do braço é INTERNA — o cliente nunca a vê.
     arm = resolve_arm(db, participant_id)
     if arm is None:
@@ -86,7 +121,9 @@ async def start_session(body: SessionStartIn, db: DbSession = Depends(get_db),
         protocol_uuid=proto.id,
         protocol_hash=proto.content_hash,
         started_at=dt.datetime.now(dt.timezone.utc),
-        headphones_ok=True,
+        headphones_ok=True,                       # derivado: a verificação acima passou
+        headphone_check=check.model_dump(),        # evidência auditável, sem PII
+        audio_gain=body.audio_gain,
         completed=False,
         interruptions=0,
         device_info=body.device_info,
@@ -114,9 +151,19 @@ async def complete_session(session_id: uuid.UUID, body: SessionCompleteIn,
     s.ended_at = dt.datetime.now(dt.timezone.utc)
     s.effective_seconds = body.effective_seconds
     s.interruptions = body.interruptions
-    s.completed = True
+    # ``completed`` é o que a análise conta como ADESÃO (desfecho primário): o protocolo
+    # exige pelo menos 80% da duração prescrita. Marcar toda sessão encerrada como concluída
+    # inflaria a adesão — quem abriu o áudio por dois minutos contaria igual a quem ouviu os
+    # vinte. A régua é do SERVIDOR (o cliente só relata o tempo efetivo) e usa a duração do
+    # protocolo CONGELADO na sessão, não a do protocolo vigente hoje.
+    proto = db.get(AudioProtocol, s.protocol_uuid)
+    minimo = MIN_COMPLETION_RATIO * float(proto.duration_s) if proto is not None else 0.0
+    s.completed = bool((s.effective_seconds or 0) >= minimo)
     db.flush()
-    return {"status": "completed", "effective_seconds": s.effective_seconds}
+    # Resposta NEUTRA quanto ao braço (a régua é a mesma nos dois): só diz se esta sessão
+    # entra na contagem de adesão, o que o participante precisa saber para se organizar.
+    return {"status": "recorded", "effective_seconds": s.effective_seconds,
+            "counts_for_adherence": s.completed}
 
 
 def _parse_range(header: str, total: int) -> tuple[int, int] | None:
