@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.core.config import allocation_block_sizes
 from app.core.security import require
 from app.core.problem import ProblemException
 from app.core.models import Participant, Allocation
@@ -25,9 +26,10 @@ from app.modules.screening.service import enrollment_blocker
 
 router = APIRouter(prefix="/allocation", tags=["allocation"])
 
-# Semente e tamanho de bloco vêm do ambiente (semente = segredo custodiado em cofre).
+# Semente vem do ambiente (segredo custodiado em cofre). Os tamanhos de bloco vêm da config
+# (G7: permutados de 4 e 6) e são lidos A CADA alocação — ler no import congelaria o valor
+# antes de o ambiente de teste conseguir trocá-lo.
 SEED = os.getenv("ALLOCATION_SEED", "dev-seed-trocar-em-producao")
-BLOCK_SIZE = int(os.getenv("ALLOCATION_BLOCK_SIZE", "4"))
 
 
 class AllocateIn(BaseModel):
@@ -54,7 +56,8 @@ async def allocate(body: AllocateIn, db: Session = Depends(get_db),
         raise ProblemException(409, "Inscrição incompleta", blocker)
     if is_allocated(db, body.participant_id):
         raise ProblemException(409, "Participante já alocado", "Este participante já possui alocação.")
-    alloc = allocate_participant(db, body.participant_id, seed=SEED, block_size=BLOCK_SIZE)
+    alloc = allocate_participant(db, body.participant_id, seed=SEED,
+                                 block_sizes=allocation_block_sizes())
 
     # Auditoria (append-only): registra que houve alocação — NUNCA o braço (arm_coded),
     # que permanece oculto inclusive na trilha. Apenas metadado neutro (bloco).

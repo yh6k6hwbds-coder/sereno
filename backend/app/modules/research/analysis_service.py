@@ -15,7 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.models import (Allocation, FollowupAssessment, AdverseEvent, Participant,
-                             Referral)
+                             ProtocolDiscontinuation, Referral)
 from app.modules.research import analysis_plan as ap
 from app.modules.research.export_service import gather_export_rows
 
@@ -68,6 +68,14 @@ def build_report(db: Session) -> dict:
     n_removidos = int(db.scalar(select(func.count()).select_from(Participant)
                                 .where(Participant.status == "removed")) or 0)
 
+    # Descontinuações (G6/ADR-106): o protocolo manda registrar os motivos de descontinuação,
+    # e o CONSORT pede o fluxo de participantes. Contagem por motivo, sem código nem braço.
+    # Todas permanecem na análise (ITT) — daí a contagem aparecer ao lado, e não como perda.
+    por_motivo = {motivo: int(db.scalar(
+        select(func.count()).select_from(ProtocolDiscontinuation)
+        .where(ProtocolDiscontinuation.reason == motivo)) or 0)
+        for motivo in ("solicitacao_participante", "evento_adverso", "adesao_insuficiente")}
+
     rows = gather_export_rows(db)                 # casos completos, cegos (A/B)
     arm_a = [r for r in rows if r.arm_coded == "Grupo A"]
     arm_b = [r for r in rows if r.arm_coded == "Grupo B"]
@@ -109,6 +117,8 @@ def build_report(db: Session) -> dict:
                     "eficácia; ferramenta complementar."),
         "enrollment": {"allocated": n_allocated, "complete_cases": len(rows),
                        "arm_a_n": len(arm_a), "arm_b_n": len(arm_b)},
+        "descontinuacoes": {"total": sum(por_motivo.values()), "por_motivo": por_motivo,
+                            "mantidos_na_analise_itt": True},
         "feasibility": {"adherence": adherence, "retention": retention,
                         "usability_sus": sus, "adherence_target_pct": ADHERENCE_TARGET_PCT},
         "blinding": {"bang_index": bang, "maintained": blinding_ok},

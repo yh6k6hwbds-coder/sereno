@@ -39,6 +39,34 @@ AUDIO_FORMATS = ("flac", "wav")
 # chutasse acertaria metade das vezes. Duas rodadas deixam o acerto por acaso em 25%.
 MIN_HEADPHONE_CHECK_ROUNDS = 2
 
+# G7 — blocos permutados de tamanho VARIÁVEL (4 e 6), como o protocolo especifica. Fica aqui,
+# e não como constante no router, porque é parâmetro de protocolo: mudá-lo é emenda, e o valor
+# em vigor precisa ser legível junto às demais invariantes do estudo.
+DEFAULT_ALLOCATION_BLOCK_SIZES = (4, 6)
+LEGACY_BLOCK_SIZE_VAR = "ALLOCATION_BLOCK_SIZE"
+
+
+def allocation_block_sizes() -> tuple[int, ...]:
+    """Tamanhos de bloco permitidos na randomização (``ALLOCATION_BLOCK_SIZES``, ex. "4,6")."""
+    # A variável ANTIGA (singular) fixava o bloco. Ignorá-la em silêncio seria trocar a
+    # randomização de um ambiente que a define sem que ninguém percebesse — e a sequência de
+    # alocação é auditada. Melhor recusar subir e obrigar a troca explícita.
+    if os.getenv(LEGACY_BLOCK_SIZE_VAR) is not None:
+        raise InsecureConfigError(
+            f"{LEGACY_BLOCK_SIZE_VAR} não é mais lida: o protocolo pede blocos de tamanho "
+            "variável (G7). Substitua por ALLOCATION_BLOCK_SIZES (ex.: \"4,6\").")
+    raw = os.getenv("ALLOCATION_BLOCK_SIZES")
+    if not raw or not raw.strip():
+        return DEFAULT_ALLOCATION_BLOCK_SIZES
+    try:
+        sizes = tuple(sorted({int(p) for p in raw.split(",") if p.strip()}))
+    except ValueError:
+        raise InsecureConfigError(f"ALLOCATION_BLOCK_SIZES inválido: {raw!r}") from None
+    if not sizes or any(b <= 0 or b % 2 != 0 for b in sizes):
+        raise InsecureConfigError(
+            "ALLOCATION_BLOCK_SIZES deve listar inteiros pares positivos (ex.: \"4,6\").")
+    return sizes
+
 
 def audio_max_gain() -> float:
     """Teto de ganho digital aceito ao iniciar sessão (0 < g <= 1)."""

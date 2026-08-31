@@ -113,4 +113,10 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 
 | 103 | **Entrega do áudio em FLAC** (sem perdas: mesmo PCM do WAV, 14% do tamanho — 230 MB viram ~33 MB), **servida do disco em janelas** (nem materializar nem transmitir carrega a sessão na memória) e **biblioteca local cifrada** no aparelho, revalidada por `If-None-Match`: as 20 sessões baixam o arquivo uma vez, sem deixar o estímulo em claro onde uma FFT revelaria o braço **[novo]** |
 
+| 104 | **Blocos permutados de tamanho VARIÁVEL (4 e 6)**, como o protocolo especifica: com bloco fixo e conhecido, a última posição de cada bloco é dedutível das anteriores — previsão de alocação, que é o que a randomização em blocos deveria impedir. O tamanho sai da mesma semente (reprodutibilidade intacta); `ALLOCATION_BLOCK_SIZE` é recusada em voz alta **[novo]** |
+
+| 105 | **Critérios de elegibilidade do protocolo codificados e FECHADOS** (7 inclusões, 9 exclusões (a)–(i)): chave faltando/desconhecida é 422, faixa sintomática (GAD-7 5–14 e/ou PSQI > 5) e a alínea (d) são **derivadas dos escores**, e a triagem vazia deixou de ser elegível — `all([])` respondia `True`. Catálogo em `GET /screening/criteria` **[novo]** |
+
+| 106 | **A avaliação intermediária (T2) vira um momento e a descontinuação vira um registro:** janela abrindo ao fim da 2ª semana com convite na Home, status `discontinued` que **para a sessão e mantém o ITT**, os três critérios do protocolo (pedido, evento adverso, adesão < 50%) e uma varredura que alcança quem parou de abrir o app. Dose e régua de adesão passam a viver em `core/protocol.py` **[novo]** |
+
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

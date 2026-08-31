@@ -95,6 +95,27 @@ de saúde (Art. 11). PII fica **cifrada e separada**; braço sempre **codificado
 - **Segurança:** pseudonimização; RBAC (a ficha é da equipe, o participante não a lê); a
   resposta ao participante **não devolve escore**; auditoria append-only de abertura e registro.
 
+### OP-04c · Descontinuação de protocolo (ADR-106)
+- **Finalidade:** registrar a saída do participante da intervenção pelos critérios do protocolo
+  (pedido do participante, evento adverso que contraindique a continuidade, adesão inferior a 50%
+  ao final da 2ª semana) e **interromper a exposição**, mantendo-o na análise por intenção de
+  tratar. Sem esse registro, o fluxo de participantes do CONSORT não fecha.
+- **Titulares:** participantes alocados.
+- **Dados — pseudonimizados:** motivo (lista fechada), semana do estudo e a contagem de sessões
+  concluídas × previstas que motivou a decisão automática, autor da decisão quando humana
+  (`protocol_discontinuation`); status do participante (`participant.status = 'discontinued'`).
+  **Sem texto livre** e **sem escore**.
+- **Base legal `[a confirmar]`:** **Art. 11** (pesquisa em saúde), continuidade da OP-04 — a
+  descontinuação é ato da condução do estudo.
+- **Destinatários:** equipe de pesquisa. O aviso por e-mail leva **só o id do registro e o
+  motivo** — nunca o código do participante.
+- **Transferência internacional:** não (além da hospedagem).
+- **Retenção:** prazo do registro de pesquisa (política §4) — o participante **permanece na
+  análise**, então o registro acompanha o dataset.
+- **Segurança:** pseudonimização; RBAC (a lista é da equipe); auditoria append-only
+  (`participant.discontinued`, sem PII); a descontinuação **não rebaixa** retirada de
+  consentimento nem retirada por segurança.
+
 ### OP-05 · Randomização, alocação e cegamento
 - **Finalidade:** alocar o participante e manter o duplo-cego (integridade científica).
 - **Titulares:** participantes.

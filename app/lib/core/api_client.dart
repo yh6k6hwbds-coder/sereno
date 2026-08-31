@@ -48,6 +48,15 @@ class ApiClient {
     return _handle(res);
   }
 
+  /// GET de JSON (ex.: o andamento do participante no protocolo).
+  Future<Map<String, dynamic>> get(String path, {bool authenticated = false}) async {
+    var res = await _doGet(path, authenticated);
+    if (authenticated && res.statusCode == 401 && await _tryRefresh()) {
+      res = await _doGet(path, authenticated); // repete com o novo token
+    }
+    return _handle(res);
+  }
+
   /// GET binário em fluxo (o áudio da sessão). Com [ifNoneMatch], o servidor pode
   /// responder **304** e poupar o download inteiro — é o que evita rebaixar o mesmo
   /// arquivo nas 20 sessões do estudo.
@@ -71,6 +80,12 @@ class ApiClient {
     final headers = <String, String>{'Content-Type': 'application/json'};
     await _maybeAuth(headers, authenticated);
     return _http.post(Uri.parse('$apiBaseUrl$path'), headers: headers, body: jsonEncode(body));
+  }
+
+  Future<http.Response> _doGet(String path, bool authenticated) async {
+    final headers = <String, String>{};
+    await _maybeAuth(headers, authenticated);
+    return _http.get(Uri.parse('$apiBaseUrl$path'), headers: headers);
   }
 
   Future<http.StreamedResponse> _doGetStream(

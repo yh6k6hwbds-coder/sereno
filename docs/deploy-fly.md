@@ -210,6 +210,29 @@ Nada a configurar no caminho feliz — mas três coisas quebram em produção se
 fly ssh console -C "python -c 'import soundfile; print(soundfile.__libsndfile_version__)'"
 ```
 
+## 3.5. Agendar a varredura de descontinuação (F3.11 / G6, ADR-106)
+
+O protocolo descontinua quem, **ao final da 2ª semana**, concluiu menos de 50% das sessões
+previstas até ali. O servidor aplica a regra sozinho quando o participante abre a tela inicial ou
+tenta iniciar uma sessão — mas isso, por construção, **nunca alcança quem parou de abrir o
+aplicativo**, que é exatamente o caso que a regra existe para pegar. Por isso existe a varredura:
+
+```powershell
+# Semanalmente. Idempotente: rodar de novo devolve discontinued: 0.
+curl -X POST https://sereno-piloto-api.fly.dev/v1/discontinuations/evaluate `
+  -H "Authorization: Bearer <token de staff com enroll:write>"
+# -> {"evaluated_at": "...", "discontinued": 2}
+```
+
+Mesmo problema de agendamento do §3.1 (expurgo) — **resolva os dois juntos**, com o mesmo cron
+externo ou a mesma máquina agendada da Fly. A diferença é que aqui a chamada é HTTP autenticada,
+não `fly ssh console`: o agendador precisa de um token de staff, então prefira a máquina agendada
+com `fly ssh console -C "python -c ..."` se não quiser guardar credencial no agendador.
+
+**Antes de agendar, confirme com a equipe** (a lista sai em `GET /v1/discontinuations`): a
+descontinuação **para as sessões** do participante. Ela não apaga nada — o participante segue na
+análise por intenção de tratar — mas alguém deve entrar em contato, e é a equipe que faz isso.
+
 ## 4. Reconstruir o app apontando para a API pública
 
 O CI já injeta a URL. O default (`https://sereno-piloto-api.fly.dev/v1`) casa com o

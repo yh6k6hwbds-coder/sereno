@@ -26,12 +26,9 @@ from sqlalchemy.orm import Session
 
 from app.core.models import (Allocation, Participant, BaselineAssessment,
                              FollowupAssessment, Session as SessionModel, AdverseEvent)
+# Dose e régua de adesão vêm do protocolo (``core.protocol``), não daqui.
+from app.core.protocol import PRESCRIBED_SESSIONS, adherence_pct
 from app.modules.instruments.instruments_scoring import ParticipantExport, build_export_csv
-
-PRESCRIBED_SESSIONS = 20          # 5 sessões/semana x 4 semanas (protocolo)
-# Uma sessão só CONTA para a adesão se rodou pelo menos 80% da duração prescrita — é a
-# definição do desfecho primário no protocolo, não uma heurística de engenharia.
-MIN_COMPLETION_RATIO = 0.8
 
 
 def _arm_label(arm_coded: str) -> str:
@@ -61,7 +58,7 @@ def gather_export_rows(db: Session) -> list[ParticipantExport]:
             gad7_base=base.gad7_total, gad7_fu=fu.gad7_total,
             psqi_base=base.psqi_global, psqi_fu=fu.psqi_global,
             sus_fu=int(round(float(fu.sus_score))),
-            adherence_pct=round(100 * int(completed) / PRESCRIBED_SESSIONS, 1),
+            adherence_pct=adherence_pct(int(completed), PRESCRIBED_SESSIONS),
             adverse_events=int(ae),
             blinding_guess=fu.blinding_guess or "nao_sei",
         ))

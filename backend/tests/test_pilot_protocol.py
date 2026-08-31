@@ -20,7 +20,7 @@ import numpy as np
 from app.core.models import Participant, Allocation, AudioProtocol, Session as SessionModel
 from app.core import auth
 from app.modules.sessions import audio_render
-from app.modules.research.export_service import PRESCRIBED_SESSIONS, MIN_COMPLETION_RATIO
+from app.core.protocol import PRESCRIBED_SESSIONS, MIN_COMPLETION_RATIO
 from scripts import seed_protocols as sp
 from tests.helpers import start_body
 

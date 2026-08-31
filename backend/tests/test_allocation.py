@@ -9,10 +9,12 @@ Cobre ainda: 409 (duplicado), 404 (inexistente), 403 (papel errado), 401 (sem to
 """
 from __future__ import annotations
 import datetime as dt
+import pytest
 from app.core.models import Participant, StaffUser, Screening, ConsentRecord
 from app.core import auth
 from app.modules.consent.router import TCLE_CURRENT   # versao vigente do termo (nao literal)
-from app.modules.allocation.randomization import generate_sequence, arm_for_index
+from app.modules.allocation.randomization import (generate_sequence, arm_for_index, assign,
+                                                  normalize_block_sizes)
 from app.modules.allocation.service import allocate_participant, resolve_arm
 
 ALLOC_URL = "/v1/allocation"
@@ -62,9 +64,64 @@ def test_service_matches_deterministic_sequence(api):
         pids = []
         for i in range(6):
             p = Participant(study_code=f"P{i}"); s.add(p); s.flush(); pids.append(p.id)
-        arms = [allocate_participant(s, pid, seed=seed, block_size=block).arm_coded for pid in pids]
+        arms = [allocate_participant(s, pid, seed=seed, block_sizes=block).arm_coded
+                for pid in pids]
         s.commit()
     assert arms == expected
+
+
+# ---------------------------------------------------------------------------
+# G7 — blocos permutados de tamanho VARIÁVEL (4 e 6)
+# ---------------------------------------------------------------------------
+def _block_lengths(seed: str, sizes, n_blocks: int) -> list[int]:
+    """Tamanhos dos primeiros ``n_blocks`` blocos, lidos pela numeração de ``assign``."""
+    lengths, atual, contagem = [], 1, 0
+    i = 0
+    while len(lengths) < n_blocks:
+        _arm, bloco = assign(i, sizes, seed)
+        if bloco != atual:
+            lengths.append(contagem)
+            atual, contagem = bloco, 0
+        contagem += 1
+        i += 1
+    return lengths
+
+
+def test_variable_blocks_are_reproducible_and_balanced_per_block():
+    seq_a = generate_sequence(40, (4, 6), "seed-G7")
+    assert seq_a == generate_sequence(40, (4, 6), "seed-G7")     # reprodutível
+    assert seq_a != generate_sequence(40, (4, 6), "outra")       # depende da semente
+    # Todo bloco fechado é 1:1 — a propriedade que justifica randomizar em blocos.
+    inicio = 0
+    for tamanho in _block_lengths("seed-G7", (4, 6), 6):
+        bloco = seq_a[inicio:inicio + tamanho]
+        assert bloco.count("A") == bloco.count("B") == tamanho // 2
+        inicio += tamanho
+
+
+def test_block_size_actually_varies_so_the_boundary_is_not_known():
+    """O ponto do G7: com bloco fixo, o último do bloco é dedutível dos anteriores."""
+    tamanhos = set(_block_lengths("seed-G7", (4, 6), 12))
+    assert tamanhos == {4, 6}
+
+
+def test_single_size_keeps_the_pre_g7_sequence_intact():
+    """Uma semente já usada com bloco fixo não pode reescrever a sequência dela."""
+    assert generate_sequence(12, (4,), "seed-S") == generate_sequence(12, 4, "seed-S")
+
+
+def test_assign_agrees_with_the_generated_sequence():
+    seq = generate_sequence(30, (4, 6), "seed-G7")
+    assert [assign(i, (4, 6), "seed-G7")[0] for i in range(30)] == seq
+    assert [arm_for_index(i, (4, 6), "seed-G7") for i in range(30)] == seq
+
+
+def test_block_sizes_must_be_positive_and_even():
+    for ruim in ((3,), (0,), (-4,), ()):
+        with pytest.raises(ValueError):
+            normalize_block_sizes(ruim)
+    assert normalize_block_sizes(6) == (6,)
+    assert normalize_block_sizes([6, 4, 4]) == (4, 6)     # ordena e desduplica
 
 
 # (2) A alocação NUNCA revela o braço — mas o servidor o conhece internamente

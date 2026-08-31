@@ -28,6 +28,7 @@ from app.core.models import (  # noqa: E402
     Participant, ContactInfo, AudioProtocol, Screening, ConsentRecord, Allocation)
 from app.core import pii_crypto  # noqa: E402
 from app.modules.consent.router import TCLE_CURRENT  # noqa: E402  # versao vigente do termo
+from app.modules.screening import service as screening_service  # noqa: E402
 
 STUDY_CODE = os.getenv("DEMO_STUDY_CODE", "DEMO")
 DEMO_EMAIL = os.getenv("DEMO_EMAIL", "voce@example.com")
@@ -74,7 +75,15 @@ def main() -> None:
                 enc_email=pii_crypto.encrypt(DEMO_EMAIL, aad=pii_crypto.aad_for(p.id, "email")),
             ))
         if s.scalar(select(Screening).where(Screening.participant_id == p.id)) is None:
-            s.add(Screening(participant_id=p.id, eligible=True, criteria={"version": "1.0.0"}))
+            # Critérios do protocolo em vigor (G8/ADR-105) — não uma versão inventada: a
+            # triagem semeada aqui é a que a demo mostra, e mostrar o formato errado ensina
+            # o formato errado a quem for operar.
+            s.add(Screening(
+                participant_id=p.id, eligible=True,
+                criteria={"version": screening_service.CRITERIA_VERSION,
+                          "inclusion": {k: True for k in screening_service.INCLUSION_CRITERIA},
+                          "exclusion": {k: False for k in screening_service.EXCLUSION_CRITERIA},
+                          "scores": {"gad7_total": 8, "psqi_global": 9}}))
         if s.scalar(select(ConsentRecord).where(ConsentRecord.participant_id == p.id)) is None:
             s.add(ConsentRecord(participant_id=p.id, tcle_version=TCLE_CURRENT, accepted=True,
                                 accepted_at=now, content_hash="0" * 64))

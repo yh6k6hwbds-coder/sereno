@@ -48,7 +48,7 @@ específicos deste desenho e não seriam capturados por um checklist genérico.
 institucionais fora do sistema (vias físicas do TCLE, atas do CEP) e tratamentos futuros não
 construídos (vestíveis persistidos, ML de decisão) — que exigiriam **revisão deste RIPD** (§11).
 
-**Metodologia:** (a) inventário das operações a partir do ROPA (8 operações, OP-01…08); (b)
+**Metodologia:** (a) inventário das operações a partir do ROPA (8 operações, OP-01…08, mais os desdobramentos OP-04b e OP-04c); (b)
 identificação de riscos **na perspectiva do titular** — o dano que a pessoa sofre, não o prejuízo da
 instituição; (c) classificação por **probabilidade × impacto**, na mesma escala do plano de
 incidentes (Baixo/Médio/Alto/Crítico), para que um risco previsto aqui e um incidente real lá sejam
@@ -75,7 +75,7 @@ definida e o TCLE reflita fielmente a retenção pós-revogação (D3). Sem A2, 
 
 ## 5. Descrição do tratamento e ciclo de vida do dado
 
-Detalhe por operação no **ROPA** (`registro-operacoes-tratamento.md`, OP-01…08). Resumo do fluxo:
+Detalhe por operação no **ROPA** (`registro-operacoes-tratamento.md`, OP-01…08 + OP-04b/OP-04c). Resumo do fluxo:
 
 ```
 Convite → Triagem (saúde, sensível) → TCLE (consentimento versionado, com IP)

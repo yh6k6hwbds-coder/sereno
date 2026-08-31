@@ -4,6 +4,7 @@ import '../../core/config.dart';
 import '../../core/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/participant_repository.dart';
+import '../../services/progress_repository.dart';
 import '../../shared/disclaimer_banner.dart';
 import '../home/home_screen.dart';
 import 'tcle_full_text_screen.dart';
@@ -27,7 +28,8 @@ class _ConsentScreenState extends State<ConsentScreen> {
       await widget.repo.recordConsent(version: tcleVersion, accepted: true);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()));
+          MaterialPageRoute(builder: (_) =>
+              HomeScreen(progressRepo: ProgressRepository(widget.repo.api))));
     } on ApiException catch (e) {
       _snack(e.toString());
     } catch (_) {

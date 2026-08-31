@@ -44,9 +44,12 @@ class Participant(Base):
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     # 'removed' = retirado do protocolo pela regra de segurança (G5/ADR-102): não é retirada
     # de consentimento ('withdrawn') nem conclusão ('completed'), e o motivo fica na ficha de
-    # encaminhamento. Diferenciar importa: o relato ao CEP conta as três coisas separadamente.
-    __table_args__ = (CheckConstraint("status in ('active','withdrawn','completed','removed')",
-                                      name="ck_participant_status"),)
+    # encaminhamento. 'discontinued' = descontinuação de protocolo (G6/ADR-106) — a pedido, por
+    # evento adverso ou por adesão < 50% ao fim da 2ª semana; **permanece na análise por ITT**,
+    # o que o separa de 'withdrawn'. Diferenciar importa: o relato ao CEP conta cada uma à parte.
+    __table_args__ = (
+        CheckConstraint("status in ('active','withdrawn','completed','removed','discontinued')",
+                        name="ck_participant_status"),)
 
 
 class ContactInfo(Base):                       # PII separada e cifrada na aplicação
@@ -280,6 +283,37 @@ class AdverseEvent(Base):
     outcome: Mapped[str] = mapped_column(String(200), nullable=True)
     occurred_at: Mapped[dt.datetime] = TS()
     __table_args__ = (CheckConstraint("severity in ('mild','moderate','severe')", name="ck_ae_severity"),)
+
+
+class ProtocolDiscontinuation(Base):
+    """Descontinuação de protocolo (G6). Registra o QUE e o PORQUÊ, sem texto livre.
+
+    O protocolo lista três motivos: pedido do participante, evento adverso que contraindique
+    a continuidade (juízo da pesquisadora) e adesão < 50% ao fim da 2ª semana. Os dois
+    primeiros são decisão humana e chegam por endpoint de staff; o terceiro é regra e o
+    servidor a aplica. Uma por participante — descontinuar duas vezes não quer dizer nada.
+
+    Guarda a CONTAGEM que motivou a decisão automática (concluídas × previstas até a data)
+    porque a análise precisa poder reconstruir o julgamento, e sessões podem ser registradas
+    depois. ``kept_in_itt`` é sempre verdadeiro: está no modelo para que quem lê a tabela
+    (ou o relatório ao CEP) não precise saber de cor que descontinuar não exclui da análise."""
+    __tablename__ = "protocol_discontinuation"
+    id: Mapped[uuid.UUID] = UUID_PK()
+    participant_id: Mapped[uuid.UUID] = fk("participant.id")
+    reason: Mapped[str] = mapped_column(String(24), nullable=False)
+    adverse_event_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("adverse_event.id", ondelete="SET NULL"), nullable=True)
+    study_week: Mapped[int] = mapped_column(SmallInteger, nullable=True)
+    sessions_completed: Mapped[int] = mapped_column(Integer, nullable=True)
+    sessions_prescribed: Mapped[int] = mapped_column(Integer, nullable=True)
+    kept_in_itt: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    decided_by: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=True)   # staff; nulo = a regra
+    decided_at: Mapped[dt.datetime] = TS()
+    __table_args__ = (
+        UniqueConstraint("participant_id", name="uq_discontinuation_participant"),
+        CheckConstraint("reason in ('solicitacao_participante','evento_adverso',"
+                        "'adesao_insuficiente')", name="ck_discontinuation_reason"),
+    )
 
 
 class RecommendationLog(Base):

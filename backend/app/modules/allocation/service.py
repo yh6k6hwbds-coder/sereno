@@ -13,19 +13,21 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.core.models import Allocation
-from app.modules.allocation.randomization import arm_for_index, block_of, seed_ref
+from app.modules.allocation.randomization import assign, seed_ref
 
 
 def is_allocated(db: Session, participant_id: uuid.UUID) -> bool:
     return db.scalar(select(Allocation.id).where(Allocation.participant_id == participant_id)) is not None
 
 
-def allocate_participant(db: Session, participant_id: uuid.UUID, *, seed: str, block_size: int) -> Allocation:
+def allocate_participant(db: Session, participant_id: uuid.UUID, *, seed: str,
+                         block_sizes) -> Allocation:
     index = db.scalar(select(func.count()).select_from(Allocation))   # ordinal (0-based)
+    arm, block = assign(index, block_sizes, seed)
     alloc = Allocation(
         participant_id=participant_id,
-        arm_coded=arm_for_index(index, block_size, seed),
-        block=block_of(index, block_size),
+        arm_coded=arm,
+        block=block,
         sequence_seed_ref=seed_ref(seed),
     )
     db.add(alloc)

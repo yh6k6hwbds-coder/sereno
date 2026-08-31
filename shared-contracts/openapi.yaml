@@ -228,6 +228,67 @@ paths:
         '200': { description: Atualizada, content: { application/json: { schema: { $ref: '#/components/schemas/Referral' } } } }
         '404': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /participants/me/status:
+    get:
+      summary: Andamento do participante no protocolo (semana, adesão, T2)
+      operationId: getMyProgress
+      description: >-
+        Em que semana o participante está, quantas sessões contaram para a adesão, se a
+        avaliação intermediária (T2, 2ª semana) está aberta e se houve descontinuação de
+        protocolo. É o que permite convidar para o T2 **na hora certa**. Aplica de passagem a
+        regra de adesão da 2ª semana. NÃO revela braço, condição nem escore. Participante
+        (`progress:read`).
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ParticipantProgress' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /participants/{id}/discontinue:
+    post:
+      summary: Registrar descontinuação de protocolo (staff)
+      operationId: discontinueParticipant
+      description: >-
+        Os dois critérios de descontinuação que são juízo humano: pedido do participante e
+        evento adverso que contraindique a continuidade. O terceiro (adesão < 50% ao final da
+        2ª semana) é regra e o servidor a aplica sozinho. Quem descontinua **permanece na
+        análise por intenção de tratar** — é o que separa este estado da retirada de
+        consentimento. Staff de inscrição (`enroll:write`).
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/DiscontinueIn' } } }
+      responses:
+        '201': { description: Registrada, content: { application/json: { schema: { $ref: '#/components/schemas/Discontinuation' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /discontinuations:
+    get:
+      summary: Listar descontinuações de protocolo (equipe)
+      operationId: listDiscontinuations
+      description: >-
+        Saídas do protocolo, pseudonimizadas (código do estudo, motivo, contagem que motivou a
+        decisão). Alimenta o fluxo de participantes do CONSORT e o relatório parcial ao CEP.
+        Nunca traz braço nem PII.
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/DiscontinuationPage' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
+  /discontinuations/evaluate:
+    post:
+      summary: Aplicar a regra de adesão da 2ª semana a todos os ativos (staff)
+      operationId: evaluateDiscontinuations
+      description: >-
+        Varredura idempotente: descontinua quem, ao final da 2ª semana, concluiu menos de 50%
+        das sessões previstas até ali. Existe porque a avaliação preguiçosa (no início de
+        sessão e na tela inicial) nunca alcança quem parou de abrir o aplicativo — que é
+        exatamente o caso que a regra precisa pegar. Staff de inscrição (`enroll:write`).
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/DiscontinuationSweep' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /participants/me/baseline:
     post:
       summary: Enviar avaliação de linha de base (PSQI + GAD-7)
@@ -486,6 +547,18 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ResearchPage' } } } }
         '403': { $ref: '#/components/responses/Problem' }
+  /screening/criteria:
+    get:
+      summary: Critérios de elegibilidade em vigor (staff)
+      operationId: listScreeningCriteria
+      description: >
+        Catálogo versionado dos critérios do protocolo aprovado: chaves, rótulos e quais são
+        DERIVADOS (calculados pelo servidor a partir dos escores, nunca declarados pelo
+        formulário). Somente staff de inscrição (`enroll:write`).
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ScreeningCriteria' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /screening:
     post:
       summary: Triagem/elegibilidade do participante (staff) — ordena o funil de inscrição
@@ -493,8 +566,9 @@ paths:
       description: >
         Registra a triagem: o servidor calcula a elegibilidade por regra transparente e
         versionada (todas as inclusões verdadeiras E nenhuma exclusão presente) e grava
-        critérios + decisão. É pré-condição, junto ao consentimento, para a alocação.
-        Somente staff de inscrição (`enroll:write`).
+        critérios + decisão. As chaves são as do protocolo aprovado e o conjunto é FECHADO —
+        critério faltando, desconhecido ou derivado declarado é 422. É pré-condição, junto ao
+        consentimento, para a alocação. Somente staff de inscrição (`enroll:write`).
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/ScreeningIn' } } }
@@ -1180,13 +1254,21 @@ components:
     ScreeningIn:
       type: object
       description: >
-        Critérios estruturados. Elegível ⇔ todas as inclusões verdadeiras E nenhuma exclusão
-        presente. As chaves concretas vêm do protocolo aprovado (CEP); o servidor só aplica a regra.
+        Critérios estruturados do protocolo aprovado. Elegível ⇔ todas as inclusões verdadeiras
+        E nenhuma exclusão presente. `inclusion`/`exclusion` devem trazer o conjunto COMPLETO das
+        chaves declaráveis (ver GET /screening/criteria); chave faltando, desconhecida ou
+        derivada (`sintomas_elegiveis`, `d_gad7_grave_ou_risco`) é 422 — as derivadas o servidor
+        calcula dos escores.
       properties:
         participant_id: { type: string, format: uuid }
         inclusion: { type: object, additionalProperties: { type: boolean } }
         exclusion: { type: object, additionalProperties: { type: boolean } }
         symptoms: { type: [object, "null"], additionalProperties: true }
+        psqi_global:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 21
+          description: "PSQI global da triagem; > 5 satisfaz (com o GAD-7) a faixa sintomática de inclusão"
         phq9_items:
           type: [array, "null"]
           items: { type: integer, minimum: 0, maximum: 3 }
@@ -1207,8 +1289,93 @@ components:
         status: { type: string, enum: [screened] }
         eligible: { type: boolean }
         risk_detected: { type: boolean, description: "gatilho de segurança acionado na triagem" }
+        unmet_criteria:
+          type: array
+          items: { type: string }
+          description: "Chaves que barraram a inclusão (inclusão falsa ou exclusão presente)"
         referral_id: { type: [string, "null"], format: uuid }
-      required: [status, eligible, risk_detected]
+      required: [status, eligible, risk_detected, unmet_criteria]
+    ParticipantProgress:
+      type: object
+      description: >-
+        Andamento no protocolo. Idêntico nos dois braços — nada aqui depende da condição.
+      properties:
+        status: { type: string, enum: [active, withdrawn, completed, removed, discontinued] }
+        allocated: { type: boolean }
+        study_day: { type: [integer, "null"], description: "dia de estudo (1 = dia da alocação)" }
+        study_week: { type: [integer, "null"] }
+        sessions_completed: { type: integer, description: "sessões com pelo menos 80% da duração" }
+        sessions_prescribed: { type: integer }
+        adherence_pct: { type: number }
+        t2: { oneOf: [ { $ref: '#/components/schemas/T2Window' }, { type: "null" } ] }
+        discontinuation: { oneOf: [ { $ref: '#/components/schemas/DiscontinuationBrief' }, { type: "null" } ] }
+      required: [status, allocated, sessions_completed, sessions_prescribed, adherence_pct]
+    T2Window:
+      type: object
+      description: "Avaliação intermediária da 2ª semana: quando abre, até quando, e se já foi feita."
+      properties:
+        opens_at: { type: string, format: date-time }
+        closes_at: { type: string, format: date-time }
+        due: { type: boolean, description: "janela aberta e ainda não respondida" }
+        late: { type: boolean, description: "janela fechada sem resposta" }
+        completed: { type: boolean }
+      required: [opens_at, closes_at, due, late, completed]
+    DiscontinuationBrief:
+      type: object
+      properties:
+        reason: { type: string, enum: [solicitacao_participante, evento_adverso, adesao_insuficiente] }
+        decided_at: { type: string, format: date-time }
+        kept_in_itt: { type: boolean, description: "sempre true — descontinuar não exclui da análise" }
+      required: [reason, decided_at, kept_in_itt]
+    DiscontinueIn:
+      type: object
+      description: >-
+        Só os motivos que são juízo humano; `adesao_insuficiente` é regra do servidor.
+      properties:
+        reason: { type: string, enum: [solicitacao_participante, evento_adverso] }
+        adverse_event_id: { type: [string, "null"], format: uuid }
+      required: [reason]
+    Discontinuation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        study_code: { type: string, description: "pseudônimo; nunca PII" }
+        reason: { type: string, enum: [solicitacao_participante, evento_adverso, adesao_insuficiente] }
+        study_week: { type: [integer, "null"] }
+        sessions_completed: { type: [integer, "null"] }
+        sessions_prescribed: { type: [integer, "null"] }
+        kept_in_itt: { type: boolean }
+        decided_at: { type: string, format: date-time }
+      required: [id, study_code, reason, kept_in_itt, decided_at]
+    DiscontinuationPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Discontinuation' } }
+      required: [items]
+    DiscontinuationSweep:
+      type: object
+      properties:
+        evaluated_at: { type: string, format: date-time }
+        discontinued: { type: integer, description: "quantos a varredura descontinuou agora" }
+      required: [evaluated_at, discontinued]
+    ScreeningCriteria:
+      type: object
+      description: "Catálogo versionado dos critérios de elegibilidade em vigor."
+      properties:
+        version: { type: string }
+        rule: { type: string }
+        inclusion: { type: array, items: { $ref: '#/components/schemas/CriterionItem' } }
+        exclusion: { type: array, items: { $ref: '#/components/schemas/CriterionItem' } }
+        derived_from: { type: object, additionalProperties: { type: string } }
+        note: { type: string }
+      required: [version, rule, inclusion, exclusion]
+    CriterionItem:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        derived: { type: boolean, description: "calculado pelo servidor; não declarar" }
+      required: [key, label, derived]
     EraseResult:
       type: object
       properties:

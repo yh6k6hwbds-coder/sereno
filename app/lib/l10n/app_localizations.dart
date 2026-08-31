@@ -112,6 +112,15 @@ class AppLocalizations {
           'e encaminhamento. Suas sessões ficam pausadas até lá — isso não traz nenhum '
           'prejuízo para você.',
       'ok': 'Entendi',
+      // Avaliação intermediária (T2) e descontinuação de protocolo (G6)
+      't2CardTitle': 'Acompanhamento da 2ª semana',
+      't2CardBody': 'Chegou a hora do acompanhamento de meio do estudo. São poucas perguntas '
+          'e leva cerca de dois minutos.',
+      't2CardLate': 'O prazo sugerido passou, mas responder ainda ajuda a equipe.',
+      'discontinuedTitle': 'Sua participação foi descontinuada',
+      'discontinuedBody': 'As sessões foram encerradas, mas tudo o que você registrou continua '
+          'fazendo parte do estudo. Isso não traz nenhum prejuízo para você — a pesquisadora '
+          'responsável pode explicar os próximos passos.',
       // Consentimento
       'consentTitle': 'Termo de Consentimento',
       'consentReadSummary': 'Leia o resumo em linguagem simples:',
@@ -262,6 +271,13 @@ class AppLocalizations {
       'safetyReferralBody': 'The lead researcher will contact you for support and referral. '
           'Your sessions are paused until then — this brings you no disadvantage.',
       'ok': 'Got it',
+      't2CardTitle': 'Week 2 check-in',
+      't2CardBody': 'It is time for the mid-study check-in. A few questions, about two minutes.',
+      't2CardLate': 'The suggested window has passed, but answering still helps the team.',
+      'discontinuedTitle': 'Your participation was discontinued',
+      'discontinuedBody': 'Sessions have ended, but everything you recorded stays part of the '
+          'study. This brings you no disadvantage — the lead researcher can explain the next '
+          'steps.',
       'consentTitle': 'Consent Form',
       'consentReadSummary': 'Read the plain-language summary:',
       'consentRead': 'I have read and understood the information',
@@ -593,6 +609,12 @@ class AppLocalizations {
   String get safetyThanksTitle => _t('safetyThanksTitle');
   String get safetyReferralTitle => _t('safetyReferralTitle');
   String get safetyReferralBody => _t('safetyReferralBody');
+  // G6 avaliação intermediária (T2) e descontinuação de protocolo
+  String get t2CardTitle => _t('t2CardTitle');
+  String get t2CardBody => _t('t2CardBody');
+  String get t2CardLate => _t('t2CardLate');
+  String get discontinuedTitle => _t('discontinuedTitle');
+  String get discontinuedBody => _t('discontinuedBody');
   String get ok => _t('ok');
   List<String> get phq9Prompts => _phq9[locale.languageCode] ?? _phq9['pt']!;
   // B4 diário

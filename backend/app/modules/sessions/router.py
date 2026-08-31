@@ -27,7 +27,8 @@ from app.modules.allocation.service import resolve_arm
 from app.modules.sessions.service import condition_for_arm, resolve_protocol, materialize_audio
 from app.modules.sessions import storage
 from app.modules.recommender.service import link_session
-from app.modules.research.export_service import MIN_COMPLETION_RATIO
+from app.core.protocol import MIN_COMPLETION_RATIO
+from app.modules.progress.service import evaluate_week2
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 # Entrega por URL ASSINADA (E3): endpoint público-mas-assinado, fora do prefixo /sessions.
@@ -105,6 +106,20 @@ async def start_session(body: SessionStartIn, db: DbSession = Depends(get_db),
         raise ProblemException(403, "Participação interrompida",
                                "Sua participação no protocolo foi interrompida pela equipe do "
                                "estudo. Fale com a pesquisadora responsável.")
+    # Descontinuação de protocolo (G6/ADR-106). A regra da 2ª semana é aferida AQUI também:
+    # é o momento em que alguém com adesão insuficiente voltaria a se expor, e o protocolo
+    # já o descontinuou. Descontinuar não apaga nada — ele segue na análise por ITT.
+    if evaluate_week2(db, participant_id) is not None:
+        # A recusa logo abaixo é uma EXCEÇÃO, e exceção faz rollback da requisição inteira
+        # (``get_db``). Sem este commit a descontinuação recém-decidida sumiria — e seria
+        # redecidida (e reavisada à equipe) a cada nova tentativa de iniciar sessão.
+        db.commit()
+    p = db.get(Participant, participant_id)
+    if p is not None and p.status == "discontinued":
+        raise ProblemException(403, "Participação descontinuada",
+                               "Sua participação no protocolo foi descontinuada. Os registros "
+                               "já feitos permanecem no estudo; fale com a pesquisadora "
+                               "responsável.")
     # Resolução do braço é INTERNA — o cliente nunca a vê.
     arm = resolve_arm(db, participant_id)
     if arm is None:

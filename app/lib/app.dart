@@ -5,6 +5,7 @@ import 'core/config.dart';
 import 'core/theme.dart';
 import 'l10n/app_localizations.dart';
 import 'services/participant_repository.dart';
+import 'services/progress_repository.dart';
 import 'services/session_store.dart';
 import 'features/auth/otp_screen.dart';
 import 'features/home/home_screen.dart';
@@ -64,7 +65,9 @@ class _AuthGateState extends State<AuthGate> {
           if (!snap.hasData) {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
-          return snap.data! ? const HomeScreen() : OtpScreen(repo: widget.repo);
+          return snap.data!
+              ? HomeScreen(progressRepo: ProgressRepository(ApiClient(widget.store)))
+              : OtpScreen(repo: widget.repo);
         },
       );
 }

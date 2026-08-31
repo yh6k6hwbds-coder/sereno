@@ -17,7 +17,7 @@ from app.core import auth
 from app.core.models import (Participant, Allocation, AudioProtocol, Referral,
                              SafetyAssessment, ConsentRecord, StaffUser)
 from app.modules.safety.service import GAD7_RISK_CUTOFF, evaluate_risk
-from tests.helpers import start_body
+from tests.helpers import start_body, screening_criteria as _criterios
 
 CHECK = "/v1/participants/me/safety-check"
 SEM_RISCO = [0] * 9                       # PHQ-9 todo zero
@@ -142,10 +142,7 @@ def test_triagem_com_item9_positivo_torna_inelegivel(api):
     client, TestSession = api
     pid = _participante(TestSession, code="SF03")
     r = client.post("/v1/screening", headers=_staff(TestSession), json={
-        "participant_id": str(pid),
-        "inclusion": {"idade_18": True, "fones": True},
-        "exclusion": {"epilepsia": False},
-        "phq9_items": ITEM9})
+        "participant_id": str(pid), "gad7_total": 8, "phq9_items": ITEM9, **_criterios()})
     assert r.status_code == 201, r.text
     corpo = r.json()
     assert corpo["eligible"] is False and corpo["risk_detected"] is True
@@ -160,21 +157,21 @@ def test_triagem_com_gad7_grave_tambem_exclui(api):
     client, TestSession = api
     pid = _participante(TestSession, code="SF04")
     r = client.post("/v1/screening", headers=_staff(TestSession), json={
-        "participant_id": str(pid),
-        "inclusion": {"idade_18": True},
-        "exclusion": {},
-        "gad7_total": 15})
+        "participant_id": str(pid), "gad7_total": 15, **_criterios()})
     assert r.json()["eligible"] is False and r.json()["risk_detected"] is True
+    # O gatilho de risco entra como a exclusão (d) do protocolo, não como um campo à parte —
+    # e GAD-7 = 15 também sai da faixa sintomática de inclusão (5 a 14).
+    assert r.json()["unmet_criteria"] == ["d_gad7_grave_ou_risco", "sintomas_elegiveis"]
 
 
 def test_triagem_sem_phq9_segue_funcionando(api):
-    """O campo é opcional: a triagem antiga não quebra (e não abre ficha à toa)."""
+    """O PHQ-9 é opcional na triagem: sem ele nada quebra (e não abre ficha à toa)."""
     client, TestSession = api
     pid = _participante(TestSession, code="SF05")
     r = client.post("/v1/screening", headers=_staff(TestSession), json={
-        "participant_id": str(pid), "inclusion": {"idade_18": True}, "exclusion": {}})
-    assert r.json() == {"status": "screened", "eligible": True,
-                        "risk_detected": False, "referral_id": None}
+        "participant_id": str(pid), "gad7_total": 8, **_criterios()})
+    assert r.json() == {"status": "screened", "eligible": True, "risk_detected": False,
+                        "unmet_criteria": [], "referral_id": None}
     with TestSession() as s:
         assert s.query(Referral).count() == 0
 

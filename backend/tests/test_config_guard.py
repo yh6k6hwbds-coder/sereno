@@ -11,7 +11,8 @@ Prova o endurecimento pré-piloto (ADR-077):
 from __future__ import annotations
 import pytest
 
-from app.core.config import validate_runtime_config, is_production, InsecureConfigError
+from app.core.config import (validate_runtime_config, is_production, InsecureConfigError,
+                             allocation_block_sizes, DEFAULT_ALLOCATION_BLOCK_SIZES)
 from app.modules.sessions.service import condition_for_arm
 from app.core.email import _build_from_env, SmtpEmailSender
 
@@ -105,3 +106,40 @@ def test_smtp_use_ssl_flag_forces_ssl_on_other_port(monkeypatch):
     s = _build_from_env()
     assert isinstance(s, SmtpEmailSender)
     assert s._use_ssl is True and s._use_tls is False
+
+
+# --- G7: tamanhos de bloco da randomização ----------------------------------
+
+def _clean_block_env(monkeypatch):
+    for k in ("ALLOCATION_BLOCK_SIZES", "ALLOCATION_BLOCK_SIZE"):
+        monkeypatch.delenv(k, raising=False)
+
+
+def test_block_sizes_default_to_the_protocol(monkeypatch):
+    _clean_block_env(monkeypatch)
+    assert allocation_block_sizes() == DEFAULT_ALLOCATION_BLOCK_SIZES == (4, 6)
+
+
+def test_block_sizes_parsed_from_env(monkeypatch):
+    _clean_block_env(monkeypatch)
+    monkeypatch.setenv("ALLOCATION_BLOCK_SIZES", " 6 , 4 ,6 ")
+    assert allocation_block_sizes() == (4, 6)
+
+
+@pytest.mark.parametrize("ruim", ["3", "4,5", "0", "", "quatro", "-4"])
+def test_block_sizes_reject_invalid(monkeypatch, ruim):
+    _clean_block_env(monkeypatch)
+    monkeypatch.setenv("ALLOCATION_BLOCK_SIZES", ruim)
+    if ruim == "":
+        assert allocation_block_sizes() == DEFAULT_ALLOCATION_BLOCK_SIZES   # vazio = padrão
+    else:
+        with pytest.raises(InsecureConfigError):
+            allocation_block_sizes()
+
+
+def test_legacy_fixed_block_var_is_refused_loudly(monkeypatch):
+    """Ignorar a var antiga em silêncio trocaria a randomização sem ninguém notar."""
+    _clean_block_env(monkeypatch)
+    monkeypatch.setenv("ALLOCATION_BLOCK_SIZE", "4")
+    with pytest.raises(InsecureConfigError, match="ALLOCATION_BLOCK_SIZES"):
+        allocation_block_sizes()
