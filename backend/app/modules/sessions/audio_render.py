@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import math
 import os
 import wave
 from collections.abc import Iterator
@@ -146,16 +147,88 @@ def _envelope_slice(n: int, fade_in_n: int, fade_out_n: int,
     return env
 
 
+# ----------------------------------------------------------------------------
+# LEITO AMBIENTE (G2/ADR-109) — "trilha de fundo ambiental de baixa intensidade,
+# idêntica em conteúdo, duração e nível, sobre a qual os tons são superpostos".
+#
+# **Estas constantes têm de ser IDÊNTICAS às de ``audio-pipeline/binaural_instrument.py``.**
+# É a mesma duplicação já assumida para a fórmula dos tons (ver o cabeçalho deste módulo):
+# a pipeline é a fonte de verdade científica, validada por FFT no CI; aqui está o
+# materializador do servidor. Há teste que compara as duas sínteses amostra a amostra.
+#
+# É TONAL e vive entre 55 e 137,5 Hz — muito abaixo da banda do estímulo (250/253 Hz) —
+# porque o protocolo recusa mascaramento; é DIÓTICO (a mesma coluna somada aos dois canais),
+# então não carrega diferença interaural nenhuma; e é FÓRMULA FECHADA, sem gerador
+# aleatório, para sair idêntico em janelas de 10 s e de uma vez só.
+# ----------------------------------------------------------------------------
+BED_PARTIALS_HZ = (55.0, 82.5, 110.0, 137.5)
+BED_PARTIAL_GAINS = (1.0, 0.6, 0.4, 0.25)
+BED_PARTIAL_PHASE = (0.0, 2.3, 4.1, 5.6)
+BED_LFO_HZ = (0.037, 0.029, 0.051, 0.043)
+BED_LFO_PHASE = (0.0, 1.7, 3.1, 4.6)
+BED_AM_DEPTH = 0.35
+
+
+def _bed_unit_rms() -> float:
+    """RMS de longo prazo do leito unitário, em forma fechada (ver a pipeline)."""
+    soma = sum(g * g / 2.0 for g in BED_PARTIAL_GAINS)
+    return math.sqrt(soma * (1.0 + BED_AM_DEPTH ** 2 / 2.0))
+
+
+def _bed_unit_peak_bound() -> float:
+    """Cota superior do pico do leito unitário (parciais e LFOs todos em fase)."""
+    return sum(BED_PARTIAL_GAINS) * (1.0 + BED_AM_DEPTH)
+
+
+def bed_scale(target_peak_dbfs: float, bed_level_dbr: float | None) -> float:
+    """Fator que põe o leito ``bed_level_dbr`` dB abaixo do RMS NOMINAL do estímulo."""
+    if bed_level_dbr is None:
+        return 0.0
+    teto = 10.0 ** (target_peak_dbfs / 20.0)
+    alvo_rms = (teto / math.sqrt(2.0)) * 10.0 ** (bed_level_dbr / 20.0)
+    return alvo_rms / _bed_unit_rms()
+
+
+def tone_amplitude(target_peak_dbfs: float, bed_level_dbr: float | None) -> float:
+    """Amplitude dos tons: o teto digital MENOS a folga que o pico do leito ocupa.
+
+    Sem leito é o próprio teto — um protocolo anterior a esta mudança gera exatamente as
+    mesmas amostras de antes. Com leito, é o que impede o arquivo entregue de estourar o
+    teto contra o qual a calibração em acoplador é feita."""
+    teto = 10.0 ** (target_peak_dbfs / 20.0)
+    return teto - bed_scale(target_peak_dbfs, bed_level_dbr) * _bed_unit_peak_bound()
+
+
+def bed_segment(n_total: int, sample_rate: int, target_peak_dbfs: float,
+                bed_level_dbr: float | None, *, start: int, count: int) -> np.ndarray:
+    """Leito MONO do trecho ``[start, start+count)``, sem envelope (aplicado pelo chamador)."""
+    if bed_level_dbr is None or count <= 0:
+        return np.zeros(max(count, 0), dtype=np.float64)
+    t = (start + np.arange(count, dtype=np.float64)) / sample_rate
+    leito = np.zeros(count, dtype=np.float64)
+    for f, g, ph, f_lfo, ph_lfo in zip(BED_PARTIALS_HZ, BED_PARTIAL_GAINS,
+                                       BED_PARTIAL_PHASE, BED_LFO_HZ, BED_LFO_PHASE):
+        am = 1.0 + BED_AM_DEPTH * np.sin(2.0 * np.pi * f_lfo * t + ph_lfo)
+        leito += g * am * np.sin(2.0 * np.pi * f * t + ph)
+    return leito * bed_scale(target_peak_dbfs, bed_level_dbr)
+
+
 def synthesize_segment(carrier_hz: float, beat_hz: float, duration_s: float,
                        target_peak_dbfs: float, *, sample_rate: int = SAMPLE_RATE,
                        fade_in_s: float = FADE_IN_S, fade_out_s: float = FADE_OUT_S,
+                       bed_level_dbr: float | None = None, with_bed: bool = True,
                        start: int = 0, count: int | None = None) -> np.ndarray:
     """Gera o trecho ``[start, start+count)`` do sinal estéreo (float64 em [-1, 1]).
 
     L = seno(portadora); R = seno(portadora + Δf). Para o sham (``beat_hz`` == 0), R coincide
     com L e não há pista interaural. A fase é contada desde a amostra 0 e o envelope é
     posicionado na duração TOTAL, então o trecho é idêntico ao pedaço correspondente do
-    sinal inteiro."""
+    sinal inteiro.
+
+    ``with_bed=False`` devolve só os TONS, e é diferente de passar ``bed_level_dbr=None``:
+    a amplitude continua sendo a reduzida, que cedeu a folga do leito. A distinção é o que
+    faz a subtração ``mistura − tons`` recuperar o leito limpo, e não a diferença de
+    amplitude entre dois estímulos distintos (é como o gate da pipeline o isola — ADR-109)."""
     fs = sample_rate
     n = int(round(duration_s * fs))
     if n <= 0:
@@ -164,7 +237,7 @@ def synthesize_segment(carrier_hz: float, beat_hz: float, duration_s: float,
     if count <= 0:
         return np.zeros((0, CHANNELS), dtype=np.float64)
 
-    amp = 10.0 ** (target_peak_dbfs / 20.0)           # pico linear
+    amp = tone_amplitude(target_peak_dbfs, bed_level_dbr)   # pico linear, já com a folga
     f_left = carrier_hz
     f_right = carrier_hz + beat_hz                    # beat_hz == 0 (sham) → f_right == f_left
     t = (start + np.arange(count, dtype=np.float64)) / fs
@@ -174,6 +247,12 @@ def synthesize_segment(carrier_hz: float, beat_hz: float, duration_s: float,
     env = _envelope_slice(n, int(round(fade_in_s * fs)), int(round(fade_out_s * fs)),
                           start, count)
     stereo = np.stack([left * env, right * env], axis=1)
+    if bed_level_dbr is not None and with_bed:
+        # Leito DIÓTICO sob o MESMO envelope: entra e sai junto com os tons, e por ser a
+        # mesma coluna somada aos dois canais não carrega diferença interaural — nem
+        # batimento que ninguém prescreveu, nem pista do braço (o leito não vê ``beat_hz``).
+        leito = bed_segment(n, fs, target_peak_dbfs, bed_level_dbr, start=start, count=count)
+        stereo = stereo + (leito * env)[:, None]
 
     peak = float(np.max(np.abs(stereo)))              # margem: nunca exceder fundo de escala
     if peak > 1.0:
@@ -276,6 +355,7 @@ def sha256_of_file(path: str) -> tuple[str, int]:
 def render_protocol_to_file(dest: str, *, carrier_hz: float, beat_hz: float, duration_s: float,
                             target_peak_dbfs: float, sample_rate: int = SAMPLE_RATE,
                             fade_in_s: float = FADE_IN_S, fade_out_s: float = FADE_OUT_S,
+                            bed_level_dbr: float | None = None,
                             fmt: str = DEFAULT_FORMAT) -> RenderedAudio:
     """Sintetiza, VALIDA por FFT e grava o artefato do protocolo em ``dest``.
 
@@ -289,7 +369,8 @@ def render_protocol_to_file(dest: str, *, carrier_hz: float, beat_hz: float, dur
     cresce com a duração (20 min a 48 kHz de uma vez seriam ~920 MB em float64)."""
     fs = int(sample_rate)
     n_total = int(round(duration_s * fs))
-    common = dict(sample_rate=fs, fade_in_s=fade_in_s, fade_out_s=fade_out_s)
+    common = dict(sample_rate=fs, fade_in_s=fade_in_s, fade_out_s=fade_out_s,
+                  bed_level_dbr=bed_level_dbr)
     # Teto digital tem de ser negativo: com pico ≥ 0 dBFS a normalização de segurança agiria
     # DENTRO de cada janela e blocos vizinhos sairiam com ganhos diferentes (degrau audível).
     if float(target_peak_dbfs) > 0.0:

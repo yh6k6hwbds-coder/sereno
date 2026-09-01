@@ -32,6 +32,7 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict
 import hashlib
 import json
+import math
 import numpy as np
 
 
@@ -55,6 +56,10 @@ class AudioProtocol:
     target_peak_dbfs: float = -12.0   # teto/alvo de pico (segurança auditiva + consistência)
     sample_rate: int = 44100  # Hz
     bit_depth: int = 16       # PCM sem perdas
+    # G2 — nível RMS do LEITO AMBIENTE, em dB abaixo do RMS nominal do estímulo
+    # (o teto digital / raiz de 2). ``None`` = sem leito. É parâmetro de PROTOCOLO,
+    # não de engenharia: mudá-lo muda o que o participante ouve. Ver ADR-109.
+    bed_level_dbr: float | None = None
 
     def expected_channels_hz(self, sham: bool) -> tuple[float, float]:
         """Frequências esperadas (L, R). Sham → Δf = 0."""
@@ -106,10 +111,129 @@ def _envelope_slice(n: int, fade_in_n: int, fade_out_n: int,
     return env
 
 
+# ----------------------------------------------------------------------------
+# LEITO AMBIENTE (G2) — "trilha de fundo ambiental de baixa intensidade,
+# idêntica em conteúdo, duração e nível, sobre a qual os tons são superpostos".
+#
+# Quatro decisões de engenharia sustentam essa frase do protocolo sem enfraquecer
+# o gate de pureza espectral (ver ADR-109):
+#
+#   1. **É TONAL, não ruído.** O protocolo recusa explicitamente o mascaramento por
+#      ruído rosa, com base metanalítica. Um leito de banda larga seria mascaramento
+#      por outro nome. Estas parciais vivem entre 55 e 137,5 Hz — bem ABAIXO da banda
+#      do estímulo (250/253 Hz) — e há um item de gate que prova que não há energia do
+#      leito perto dela. É o que torna "não mascara" uma afirmação verificável.
+#   2. **É DIÓTICO** (idêntico amostra a amostra em L e R). Sem diferença interaural,
+#      não pode gerar batimento espúrio nem pista de braço; e "idêntico em conteúdo,
+#      duração e nível nos dois braços" passa a ser verdade por construção, não por
+#      cuidado de quem renderiza.
+#   3. **É FÓRMULA FECHADA, sem gerador aleatório.** Nada de semente, nada de FFT do
+#      sinal inteiro: o leito é função de ``t``, então sai idêntico em janelas de 10 s
+#      (como o backend materializa) e de uma vez só (como o teste valida). Um leito
+#      por ruído filtrado exigiria a FFT do sinal completo — 920 MB para 20 minutos.
+#   4. **NÃO se paga com clipping.** O teto digital (``target_peak_dbfs``) é do
+#      arquivo ENTREGUE; a amplitude dos tons cede exatamente a folga que o pico do
+#      leito ocupa. Sem isso o arquivo estouraria o teto contra o qual a calibração
+#      em acoplador é feita.
+#
+# Frequências e ganhos escolhidos para soar como um bordão grave e estável. Mudá-los
+# muda o que o participante ouve: é emenda de protocolo, não ajuste de código.
+# ----------------------------------------------------------------------------
+BED_PARTIALS_HZ = (55.0, 82.5, 110.0, 137.5)
+BED_PARTIAL_GAINS = (1.0, 0.6, 0.4, 0.25)
+BED_PARTIAL_PHASE = (0.0, 2.3, 4.1, 5.6)
+# LFOs lentos e mutuamente não-comensuráveis: o bordão "respira" sem nunca repetir
+# de forma audível em 20 minutos (o menor período é ~19,6 s, o maior ~34,5 s).
+BED_LFO_HZ = (0.037, 0.029, 0.051, 0.043)
+BED_LFO_PHASE = (0.0, 1.7, 3.1, 4.6)
+BED_AM_DEPTH = 0.35
+# Banda de guarda em torno do estímulo: o gate reprova se houver energia do leito aqui.
+BED_GUARD_HZ = 20.0
+# Limiar dos itens de IDENTIDADE do leito (diótico, e igual entre braços). Não é zero
+# porque o leito é recuperado por SUBTRAÇÃO (mistura − tons), e ``(a+b) − a`` devolve ``b``
+# a menos de arredondamento de float64 (~1e-17 nestas amplitudes). Verificar a reconstrução,
+# e não o leito sintetizado direto, é o que faz o item pegar um leito que passasse a depender
+# do braço lá na frente — comparar ``bed_segment`` consigo mesma seria tautologia. Qualquer
+# diferença interaural REAL é muitas ordens de grandeza maior que este limiar.
+BED_IDENTITY_TOL = 1e-12
+
+
+def _bed_unit_rms() -> float:
+    """RMS de longo prazo do leito unitário, em forma fechada.
+
+    As parciais estão em frequências distintas, então suas potências somam; cada uma é
+    modulada por ``1 + m·sin(...)``, cujo valor quadrático médio é ``1 + m²/2``. Vale a
+    forma fechada, e não uma medida: a escala do leito não pode depender do tamanho da
+    janela em que alguém resolveu medi-la."""
+    soma = sum(g * g / 2.0 for g in BED_PARTIAL_GAINS)
+    return math.sqrt(soma * (1.0 + BED_AM_DEPTH ** 2 / 2.0))
+
+
+def _bed_unit_peak_bound() -> float:
+    """Cota SUPERIOR do pico do leito unitário (todas as parciais e LFOs em fase)."""
+    return sum(BED_PARTIAL_GAINS) * (1.0 + BED_AM_DEPTH)
+
+
+def bed_scale(protocol: "AudioProtocol") -> float:
+    """Fator que põe o leito ``bed_level_dbr`` dB abaixo do RMS NOMINAL do estímulo.
+
+    A referência é o **teto digital** do protocolo (``target_peak_dbfs``/√2), e não o RMS
+    medido dos tons — que já desceu a folga do leito. Referência fixa evita a circularidade
+    (nível do leito → folga → amplitude dos tons → nível do leito) e mantém a escala
+    calculável em forma fechada."""
+    if protocol.bed_level_dbr is None:
+        return 0.0
+    teto = 10.0 ** (protocol.target_peak_dbfs / 20.0)
+    alvo_rms = (teto / math.sqrt(2.0)) * 10.0 ** (protocol.bed_level_dbr / 20.0)
+    return alvo_rms / _bed_unit_rms()
+
+
+def tone_amplitude(protocol: "AudioProtocol") -> float:
+    """Amplitude dos tons: o teto digital MENOS a folga que o pico do leito ocupa.
+
+    Sem leito, é o teto — os protocolos anteriores a esta mudança geram exatamente as
+    mesmas amostras de antes."""
+    teto = 10.0 ** (protocol.target_peak_dbfs / 20.0)
+    return teto - bed_scale(protocol) * _bed_unit_peak_bound()
+
+
+def bed_segment(protocol: "AudioProtocol", *, start_s: float = 0.0,
+                duration_s: float | None = None) -> np.ndarray:
+    """Leito MONO do trecho ``[start_s, start_s + duration_s)``, já com o envelope.
+
+    Bit-a-bit igual ao pedaço correspondente do leito inteiro (é função de ``t``), o que
+    permite materializar 20 minutos em janelas sem que o resultado dependa do tamanho da
+    janela. Sem ``bed_level_dbr``, devolve silêncio."""
+    fs = protocol.sample_rate
+    n_total = int(round(protocol.duration_s * fs))
+    start = int(round(start_s * fs))
+    count = n_total - start if duration_s is None else int(round(duration_s * fs))
+    count = max(min(count, n_total - start), 0)
+    if count == 0 or protocol.bed_level_dbr is None:
+        return np.zeros(count, dtype=np.float64)
+
+    t = (start + np.arange(count, dtype=np.float64)) / fs
+    leito = np.zeros(count, dtype=np.float64)
+    for f, g, ph, f_lfo, ph_lfo in zip(BED_PARTIALS_HZ, BED_PARTIAL_GAINS,
+                                       BED_PARTIAL_PHASE, BED_LFO_HZ, BED_LFO_PHASE):
+        am = 1.0 + BED_AM_DEPTH * np.sin(2.0 * np.pi * f_lfo * t + ph_lfo)
+        leito += g * am * np.sin(2.0 * np.pi * f * t + ph)
+    leito *= bed_scale(protocol)
+    # Mesmo envelope dos tons: o leito entra e sai junto, sem clique nas bordas.
+    env = _envelope_slice(n_total, int(round(protocol.fade_in_s * fs)),
+                          int(round(protocol.fade_out_s * fs)), start, count)
+    return leito * env
+
+
 def synthesize_segment(protocol: AudioProtocol, sham: bool = False, *,
                        start_s: float = 0.0,
-                       duration_s: float | None = None) -> np.ndarray:
+                       duration_s: float | None = None,
+                       with_bed: bool = True) -> np.ndarray:
     """Gera APENAS o trecho ``[start_s, start_s + duration_s)`` do estímulo.
+
+    ``with_bed=False`` devolve **só os tons**, sem o leito ambiente. É o caminho da
+    validação: a pureza espectral do estímulo é medida antes da mistura, para que o
+    piso de −60 dB continue valendo sobre o que ele sempre mediu (ver ADR-109).
 
     Mesma fórmula canônica do sinal inteiro (fase contada desde a amostra 0 e envelope
     posicionado na duração TOTAL), então o trecho é bit-a-bit igual ao pedaço
@@ -125,7 +249,7 @@ def synthesize_segment(protocol: AudioProtocol, sham: bool = False, *,
     if count == 0:
         return np.zeros((0, 2), dtype=np.float64)
 
-    amp = 10.0 ** (protocol.target_peak_dbfs / 20.0)
+    amp = tone_amplitude(protocol)
     fL, fR = protocol.expected_channels_hz(sham)
     t = (start + np.arange(count, dtype=np.float64)) / fs
 
@@ -133,7 +257,13 @@ def synthesize_segment(protocol: AudioProtocol, sham: bool = False, *,
     right = amp * np.sin(2.0 * np.pi * fR * t)
     env = _envelope_slice(n_total, int(round(protocol.fade_in_s * fs)),
                           int(round(protocol.fade_out_s * fs)), start, count)
-    return np.stack([left * env, right * env], axis=1)
+    tons = np.stack([left * env, right * env], axis=1)
+    if not with_bed or protocol.bed_level_dbr is None:
+        return tons
+    # Leito DIÓTICO: a mesma coluna somada aos dois canais. É o que garante que ele não
+    # carrega diferença interaural nenhuma — nem batimento espúrio, nem pista de braço.
+    leito = bed_segment(protocol, start_s=start_s, duration_s=duration_s)
+    return tons + leito[:, None]
 
 
 def synthesize(protocol: AudioProtocol, sham: bool = False,
@@ -231,6 +361,9 @@ def _evidence(protocol: "AudioProtocol", sham: bool, stereo: np.ndarray | None =
         steady, head, tail = stereo[start:start + n_steady], stereo[:n_edge], stereo[-n_edge:]
         peak = float(np.max(np.abs(stereo)))
         max_jump = float(np.max(np.abs(np.diff(stereo, axis=0))))
+        # Sem leito, os tons SÃO o sinal; com leito, refaz-se a mesma janela sem ele.
+        steady_tons = steady if protocol.bed_level_dbr is None else synthesize_segment(
+            protocol, sham, start_s=start / fs, duration_s=n_steady / fs, with_bed=False)
     else:
         dur = protocol.duration_s
         steady_s = min(steady_s, dur)
@@ -241,7 +374,14 @@ def _evidence(protocol: "AudioProtocol", sham: bool, stereo: np.ndarray | None =
         tail = synthesize_segment(protocol, sham, start_s=dur - edge_s, duration_s=edge_s)
         peak = max(float(np.max(np.abs(s))) for s in (steady, head, tail))
         max_jump = max(float(np.max(np.abs(np.diff(s, axis=0)))) for s in (steady, head, tail))
-    return {"steady": steady, "head": head, "tail": tail, "peak": peak, "max_jump": max_jump}
+        steady_tons = synthesize_segment(protocol, sham,
+                                         start_s=max((dur - steady_s) / 2.0, 0.0),
+                                         duration_s=steady_s, with_bed=False)
+    # ``steady`` é o que CHEGA À ORELHA (tons + leito): é dele que saem o teto de pico e a
+    # equalização de energia. ``steady_tons`` é o ESTÍMULO isolado, e é nele que a pureza
+    # espectral é medida — o leito é conteúdo pretendido, não impureza (ADR-109).
+    return {"steady": steady, "steady_tons": steady_tons, "head": head, "tail": tail,
+            "peak": peak, "max_jump": max_jump}
 
 
 def validate_signal(stereo: np.ndarray, protocol: AudioProtocol, sham: bool,
@@ -282,7 +422,9 @@ def _validate(ev: dict, protocol: AudioProtocol, sham: bool,
 
     peaks = {}
     for idx, (ch_name, exp) in enumerate([("L", exp_L), ("R", exp_R)]):
-        freqs, mag = _spectrum(ev["steady"][:, idx], fs)
+        # Espectro do ESTÍMULO isolado: o leito ambiente é conteúdo pretendido do arquivo,
+        # não impureza do estímulo, e medi-lo aqui reprovaria o que o protocolo manda haver.
+        freqs, mag = _spectrum(ev["steady_tons"][:, idx], fs)
         k = int(np.argmax(mag))
         f_peak = float(freqs[k])
         peaks[ch_name] = f_peak
@@ -326,6 +468,40 @@ def _validate(ev: dict, protocol: AudioProtocol, sham: bool,
           edge_ok and ev["max_jump"] < click_threshold,
           f"|amostra inicial/final|~0={edge_ok}, salto máx={ev['max_jump']:.4f}")
 
+    # (6) leito ambiente (G2): o que o protocolo promete e o que ele proíbe.
+    if protocol.bed_level_dbr is not None:
+        leito = ev["steady"] - ev["steady_tons"]
+
+        # (6a) DIÓTICO — bit a bit igual nos dois canais. Qualquer diferença interaural no
+        # leito seria um batimento que ninguém prescreveu, ou uma pista de braço.
+        difs = float(np.max(np.abs(leito[:, 0] - leito[:, 1])))
+        check("leito diótico (L == R)", difs <= BED_IDENTITY_TOL,
+              f"maior diferença L-R no leito = {difs:.3e} (tol={BED_IDENTITY_TOL:.0e})")
+
+        # (6b) NÍVEL — "baixa intensidade", e a intensidade declarada. A tolerância é larga
+        # de propósito: as parciais são moduladas por LFOs de período comparável à janela
+        # medida, então o RMS instantâneo oscila em torno do de longo prazo. O que este item
+        # pega é um leito na ordem de grandeza errada, não meio decibel.
+        nominal = protocol.target_peak_dbfs - 20.0 * math.log10(math.sqrt(2.0))
+        medido = rms_dbfs(leito[:, 0]) - nominal
+        check("nível do leito",
+              abs(medido - protocol.bed_level_dbr) <= 3.0,
+              f"medido={medido:.1f} dBr, declarado={protocol.bed_level_dbr:.1f} dBr")
+
+        # (6c) FORA DA BANDA DO ESTÍMULO — é isto que torna verificável a recusa do
+        # protocolo ao mascaramento: o leito não põe energia onde o estímulo está.
+        freqs_b, mag_b = _spectrum(leito[:, 0], fs)
+        lo = protocol.carrier_hz - BED_GUARD_HZ
+        hi = protocol.carrier_hz + protocol.beat_hz + BED_GUARD_HZ
+        na_banda = (freqs_b >= lo) & (freqs_b <= hi)
+        e_total = float(np.sum(mag_b ** 2))
+        e_banda = float(np.sum(mag_b[na_banda] ** 2))
+        razao_db = _dbfs(np.sqrt(e_banda / (e_total + 1e-18)))
+        check("leito fora da banda do estímulo",
+              razao_db <= purity_floor_db,
+              f"energia em [{lo:.0f}, {hi:.0f}] Hz = {razao_db:.1f} dB do leito "
+              f"(piso={purity_floor_db:.0f} dB)")
+
     return report
 
 
@@ -349,6 +525,26 @@ def validate_arm_energy_match(protocol: AudioProtocol, tol_db: float = 0.05) -> 
             "detail": f"{', '.join(detail)}, total: dif={total:.4f} dB (tol={tol_db} dB)"}
 
 
+def validate_bed_identical_across_arms(protocol: AudioProtocol) -> dict:
+    """O leito é BIT A BIT o mesmo nos dois braços (G2 — item de cegamento).
+
+    O protocolo exige a trilha de fundo "idêntica em conteúdo, duração e nível" nas duas
+    condições. Aqui isso deixa de ser consequência assumida da fórmula e vira item de gate:
+    qualquer dependência do leito em relação ao braço — uma semente derivada de ``sham``,
+    um nível diferente — daria ao participante uma pista audível que não é o estímulo."""
+    if protocol.bed_level_dbr is None:
+        return {"check": "leito idêntico entre braços", "ok": True,
+                "detail": "protocolo sem leito ambiente"}
+    ativo = _evidence(protocol, sham=False)
+    controle = _evidence(protocol, sham=True)
+    leito_a = ativo["steady"] - ativo["steady_tons"]
+    leito_c = controle["steady"] - controle["steady_tons"]
+    dif = float(np.max(np.abs(leito_a - leito_c)))
+    return {"check": "leito idêntico entre braços", "ok": bool(dif <= BED_IDENTITY_TOL),
+            "detail": f"maior diferença ativo-sham no leito = {dif:.3e} "
+                      f"(tol={BED_IDENTITY_TOL:.0e})"}
+
+
 # ----------------------------------------------------------------------------
 # BIBLIOTECA DO PILOTO — o estímulo do protocolo aprovado. Fonte: seção
 # "Protocolo de intervenção" do projeto de IC.
@@ -362,15 +558,24 @@ def validate_arm_energy_match(protocol: AudioProtocol, tol_db: float = 0.05) -> 
 #   Arquivo:            48 kHz, 16 bits, sem perdas; rampa de entrada de 30 s e
 #                       de saída de 60 s (assimétrica, como especificado).
 #
+#   Leito:              trilha ambiental tonal, diótica, 30 dB abaixo do estímulo (G2).
+#
 # A escolha dos parâmetros vem do protocolo (JIRAKITTAYAKORN; WONGSAWAT, 2018) e
 # NÃO é decisão de engenharia: mudar qualquer número aqui é emenda de protocolo.
 # O nível absoluto de 60 dB(A) é calibrado no acoplador de orelha; o que o arquivo
 # carrega é o teto digital (``target_peak_dbfs``) contra o qual essa calibração é
 # feita — ver docs/decisoes/ADR-100.
 # ----------------------------------------------------------------------------
+# **O NÍVEL do leito (−30 dBr) é escolha desta implementação, não número do protocolo**,
+# que diz apenas "baixa intensidade". −30 dB abaixo do estímulo é audível como presença e
+# fica muito longe de mascarar — mas é um parâmetro do que o participante ouve, e por isso
+# vive nomeado aqui e vai declarado ao CEP, como a janela de 7 dias do T2 (ADR-106).
+BED_LEVEL_DBR = -30.0
+
 PILOT_LIBRARY = [
-    AudioProtocol("delta-3", "1.0.0", "delta", 250.0, 3.0, duration_s=1200.0,
-                  fade_in_s=30.0, fade_out_s=60.0, sample_rate=48000, bit_depth=16),
+    AudioProtocol("delta-3", "1.1.0", "delta", 250.0, 3.0, duration_s=1200.0,
+                  fade_in_s=30.0, fade_out_s=60.0, sample_rate=48000, bit_depth=16,
+                  bed_level_dbr=BED_LEVEL_DBR),
 ]
 
 # ----------------------------------------------------------------------------
@@ -407,9 +612,10 @@ def run_battery(library) -> bool:
                 print(f"   {'✓' if c['ok'] else '✗'} {c['check']:32s} — {c['detail']}")
             print(f"   → RESULTADO: {'APROVADO' if rep['passed'] else 'REPROVADO'}")
         # Cegamento acústico: ativo e sham têm de ter a MESMA energia (item do gate).
-        eq = validate_arm_energy_match(proto)
-        all_passed &= eq["ok"]
-        print(f"   {'✓' if eq['ok'] else '✗'} {eq['check']:32s} — {eq['detail']}")
+        for item in (validate_arm_energy_match(proto),
+                     validate_bed_identical_across_arms(proto)):
+            all_passed &= item["ok"]
+            print(f"   {'✓' if item['ok'] else '✗'} {item['check']:32s} — {item['detail']}")
     print("\n" + "=" * 70)
     print(f"BATERIA COMPLETA: {'TODOS APROVADOS' if all_passed else 'HÁ FALHAS'}")
     print("=" * 70)

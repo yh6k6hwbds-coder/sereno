@@ -45,10 +45,17 @@ def condition_for_arm(arm: str) -> str | None:
 
 
 def resolve_protocol(db: DbSession, band: str, condition: str) -> AudioProtocol | None:
-    """Escolhe o protocolo concreto: mesma banda; ativo = beat_hz>0, sham = beat_hz==0."""
+    """Escolhe o protocolo concreto: mesma banda; ativo = beat_hz>0, sham = beat_hz==0.
+
+    Entre versões da mesma banda e condição vence a MAIS NOVA (``created_at`` decrescente).
+    Sem esse critério a escolha era o que o banco devolvesse primeiro: uma base semeada antes
+    do leito ambiente (ADR-109) guarda as duas versões, e metade dos participantes poderia
+    receber o estímulo antigo — sem leito nos dois braços, mas sem ninguém perceber.
+    Ordenar por ``created_at``, e não pela string da versão, evita o desempate lexical que
+    poria "1.10.0" antes de "1.9.0"."""
     q = select(AudioProtocol).where(AudioProtocol.band == band)
     q = q.where(AudioProtocol.beat_hz > 0) if condition == "active" else q.where(AudioProtocol.beat_hz == 0)
-    return db.scalars(q).first()
+    return db.scalars(q.order_by(AudioProtocol.created_at.desc())).first()
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +111,9 @@ def materialize_audio(proto: AudioProtocol) -> audio_render.RenderedAudio:
             carrier_hz=float(proto.carrier_hz), beat_hz=float(proto.beat_hz),
             duration_s=float(proto.duration_s), target_peak_dbfs=float(proto.target_peak_dbfs),
             sample_rate=int(proto.sample_rate), fade_in_s=float(proto.fade_in_s),
-            fade_out_s=float(proto.fade_out_s), fmt=fmt,
+            fade_out_s=float(proto.fade_out_s),
+            bed_level_dbr=None if proto.bed_level_dbr is None else float(proto.bed_level_dbr),
+            fmt=fmt,
         )
         # Sidecar por último: sua existência é o sinal de "artefato completo e conferido".
         with open(sha_path, "w", encoding="utf-8") as f:

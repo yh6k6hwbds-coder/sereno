@@ -13,7 +13,12 @@ dos parâmetros publicados no projeto.
 """
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
+import importlib.util
+import os
+import sys
+
 import pytest
 import numpy as np
 
@@ -25,6 +30,19 @@ from scripts import seed_protocols as sp
 from tests.helpers import start_body
 
 
+def _pipeline():
+    """Importa ``binaural_instrument`` por caminho — a pipeline não é pacote instalável."""
+    raiz = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    caminho = os.path.join(raiz, "audio-pipeline", "binaural_instrument.py")
+    if not os.path.exists(caminho):
+        pytest.skip("audio-pipeline não disponível neste ambiente")
+    spec = importlib.util.spec_from_file_location("binaural_instrument", caminho)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod        # ``@dataclass`` resolve anotações via sys.modules
+    spec.loader.exec_module(mod)
+    return mod
+
+
 # --------------------------------------------------------------------------- (1) estímulo
 def test_parametros_do_protocolo_aprovado():
     assert (sp.CARRIER_HZ, sp.BEAT_HZ, sp.BAND) == (250.0, 3.0, "delta")
@@ -32,6 +50,32 @@ def test_parametros_do_protocolo_aprovado():
     assert sp.SAMPLE_RATE == 48000
     assert (sp.FADE_IN_S, sp.FADE_OUT_S) == (30.0, 60.0)
     assert sp.TARGET_PEAK_DBFS < 0.0                  # teto digital, nunca fundo de escala
+    # Leito ambiente (ADR-109): existe, e "de baixa intensidade" — bem abaixo do estímulo.
+    assert sp.BED_LEVEL_DBR is not None and sp.BED_LEVEL_DBR <= -20.0
+
+
+def test_o_leito_ambiente_e_semeado_nos_dois_bracos():
+    """O protocolo promete a trilha "idêntica em conteúdo, duração e nível" NOS DOIS braços.
+
+    Semear o leito em só um deles daria ao participante a pista audível que o cegamento
+    existe para negar — e nenhum outro teste pegaria isso, porque cada braço, sozinho,
+    continuaria válido."""
+    níveis = {sp._row(spec).bed_level_dbr for spec in sp.LIBRARY}
+    assert níveis == {sp.BED_LEVEL_DBR}
+
+
+def test_o_leito_semeado_e_o_mesmo_que_a_pipeline_valida():
+    """A pipeline é a fonte de verdade científica (é ela que passa pelo gate de FFT no CI).
+
+    Se o seeder semeasse outro nível, o piloto tocaria um áudio que nunca foi validado."""
+    pipeline = _pipeline()
+    assert sp.BED_LEVEL_DBR == pipeline.BED_LEVEL_DBR
+    (proto,) = pipeline.PILOT_LIBRARY
+    assert (proto.carrier_hz, proto.beat_hz, proto.duration_s) == (
+        sp.CARRIER_HZ, sp.BEAT_HZ, sp.DURATION_S)
+    assert proto.bed_level_dbr == sp.BED_LEVEL_DBR
+    # A versão semeada acompanha a da pipeline: as duas descrevem o mesmo arquivo.
+    assert sp.VERSION == proto.version
 
 
 def test_dose_prescrita_bate_com_o_protocolo():
@@ -47,7 +91,7 @@ def test_biblioteca_tem_ativo_e_controle_com_o_mesmo_resto():
     assert beats == [0.0, 3.0]
     rows = [sp._row(spec) for spec in sp.LIBRARY]
     for campo in ("band", "carrier_hz", "duration_s", "sample_rate",
-                  "fade_in_s", "fade_out_s", "target_peak_dbfs", "version"):
+                  "fade_in_s", "fade_out_s", "target_peak_dbfs", "version", "bed_level_dbr"):
         assert len({getattr(r, campo) for r in rows}) == 1, f"{campo} difere entre os braços"
 
 
@@ -184,3 +228,34 @@ def test_materializar_a_biblioteca_deixa_os_arquivos_prontos(api, monkeypatch, t
     sp._materialize()                              # idempotente: relê o cache, não re-renderiza
     assert {p.name: p.stat().st_mtime_ns for p in tmp_path.iterdir()} == antes
 
+
+# --------------------------------------------------------- (3) qual versão chega à orelha
+def test_entre_duas_versoes_o_participante_recebe_a_mais_nova(api):
+    """Uma base semeada ANTES do leito ambiente guarda as duas versões do mesmo braço.
+
+    Sem critério de desempate, quem escolhia era a ordem que o banco devolvesse — e parte
+    dos participantes ouviria o estímulo antigo, sem leito, sem que nada acusasse. O critério
+    é ``created_at``, não a string da versão: "1.10.0" vem depois de "1.9.0", e a ordenação
+    lexical diria o contrário."""
+    from app.modules.sessions.service import resolve_protocol
+
+    _, TestSession = api
+    comum = dict(band="theta", carrier_hz=250.0, duration_s=60.0, target_peak_dbfs=-12.0,
+                 sample_rate=48000, fade_in_s=1.0, fade_out_s=1.0)
+    # Datas explícitas: o ``server_default`` é ``CURRENT_TIMESTAMP``, que no SQLite tem
+    # resolução de SEGUNDO — duas inserções no mesmo segundo empatariam e o teste passaria
+    # (ou falharia) por acaso, sem dizer nada sobre a regra.
+    velha = dt.datetime(2026, 8, 1, 12, 0, tzinfo=dt.timezone.utc)
+    with TestSession() as s:
+        s.add(AudioProtocol(protocol_id="vv-0001", version="1.9.0", beat_hz=3.0,
+                            bed_level_dbr=None, content_hash="c" * 64,
+                            created_at=velha, **comum))
+        s.add(AudioProtocol(protocol_id="vv-0002", version="1.10.0", beat_hz=3.0,
+                            bed_level_dbr=sp.BED_LEVEL_DBR, content_hash="d" * 64,
+                            created_at=velha + dt.timedelta(days=30), **comum))
+        s.commit()
+    with TestSession() as s:
+        escolhido = resolve_protocol(s, "theta", "active")
+        assert escolhido is not None
+        assert escolhido.protocol_id == "vv-0002"      # a mais nova, não a lexicalmente maior
+        assert escolhido.bed_level_dbr is not None     # e é a que tem o leito

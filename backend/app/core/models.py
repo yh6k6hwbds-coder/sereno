@@ -104,6 +104,12 @@ class AudioProtocol(Base):                     # versionado; identificador NEUTR
                                              server_default=text("3.0"))
     fade_out_s: Mapped[float] = mapped_column(Numeric(5, 1), nullable=False, default=3.0,
                                               server_default=text("3.0"))
+    # G2 (ADR-109) — nível do LEITO AMBIENTE, em dB abaixo do RMS nominal do estímulo.
+    # NULO = sem leito (é o caso dos protocolos curtos de demo). O protocolo do estudo
+    # promete a trilha de fundo "idêntica em conteúdo, duração e nível" nos dois braços;
+    # como o leito é diótico e não depende de ``beat_hz``, uma coluna só serve às duas
+    # condições — e é o que garante que elas não possam divergir.
+    bed_level_dbr: Mapped[float] = mapped_column(Numeric(5, 1), nullable=True)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[dt.datetime] = TS()
     __table_args__ = (
@@ -112,6 +118,10 @@ class AudioProtocol(Base):                     # versionado; identificador NEUTR
         CheckConstraint("carrier_hz > 0 and duration_s > 0", name="ck_protocol_positive"),
         CheckConstraint("sample_rate > 0 and fade_in_s >= 0 and fade_out_s >= 0",
                         name="ck_protocol_render"),
+        # Leito ACIMA do estímulo deixaria de ser "de baixa intensidade" e viraria
+        # mascaramento — que é justamente o que o protocolo recusa.
+        CheckConstraint("bed_level_dbr is null or bed_level_dbr < 0",
+                        name="ck_protocol_bed_level"),
     )
 
 

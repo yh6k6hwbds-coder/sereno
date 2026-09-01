@@ -18,6 +18,22 @@
 
 ## Estado atual (baseline deste roadmap)
 
+> ### ⛳ Marco (2026-09-01): **G2 sai do impasse — o leito ambiente existe, e o gate ficou mais duro.**
+> ADR-109 fechou **G2**, o último item de código da Fase G. O impasse registrado aqui ("ou o leito
+> sai do protocolo, ou o gate ganha uma exceção") era **falso**: o piso de −60 dB mede energia
+> **espúria**, e o leito é conteúdo **prescrito**. A pureza passou a ser medida no estímulo
+> ISOLADO — o piso valendo sobre exatamente o que sempre mediu — e o gate **ganhou quatro itens**
+> onde havia zero: leito diótico, no nível declarado, **fora da banda do estímulo** (−179 dB em
+> [230, 273] Hz, que é o que torna verificável a recusa do protocolo ao mascaramento) e **bit a
+> bit idêntico entre os braços**. O leito é tonal (55–137,5 Hz), diótico e de fórmula fechada —
+> sem gerador aleatório, senão não sairia igual nas janelas de 10 s da materialização.
+> Biblioteca do estudo em **v1.1.0**; `resolve_protocol` passou a desempatar pela versão mais
+> nova, senão uma base já semeada serviria o estímulo **sem leito** a parte dos participantes.
+> ⚠️ **O nível (−30 dBr) é escolha da implementação** — o protocolo diz só "baixa intensidade" —
+> e **precisa de ratificação do mantenedor e de declaração ao CEP**.
+> **O que sobra da Fase G não é código:** os **valores** de G3/G9, que saem da **calibração em
+> acoplador** (F2.7).
+>
 > ### ⛳ Marco (2026-08-31, 2ª rodada): **a Fase G fecha em código.**
 > ADR-107 e 108 fecharam **G10** e **G9**. O parágrafo "Registro e monitoramento" passou a ter as
 > seis colunas que nomeia (faltavam três: duração das interrupções, volume médio/máximo e o item
@@ -25,7 +41,7 @@
 > exposição auditiva** virou conta com teste: 6h40 a 60 dB(A) consomem **0,17%** da permissão
 > semanal da OMS/UIT, então o alerta dos 50% não deve disparar no piloto. CI-espelho verde:
 > **454 testes de backend a 91,5%**, migração `d0e1f2a3b4c5`, OpenAPI válido.
-> **O que sobra da Fase G não é código:** **G2** (leito ambiente — decisão do mantenedor) e os
+> **O que sobrava da Fase G:** **G2** (leito ambiente) — fechado em 2026-09-01 pelo ADR-109 — e os
 > **valores** de G3/G9, que saem da mesma **calibração em acoplador** (F2.7).
 >
 > ### ⛳ Marco (2026-08-31): **a Fase G fecha, menos o que depende de decisão ou de calibração.**
@@ -574,7 +590,7 @@ já está preparado", não redesenhar.
 | # | Pendência | Estado | Onde |
 |---|---|---|---|
 | G1 | **Formato de entrega do áudio** — ✅ **FEITO** (2026-08-30, ADR-103): o artefato passou a **FLAC** (sem perdas; mesmo PCM do WAV, **14%** do tamanho — 230 MB viram ~33 MB), é **servido do disco em janelas** (nem materializar nem transmitir carrega a sessão na memória) e o aparelho guarda uma **biblioteca cifrada**, revalidada por `If-None-Match` → 304: as 20 sessões baixam o arquivo **uma vez**. Baixar a taxa de amostragem segue disponível, mas é **emenda de protocolo** | ✅ | ADR-103; ADR-053/054/082 |
-| G2 | **Leito ambiente** de baixa intensidade nos dois braços (o protocolo promete; e **rejeita** ruído rosa). O gate exige pureza espectral ≤ −60 dB — um leito reprovaria a bateria como está | ⬜ **exige decisão** | ADR-100, `binaural_instrument.py` |
+| G2 | **Leito ambiente** de baixa intensidade nos dois braços — ✅ **FEITO** (2026-09-01, ADR-109): o impasse com o gate era falso (o piso de −60 dB mede energia **espúria**; o leito é conteúdo **prescrito**). A pureza passou a ser medida no estímulo **isolado** e o gate **ganhou quatro itens**: diótico, no nível declarado, **fora da banda** do estímulo (−179 dB — é o que torna verificável a recusa ao ruído rosa) e **bit a bit igual entre os braços**. Leito tonal (55–137,5 Hz), diótico, de fórmula fechada; coluna `bed_level_dbr` com `CHECK < 0`; estudo em v1.1.0. ⚠️ **Falta o VALOR ser ratificado**: −30 dBr é escolha da implementação (o protocolo diz só "baixa intensidade") e precisa ir declarado ao CEP | 🟡 | ADR-109; protocolo, "Parâmetros comuns aos dois braços" |
 | G3 | **Limite de volume por software** — ✅ **MECANISMO FEITO** (2026-08-30, ADR-101): o app não oferece controle de volume, trava o ganho, declara-o ao iniciar e o servidor recusa acima de `AUDIO_MAX_GAIN`. ⚠️ **Falta o VALOR**: qual ganho corresponde a 60 dB(A) sai da calibração em acoplador de orelha (etapa (i)/F2.7) — até lá o padrão 1.0 não restringe nada | 🟡 | ADR-101; protocolo, "Intensidade e segurança auditiva" |
 | G4 | **Verificação dicótica de fones** — ✅ **FEITO** (2026-08-30, ADR-101): duas rodadas com orelha sorteada, errar reinicia o teste, `headphones_ok` saiu do contrato e a evidência (`rounds`/`errors`/`attempts`/`ears`) fica gravada por sessão | ✅ | ADR-101; protocolo, "Posologia e contexto de uso" |
 | G5 | **PHQ-9 de segurança + fluxo de encaminhamento** — ✅ **FEITO** (2026-08-30, ADR-102): escore com item 9 separado, regra de risco versionada valendo na triagem e no seguimento, status `removed` que **para a sessão**, ficha com confirmação de acolhimento, bloco `seguranca` no relatório ao CEP e tela do participante **sem escore**. ⚠️ Enunciados do PHQ-9 são próprios até a versão validada PT-BR ser licenciada; o aviso à equipe depende de `TEAM_NOTIFY_EMAIL` (F3.7) | ✅ | ADR-102; protocolo, "Fluxo de encaminhamento" |
@@ -586,15 +602,16 @@ já está preparado", não redesenhar.
 
 ## Ordem sugerida de execução
 
-**Código (Fase G): acabou.** ~~G4 (fones)~~, ~~G3 (mecanismo do limite de volume)~~,
+**Código (Fase G): acabou de verdade.** ~~G2 (leito ambiente)~~ fechado em 2026-09-01 (ADR-109).
+~~G4 (fones)~~, ~~G3 (mecanismo do limite de volume)~~,
 ~~G5 (PHQ-9/encaminhamento)~~ e ~~G1 (entrega do áudio)~~ feitos em 2026-08-30 (ADR-101 a 103);
 ~~G6 (T2 e descontinuação)~~, ~~G7 (blocos variáveis)~~, ~~G8 (critérios de elegibilidade)~~,
 ~~G9 (dose auditiva)~~ e ~~G10 (registro por sessão)~~ em 2026-08-31 (ADR-104 a 108).
 
 **O que sobra da Fase G não se resolve escrevendo código:**
-- **G2** — leito ambiente de baixa intensidade nos dois braços **vs.** o gate de pureza espectral
-  ≤ −60 dB, que um leito reprovaria. **Decisão do mantenedor** (ou o leito sai do protocolo, ou o
-  gate ganha uma exceção nomeada e justificada no dossiê).
+- **O nível do leito (G2)** — −30 dBr é escolha da implementação; o protocolo diz apenas "baixa
+  intensidade". O código está pronto e testado, e o número vive nomeado em um lugar só de cada
+  lado (`BED_LEVEL_DBR`). Falta **ratificar e declarar ao CEP**, como a janela de 7 dias do T2.
 - **Os valores de G3 e G9** — qual ganho digital corresponde a 60 dB(A), e qual o nível em fundo
   de escala do transdutor. Os dois saem da **mesma medição**: a calibração em acoplador de orelha
   da etapa (i) (**F2.7**). Até lá, `AUDIO_MAX_GAIN=1.0` não restringe nada e a dose é previsão.
