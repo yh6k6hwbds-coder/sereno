@@ -489,6 +489,47 @@ paths:
         '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/AdverseEventAccepted' } } } }
         '404': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+    get:
+      summary: Listar eventos adversos (equipe)
+      description: >-
+        Os relatos, pseudonimizados (código do estudo, tipo, gravidade, conduta, desfecho).
+        Segurança é desfecho primário e este era o único dado do estudo sem leitura nenhuma —
+        havia só o POST. `pending=true` deixa só o que exige ação: moderado/grave ainda sem
+        desfecho. Nunca traz braço nem PII.
+      operationId: listAdverseEvents
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - name: severity
+          in: query
+          required: false
+          schema: { type: string, enum: [mild, moderate, severe] }
+        - name: pending
+          in: query
+          required: false
+          description: "só moderado/grave ainda sem desfecho registrado"
+          schema: { type: boolean, default: false }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdverseEventPage' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /adverse-events/{id}/outcome:
+    post:
+      summary: Registrar o desfecho de um evento adverso (equipe)
+      description: >-
+        Fecha o acompanhamento do evento. A coluna existia desde o ADR-051 e nada a escrevia:
+        um evento entrava e nunca era encerrado. Sobrescrever é permitido — um desfecho evolui
+        ("em acompanhamento" → "resolvido") — e cada gravação fica na trilha de auditoria,
+        que registra QUE houve, não o texto (é dado de saúde).
+      operationId: recordAdverseEventOutcome
+      parameters: [ { $ref: '#/components/parameters/PathId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AdverseEventOutcomeIn' } } }
+      responses:
+        '200': { description: Registrado, content: { application/json: { schema: { $ref: '#/components/schemas/AdverseEvent' } } } }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /participants/{id}/contact:
     post:
       summary: Gravar contato do participante (staff) — PII CIFRADA em repouso
@@ -1230,6 +1271,30 @@ components:
         session_id: { type: [string, "null"], format: uuid }
         action: { type: [string, "null"] }
       required: [type, severity]
+    AdverseEvent:
+      type: object
+      description: "Um evento como a EQUIPE o vê: pseudonimizado, sem braço e sem PII."
+      properties:
+        id: { type: string, format: uuid }
+        study_code: { type: string, description: "pseudônimo — nunca nome/e-mail" }
+        type: { type: string }
+        severity: { type: string, enum: [mild, moderate, severe] }
+        action: { type: [string, "null"], description: "conduta relatada pelo participante" }
+        outcome: { type: [string, "null"], description: "desfecho registrado pela equipe" }
+        requires_attention: { type: boolean, description: "derivado da gravidade, não guardado" }
+        session_id: { type: [string, "null"], format: uuid }
+        occurred_at: { type: string, format: date-time }
+      required: [id, study_code, type, severity, requires_attention, occurred_at]
+    AdverseEventPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/AdverseEvent' } }
+      required: [items]
+    AdverseEventOutcomeIn:
+      type: object
+      properties:
+        outcome: { type: string, minLength: 2, maxLength: 200 }
+      required: [outcome]
     SessionPage:
       type: object
       properties:

@@ -18,6 +18,17 @@
 
 ## Estado atual (baseline deste roadmap)
 
+> ### ⛳ Marco (2026-09-01, 2ª rodada): **a equipe passa a LER o que só sabia escrever.**
+> ADR-110 abriu a **Fase H** (operar o estudo) e fechou o **H1**. Segurança é desfecho
+> **primário** e os eventos adversos eram o único dado do estudo **sem leitura nenhuma** — havia
+> só o `POST`. Pior: o e-mail de alerta mandava a equipe "acessar o painel de pesquisa", que
+> **nunca existiu** (ADR-096 dispensou o console de propósito), e a coluna `outcome` estava no
+> schema desde o ADR-051 **sem que nada a escrevesse** — um evento entrava e nunca era encerrado.
+> Agora há `GET /v1/adverse-events` (pseudonimizado, com `pending=true` para o que falta fechar) e
+> `POST /v1/adverse-events/{id}/outcome`, com a trilha guardando **que** houve o registro, não o
+> texto (é dado de saúde). A Fase H nomeia as outras quatro lacunas operacionais, que estavam
+> fora de qualquer lista.
+>
 > ### ⛳ Marco (2026-09-01): **G2 sai do impasse — o leito ambiente existe, e o gate ficou mais duro.**
 > ADR-109 fechou **G2**, o último item de código da Fase G. O impasse registrado aqui ("ou o leito
 > sai do protocolo, ou o gate ganha uma exceção") era **falso**: o piso de −60 dB mede energia
@@ -600,6 +611,26 @@ já está preparado", não redesenhar.
 | G9 | **Dose acumulada + alerta em 50%** — ✅ **FEITO** (2026-08-31, ADR-108): `core/hearing.py` com a troca de 3 dB sobre o **tempo efetivo**; janela do alerta **móvel de 7 dias** (a permissão OMS/UIT é semanal) e acumulado do estudo junto; sai por `GET /participants/me/status` e vira cartão na Home. Sem calibração, é **previsão no nível prescrito** e a tela diz isso. A conta confirma o protocolo: 6h40 a 60 dB(A) = **0,17%** da permissão (em 60 dB(A) cabem 4000 h/semana) | ✅ | ADR-108; protocolo, "Intensidade e segurança auditiva" |
 | G10 | **Registro por sessão** — ✅ **FEITO** (2026-08-31, ADR-107): a revisão do parágrafo achou **três** itens sem coluna, não um. Entraram `paused_seconds` (o protocolo pede "interrupções **e sua duração**"), `gain_mean`/`gain_peak` (volume médio e máximo **aplicados**, não o declarado) e `relaxation_0_10` — o item único do protocolo, que existia só como **0–4** dentro do questionário **opcional**. O item é perguntado **depois** de a adesão ser enviada, e o teto de volume passou a valer também no encerramento | ✅ | ADR-107; protocolo, "Registro e monitoramento" |
 
+## Fase H — a equipe consegue OPERAR o estudo
+
+Estes itens não são funcionalidade nova: são os dados que o sistema já coleta e que **ninguém
+consegue ler**. Saíram da auditoria operacional de 2026-08-29 (cinco passos que não estavam em
+lista nenhuma) e de pendências de ADR que nunca viraram item de roadmap. O ADR-096 decidiu, de
+propósito, que a operação é por **API**, sem console gráfico — o que não dispensa haver o que
+chamar.
+
+| # | Item | Status | Fonte |
+|---|---|---|---|
+| H1 | **Ler e acompanhar eventos adversos** — ✅ **FEITO** (2026-09-01, ADR-110): `GET /v1/adverse-events` pseudonimizado, com filtro `pending=true` (moderado/grave **ainda sem desfecho**), e `POST /v1/adverse-events/{id}/outcome`, que escreve a coluna `outcome` — existente desde o ADR-051 e que **nada jamais preenchia**: um evento entrava e nunca era encerrado. O e-mail de alerta mandava "acesse o painel de pesquisa", que **nunca existiu**; agora aponta para os endpoints reais. Segurança é desfecho **primário** e era o único dado do estudo sem leitura nenhuma | ✅ | ADR-110; pendência do ADR-051; auditoria, lacuna 4 |
+| H2 | **Ler o registro por sessão** — não há `GET` de sessões para a equipe. O ADR-107 acrescentou seis colunas que o protocolo manda registrar (interrupções e sua duração, volume médio/máximo, relaxamento 0–10) e **nenhuma delas é legível** fora do export agregado. Mesma forma do H1 | ⬜ | ADR-107; protocolo, "Registro e monitoramento" |
+| H3 | **Bootstrap da primeira conta de staff em produção** — `POST /v1/staff` exige `user:manage`; banco novo = ninguém entra. Agrava: o descegamento exige **2 admins distintos** (ADR-075), então são ≥2 contas desde o início | ⬜ | auditoria, lacuna 1; ADR-075 |
+| H4 | **Receituário de operação** para uma equipe que não programa — já são cinco listagens de staff só por API (`/referrals`, `/discontinuations`, `/adverse-events`, `/research/*`, `/staff`). O `deploy-fly.md` cobre infra, não operação | ⬜ | auditoria, lacuna 5; ADR-096 |
+| H5 | **Distribuição do app** — não há build iOS; o APK sai como *artifact* do CI, sem assinatura de loja. E **ninguém validou a fidelidade bit-a-bit no navegador** (a inegociável #3 foi testada no cliente Flutter) | ⬜ | auditoria, lacuna 3; inegociável #3 |
+
+> A **lacuna 2** da auditoria (biblioteca de estímulos em produção) fechou por outro caminho:
+> `scripts/seed_protocols.py` existe, foi para v1.1.0 com o leito ambiente (ADR-109) e o
+> `--check` agora acusa versões antigas convivendo com a corrente.
+
 ## Ordem sugerida de execução
 
 **Código (Fase G): acabou de verdade.** ~~G2 (leito ambiente)~~ fechado em 2026-09-01 (ADR-109).
@@ -615,6 +646,10 @@ já está preparado", não redesenhar.
 - **Os valores de G3 e G9** — qual ganho digital corresponde a 60 dB(A), e qual o nível em fundo
   de escala do transdutor. Os dois saem da **mesma medição**: a calibração em acoplador de orelha
   da etapa (i) (**F2.7**). Até lá, `AUDIO_MAX_GAIN=1.0` não restringe nada e a dose é previsão.
+
+**Próximo código: a Fase H.** Ordem sugerida — `H2 (ler sessões, mesma forma do H1) →
+H3 (bootstrap de staff, que é caminho crítico do primeiro deploy) → H4 (receituário) →
+H5 (distribuição)`.
 
 **Operação nova (entra na F3):** a regra de adesão da 2ª semana precisa de alguém que a chame
 para alcançar quem sumiu — `POST /v1/discontinuations/evaluate`, semanalmente. É o mesmo problema
