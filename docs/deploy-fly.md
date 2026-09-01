@@ -8,6 +8,10 @@ Decisão e ressalvas em `docs/decisoes/ADR-076-deploy-fly-residencia.md`.
 > rode cada um com o prefixo `! ` para a saída cair aqui e eu te ajudar se algo falhar.
 > Todos os `fly …` rodam a partir da pasta `sereno/` (onde está o `fly.toml`).
 
+> **Este documento é sobre INFRAESTRUTURA** — subir, configurar, agendar. A operação do estudo no
+> dia a dia (inscrever, alocar, acompanhar, responder a evento adverso, exportar) está no
+> **`operar-o-estudo.md`**, escrito para quem não programa.
+
 ## Ordem de execução (a Fase F3 inteira, em sequência)
 
 As dez pendências operacionais do `ROADMAP.md` §F3 nesta ordem — cada uma com o que a destrava e

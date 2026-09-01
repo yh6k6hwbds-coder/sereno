@@ -18,6 +18,16 @@
 
 ## Estado atual (baseline deste roadmap)
 
+> ### ⛳ Marco (2026-09-01, 6ª rodada): **a Fase H fecha em código — sobra uma decisão.**
+> `docs/operar-o-estudo.md` fechou o **H4**. O ADR-096 dispensou o painel de staff de propósito, e
+> o preço disso era a equipe depender de quem programa; o receituário é o que paga esse preço, com
+> as dez tarefas do dia a dia e a tabela de erros em português. **Escrever a partir do contrato
+> pegou três imprecisões** que passariam batido: o descegamento pede `justification` (mín. 10
+> caracteres), não `reason`; a lista de participantes tem `limit` em outra escala (20/200, não
+> 100/500); e o export devolve **JSON enquanto processa** — quem salvasse direto acharia que o CSV
+> veio corrompido. **Da Fase H sobra o H5**, que é decisão do mantenedor (loja) mais uma pergunta
+> técnica aberta: a fidelidade bit-a-bit nunca foi verificada **no navegador**.
+>
 > ### ⛳ Marco (2026-09-01, 5ª rodada): **as quatro leituras da Fase H estão de pé.**
 > ADR-113 fechou o **H6**: `GET /research/participants` era um stub que respondia **200 com lista
 > vazia** e um `TODO` no corpo — pior que rota faltando, porque uma rota ausente dá 404 e quem
@@ -642,8 +652,8 @@ já está preparado", não redesenhar.
 
 ## Fase H — a equipe consegue OPERAR o estudo
 
-Estes itens não são funcionalidade nova: são os dados que o sistema já coleta e que **ninguém
-consegue ler**. Saíram da auditoria operacional de 2026-08-29 (cinco passos que não estavam em
+O receituário do dia a dia é o **`docs/operar-o-estudo.md`** (H4). Os itens abaixo não são
+funcionalidade nova: são os dados que o sistema já coleta e que **ninguém conseguia ler**. Saíram da auditoria operacional de 2026-08-29 (cinco passos que não estavam em
 lista nenhuma) e de pendências de ADR que nunca viraram item de roadmap. O ADR-096 decidiu, de
 propósito, que a operação é por **API**, sem console gráfico — o que não dispensa haver o que
 chamar.
@@ -653,7 +663,7 @@ chamar.
 | H1 | **Ler e acompanhar eventos adversos** — ✅ **FEITO** (2026-09-01, ADR-110): `GET /v1/adverse-events` pseudonimizado, com filtro `pending=true` (moderado/grave **ainda sem desfecho**), e `POST /v1/adverse-events/{id}/outcome`, que escreve a coluna `outcome` — existente desde o ADR-051 e que **nada jamais preenchia**: um evento entrava e nunca era encerrado. O e-mail de alerta mandava "acesse o painel de pesquisa", que **nunca existiu**; agora aponta para os endpoints reais. Segurança é desfecho **primário** e era o único dado do estudo sem leitura nenhuma | ✅ | ADR-110; pendência do ADR-051; auditoria, lacuna 4 |
 | H2 | **Ler o registro por sessão** — ✅ **FEITO** (2026-09-01, ADR-111): `GET /v1/sessions/registry` (equipe) com as seis colunas do ADR-107, pseudonimizado e **sem nada do protocolo de áudio** — só há dois protocolos, um por braço, então qualquer identificador estável do áudio agruparia os participantes por braço. Sessões **abertas** aparecem, com os campos do fim nulos. E `GET /v1/sessions` (o histórico do próprio participante) passou a **existir**: o contrato o prometia e a rota não estava lá | ✅ | ADR-111; ADR-107; protocolo, "Registro e monitoramento" |
 | H3 | **Bootstrap da primeira conta de staff** — ✅ **FEITO** (2026-09-01, ADR-112): `scripts/bootstrap_staff.py`, que **nunca define senha** (conta nasce com hash desconhecido + token de uso único, como o convite do ADR-094) e **cobra o segundo admin**, porque o descegamento exige dois distintos (ADR-075) e uma instalação com um só descobre isso no fim do estudo. `--print-link` é o caminho **antes do SMTP** — o link é segredo, vale uma vez. Recusa-se a agir havendo staff: dali em diante o caminho é a API, que registra quem convidou quem. Passo §3.35 do `deploy-fly.md` | ✅ | ADR-112; auditoria, lacuna 1; ADR-075 |
-| H4 | **Receituário de operação** para uma equipe que não programa — já são cinco listagens de staff só por API (`/referrals`, `/discontinuations`, `/adverse-events`, `/research/*`, `/staff`). O `deploy-fly.md` cobre infra, não operação | ⬜ | auditoria, lacuna 5; ADR-096 |
+| H4 | **Receituário de operação** — ✅ **FEITO** (2026-09-01): `docs/operar-o-estudo.md`, orientado a TAREFA e não a endpoint (entrar com 2º fator, funil de inscrição, as cinco listas, evento adverso, encaminhamento, rotinas semanais, export, descegamento, contas, LGPD), com uma tabela de erros em português. Aponta o `/docs` navegável da própria API como caminho principal para quem não usa terminal. Todo comando foi conferido contra o contrato — três imprecisões minhas foram corrigidas na revisão (`justification` e não `reason` no descegamento; `limit` diferente na lista de participantes; o export devolve **JSON enquanto processa** e CSV só no fim) | ✅ | `operar-o-estudo.md`; auditoria, lacuna 5; ADR-096 |
 | H6 | **A lista de participantes deixa de mentir** — ✅ **FEITO** (2026-09-01, ADR-113): era um stub que respondia **200 com lista vazia** e um `TODO` no corpo — pior que rota faltando, que ao menos dá 404. Implementada na forma que o contrato **já prometia**: braço **codificado** (nulo = ainda não randomizado), adesão, sessões e eventos adversos, keyset em `(enrolled_at, id)`. As contagens saem por **subconsulta**: um `join` de sessões com eventos adversos multiplicaria uma pela outra, e a adesão sairia errada por um fator — continuando plausível | ✅ | ADR-113; achado do ADR-111 |
 | H5 | **Distribuição do app** — não há build iOS; o APK sai como *artifact* do CI, sem assinatura de loja. E **ninguém validou a fidelidade bit-a-bit no navegador** (a inegociável #3 foi testada no cliente Flutter) | ⬜ | auditoria, lacuna 3; inegociável #3 |
 
@@ -677,10 +687,14 @@ chamar.
   de escala do transdutor. Os dois saem da **mesma medição**: a calibração em acoplador de orelha
   da etapa (i) (**F2.7**). Até lá, `AUDIO_MAX_GAIN=1.0` não restringe nada e a dose é previsão.
 
-**Próximo código: a Fase H.** ~~H1 (eventos adversos)~~, ~~H2 (registro por sessão)~~,
-~~H3 (bootstrap de staff)~~ e ~~H6 (lista de participantes)~~ feitos em 2026-09-01
-(ADR-110 a 113). Sobram **H4** (receituário de operação — agora há o que o receituário mande
-consultar) e **H5** (distribuição do app, que precisa de decisão do mantenedor sobre loja).
+**Fase H: sobra um item, e ele é decisão.** ~~H1 (eventos adversos)~~, ~~H2 (registro por
+sessão)~~, ~~H3 (bootstrap de staff)~~, ~~H6 (lista de participantes)~~ e ~~H4 (receituário)~~
+feitos em 2026-09-01 (ADR-110 a 113 + `operar-o-estudo.md`).
+
+**H5 (distribuição do app) precisa do mantenedor**, não de código: escolher entre Play Console
+(teste interno), TestFlight ou link direto muda o que se constrói — e há uma pergunta técnica
+aberta junto, que **nenhuma das opções resolve sozinha**: a fidelidade bit-a-bit (inegociável #3)
+foi testada no cliente Flutter e **nunca no navegador**, onde o áudio passa pela pilha do browser.
 
 **Operação nova (entra na F3):** a regra de adesão da 2ª semana precisa de alguém que a chame
 para alcançar quem sumiu — `POST /v1/discontinuations/evaluate`, semanalmente. É o mesmo problema
