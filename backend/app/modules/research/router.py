@@ -17,11 +17,6 @@ from app.modules.recommender.service import coherence as recommendation_coherenc
 router = APIRouter(prefix="/research", tags=["research"])
 
 
-@router.get("/_status")
-async def status():
-    return {"module": "research", "status": "stub"}
-
-
 @router.get("/participants")
 async def list_participants(limit: int = 20, cursor: str | None = None,
                             db: Session = Depends(get_db),

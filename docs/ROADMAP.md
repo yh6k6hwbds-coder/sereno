@@ -18,6 +18,19 @@
 
 ## Estado atual (baseline deste roadmap)
 
+> ### ⛳ Marco (2026-09-01, 8ª rodada): **varredura final — o contrato passa a ser verificado, e a superfície encolhe.**
+> ADR-115. O `openapi.yaml` é a **fonte de verdade da API** e a Definição de Pronto manda
+> atualizá-lo antes do código — mas **nada verificava isso**: o CI só conferia que ele é um
+> OpenAPI bem formado, não que descreva o app que existe. A falta cobrou duas vezes na Fase H, nas
+> duas direções (o `GET /sessions` prometido e ausente; sete `_status` no ar, **públicos e não
+> documentados**, dois deles respondendo `{"status": "stub"}` e um devolvendo a versão do TCLE sem
+> autenticação). Placar da auditoria: **55 no contrato, 62 no app**. Os sete andaimes saíram — o
+> piloto ainda vai passar por pentest (F3.5) — e um teste passa a comparar os dois **nas duas
+> direções, caminho a caminho**, nomeando a rota que divergiu. Agora: **55 = 55**.
+> **F3.11 ficou agendável:** `scripts/sweep_discontinuations.py` roda no servidor **sem
+> credencial** — agendar a chamada HTTP exigiria guardar o segredo de MFA no agendador, o que
+> esvaziaria o MFA para ganhar uma rotina.
+>
 > ### ⛳ Marco (2026-09-01, 7ª rodada): **as duas pendências de decisão foram resolvidas; a Fase H está completa.**
 > **G2 ratificado:** o leito ambiente fica em **−30 dBr**, e a declaração ao CEP está escrita —
 > `dossie-submissao-cep.md` **§4b**, uma tabela nova com **todos** os parâmetros que a
@@ -619,7 +632,7 @@ Depende de infraestrutura no ar ou de credencial, não de escrever código.
 | F3.3 | **Deploy na Fly** | ✅ `fly.toml` + runbook prontos (ADR-076); depende de cartão |
 | F3.4 | Ao aprovar o TCLE: trocar a versão para `1.0.0` — `python scripts/tcle_version.py 1.0.0` | ✅ Script pronto (ADR-099). ⚠️ **Não é "uma linha em cada"**, como esta linha dizia: são **4 literais** em 3 linguagens (incl. o `examples` do contrato e o cabeçalho do `.md`) + um **teste de widget que guarda o estado de rascunho e vai falhar de propósito**. O script faz o mecânico e lista o que exige julgamento; `--check` roda no CI |
 | F3.5 | **Pentest externo** antes de dado real | ⬜ C12 |
-| F3.11 | **Agendar a varredura de descontinuação** — `POST /v1/discontinuations/evaluate`, semanalmente | ✅ Regra e endpoint prontos (ADR-106). **Enquanto ninguém agendar, a regra da 2ª semana só alcança quem ainda abre o app** — mesmo problema de agendamento do F3.1 |
+| F3.11 | **Agendar a varredura de descontinuação** — `scripts/sweep_discontinuations.py`, semanalmente | ✅ Regra, endpoint **e script** prontos (ADR-106 + complemento). O script roda no servidor **sem credencial**: agendar a chamada HTTP exigiria guardar o segredo de MFA no agendador. **Enquanto ninguém agendar, a regra da 2ª semana só alcança quem ainda abre o app** — agende junto do F3.1 |
 | F3.7 | **Ligar os alertas**: `TEAM_NOTIFY_EMAIL` no ambiente (sem ele o alerta só vai para o log) | ✅ Detector pronto (ADR-093) |
 | F3.8 | **Subir o worker de e-mail** (`EMAIL_DELIVERY=queue` + `python scripts/email_worker.py`) — sem worker a fila enche e nada é enviado | ✅ Adaptador pronto (ADR-092) |
 | F3.9 | **Hospedar um Vault** e ligar `KEY_PROVIDER=vault` (chave com `derived=true`) | ✅ Adaptador pronto (ADR-095) |

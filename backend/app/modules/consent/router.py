@@ -46,11 +46,6 @@ class ConsentOut(BaseModel):
     content_hash: str
 
 
-@router.get("/consent/_status")
-async def status():
-    return {"module": "consent", "tcle_version": TCLE_CURRENT}
-
-
 @router.post("/consent", status_code=201, response_model=ConsentOut)
 async def record_consent(
     body: ConsentIn,

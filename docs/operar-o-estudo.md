@@ -235,8 +235,12 @@ varredura alcança quem sumiu — que é justamente quem interessa:
 curl -sX POST "$API/discontinuations/evaluate" -H "Authorization: Bearer $T"
 ```
 
-> Idealmente isto é **agendado** (F3.11), não lembrado. Enquanto ninguém agendar, alguém precisa
-> rodar toda semana. É a mesma pendência do expurgo de transitórios.
+> Idealmente isto é **agendado** (F3.11), não lembrado — e o agendamento não usa esta chamada:
+> roda `scripts/sweep_discontinuations.py` dentro do servidor, sem credencial (o login de staff
+> exige MFA, e guardar segredo de segundo fator num agendador esvaziaria o MFA). Os dois caminhos
+> aplicam a mesma regra. Receita no `deploy-fly.md` §3.5, junto do expurgo de transitórios.
+>
+> Esta chamada aqui é o caminho de **uma pessoa rodando na hora**.
 
 **Conferir se há pendências de segurança:** `GET /adverse-events?pending=true` deve devolver lista
 vazia ao fim da semana.

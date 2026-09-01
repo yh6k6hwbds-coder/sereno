@@ -137,11 +137,6 @@ class StaffSessionPage(BaseModel):
     items: list[StaffSessionOut]
 
 
-@router.get("/_status")
-async def status():
-    return {"module": "sessions", "status": "stub"}
-
-
 @router.post("", status_code=201, response_model=SessionStartOut)
 async def start_session(body: SessionStartIn, db: DbSession = Depends(get_db),
                         participant_id: uuid.UUID = Depends(current_participant),

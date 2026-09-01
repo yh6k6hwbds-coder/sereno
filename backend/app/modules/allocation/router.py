@@ -40,11 +40,6 @@ class UnblindIn(BaseModel):
     justification: str = Field(min_length=10, max_length=500)
 
 
-@router.get("/_status")
-async def status():
-    return {"module": "allocation", "status": "stub"}
-
-
 @router.post("", status_code=201)
 async def allocate(body: AllocateIn, db: Session = Depends(get_db),
                    user: dict = Depends(require("enroll:write"))):

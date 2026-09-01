@@ -26,7 +26,7 @@ infraestrutura ou alguém agendar. Marque conforme for.
 | 4 | **`STAFF_SETUP_URL`** (F3.10) | App publicado no GitHub Pages | §3.3 | O convite da equipe manda o token cru |
 | 4b | **A PRIMEIRA conta de staff** (H3) | Só o deploy no ar | §3.35 | **Ninguém entra**: criar staff exige `user:manage`, que só staff tem |
 | 5 | **`TEAM_NOTIFY_EMAIL`** (F3.7) | Um endereço da equipe | §3.2 | O alerta só vai para o log — ninguém vê |
-| 6 | **Agendar o expurgo** (F3.1) | Deploy no ar (ou um host externo) | §3.1 | O mecanismo existe e **nunca roda**; item E2 do checklist LGPD segue aberto |
+| 6 | **Agendar o expurgo (F3.1) E a varredura (F3.11)** — dois scripts, mesmo agendador | Deploy no ar (ou um host externo) | §3.1 e §3.5 | Os mecanismos existem e **nunca rodam**: item E2 do checklist LGPD aberto, e a regra da 2ª semana não alcança quem parou de abrir o app |
 | 7 | **Worker de e-mail** (F3.8) | Redis + processo `worker` no `fly.toml` | §3.2 | ⚠️ Ligar `EMAIL_DELIVERY=queue` **sem worker** para o OTP de vez |
 | 8 | **Vault** (F3.9) | Um Vault hospedado, chave com `derived=true` | §3.2 | A custódia da chave **não mudou** na prática (C11 aberto) |
 | 9 | **Pentest externo** (F3.5) | Decisão/contratação do NIT | — | Nenhuma revisão independente antes de dado real |
@@ -258,17 +258,25 @@ previstas até ali. O servidor aplica a regra sozinho quando o participante abre
 tenta iniciar uma sessão — mas isso, por construção, **nunca alcança quem parou de abrir o
 aplicativo**, que é exatamente o caso que a regra existe para pegar. Por isso existe a varredura:
 
-```powershell
+```bash
 # Semanalmente. Idempotente: rodar de novo devolve discontinued: 0.
-curl -X POST https://sereno-piloto-api.fly.dev/v1/discontinuations/evaluate `
-  -H "Authorization: Bearer <token de staff com enroll:write>"
-# -> {"evaluated_at": "...", "discontinued": 2}
+fly ssh console --app sereno-piloto-api -C "python scripts/sweep_discontinuations.py"
+# -> {"evaluated_at": "...", "discontinued": 2, "dry_run": false}
 ```
 
-Mesmo problema de agendamento do §3.1 (expurgo) — **resolva os dois juntos**, com o mesmo cron
-externo ou a mesma máquina agendada da Fly. A diferença é que aqui a chamada é HTTP autenticada,
-não `fly ssh console`: o agendador precisa de um token de staff, então prefira a máquina agendada
-com `fly ssh console -C "python -c ..."` se não quiser guardar credencial no agendador.
+**Exatamente o mesmo agendamento do §3.1 (expurgo) — resolva os dois juntos.** Os dois são
+scripts que rodam dentro do servidor, sem credencial nenhuma.
+
+> **Por que script, e não a chamada HTTP.** O endpoint `POST /v1/discontinuations/evaluate`
+> continua existindo e é o caminho quando **uma pessoa** quer rodar a varredura na hora. Mas ele
+> exige token de staff, e o login de staff exige **MFA** — de propósito. Agendar a chamada
+> obrigaria a guardar credencial **e** segredo de segundo fator no agendador, esvaziando o MFA
+> para ganhar uma tarefa de rotina. Os dois caminhos chamam a **mesma** função de serviço: a regra
+> vive em um lugar só.
+>
+> `--dry-run` diz quantos *seriam* descontinuados sem gravar nada — útil na primeira vez.
+> A saída **não nomeia participante**: log de agendador é lido por quem opera infraestrutura, e
+> a lista com nome de estudo sai pelo `GET /v1/discontinuations`.
 
 **Antes de agendar, confirme com a equipe** (a lista sai em `GET /v1/discontinuations`): a
 descontinuação **para as sessões** do participante. Ela não apaga nada — o participante segue na

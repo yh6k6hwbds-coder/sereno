@@ -130,3 +130,22 @@ atrasada que não reescreve a 2ª semana, exposição que para de fato, ITT pres
 rebaixamento de `removed`, idempotência, varredura, lista pseudonimizada e ausência de braço) e
 `app/test/home_t2_test.dart` (convite só quando devido, texto de atraso, estado descontinuado
 sem CTA, Home inteira sem rede); migração `c9d0e1f2a3b4`; OpenAPI válido.
+
+---
+
+## Complemento (2026-09-01) — a varredura ficou agendável
+
+A regra existia e o endpoint também; faltava o **como agendar**. `POST /discontinuations/evaluate`
+exige token de staff, e o login de staff exige **MFA**: agendar a chamada obrigaria a guardar
+credencial e segredo de segundo fator no agendador, esvaziando o MFA para ganhar uma tarefa de
+rotina.
+
+Entrou `backend/scripts/sweep_discontinuations.py`, no mesmo molde do `purge_otp.py`: roda dentro
+do servidor, com o acesso ao banco que a aplicação já tem, **sem credencial**. Chama a mesma
+`sweep_week2` do endpoint — a regra continua vivendo em um lugar só —, tem `--dry-run` e sai com
+código ≠ 0 em falha, para o agendador alertar. A saída **não nomeia participante**: log de
+agendador é lido por quem opera infraestrutura, não necessariamente por quem tem acesso ao dado do
+estudo.
+
+O endpoint continua sendo o caminho de quem quer rodar a varredura na hora. Receita no
+`deploy-fly.md` §3.5, agora agendável junto do expurgo do §3.1.

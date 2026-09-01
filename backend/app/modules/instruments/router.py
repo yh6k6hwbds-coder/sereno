@@ -52,11 +52,6 @@ class ScoreOut(BaseModel):
     score_version: str
 
 
-@router.get("/baseline/_status")
-async def status():
-    return {"module": "instruments", "endpoint": "baseline"}
-
-
 @router.post("/baseline", status_code=201, response_model=ScoreOut)
 async def submit_baseline(
     body: BaselineIn,

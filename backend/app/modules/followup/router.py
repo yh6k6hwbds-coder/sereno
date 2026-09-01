@@ -49,11 +49,6 @@ class FollowupOut(BaseModel):
     score_version: str
 
 
-@router.get("/followup/_status")
-async def status():
-    return {"module": "followup"}
-
-
 @router.post("/followup", status_code=201, response_model=FollowupOut)
 async def submit_followup(body: FollowupIn, db: Session = Depends(get_db),
                           participant_id: uuid.UUID = Depends(current_participant),
