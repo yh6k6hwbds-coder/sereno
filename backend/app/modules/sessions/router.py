@@ -5,7 +5,10 @@ POST /v1/sessions (iniciar): exige verificação de fones; resolve o braço do
 participante INTERNAMENTE (resolve_arm) e a condição (chave selada); grava a sessão
 com protocol_hash; devolve APENAS session_id + handle neutro (banda) + content_hash.
 Nunca retorna braço, condição ou beat_hz.
-POST /v1/sessions/{id}/complete (encerrar): grava fim, duração efetiva e interrupções.
+POST /v1/sessions/{id}/complete (encerrar): grava o que o protocolo manda registrar por
+sessão (G10) — fim, duração efetiva, interrupções **e sua duração**, volume médio e máximo
+aplicados e o item único de relaxamento (0 a 10). O teto de volume (G3) é reconferido sobre o
+que foi REPRODUZIDO, não só sobre o que foi declarado ao iniciar.
 Protegido contra IDOR (a sessão precisa ser do participante autenticado). problem+json.
 """
 from __future__ import annotations
@@ -68,8 +71,24 @@ class SessionStartOut(BaseModel):
 
 
 class SessionCompleteIn(BaseModel):
+    """Telemetria do fim da sessão — os itens que o protocolo manda registrar (G10).
+
+    ``paused_seconds``, ``gain_mean``/``gain_peak`` e ``relaxation_0_10`` são **opcionais**:
+    um cliente antigo (ou um reenvio da fila offline gravada antes desta versão) continua
+    encerrando a sessão, e o campo fica nulo — a ausência é informação, e recusar o
+    encerramento faria perder a medida de adesão, que é desfecho primário."""
     effective_seconds: int = Field(ge=0, le=86400)
     interruptions: int = Field(ge=0, default=0)
+    paused_seconds: int | None = Field(
+        default=None, ge=0, le=86400,
+        description="tempo total em pausa (protocolo: 'interrupções e sua duração')")
+    gain_mean: float | None = Field(
+        default=None, gt=0.0, le=1.0, description="ganho MÉDIO aplicado na reprodução")
+    gain_peak: float | None = Field(
+        default=None, gt=0.0, le=1.0, description="ganho MÁXIMO aplicado na reprodução")
+    relaxation_0_10: int | None = Field(
+        default=None, ge=0, le=10,
+        description="item único de percepção de relaxamento (0 a 10), por sessão")
 
 
 @router.get("/_status")
@@ -166,6 +185,24 @@ async def complete_session(session_id: uuid.UUID, body: SessionCompleteIn,
     s.ended_at = dt.datetime.now(dt.timezone.utc)
     s.effective_seconds = body.effective_seconds
     s.interruptions = body.interruptions
+    # G10 — o restante do registro por sessão. O teto de volume (G3) vale para o que foi
+    # REPRODUZIDO, não só para o que foi declarado ao iniciar: um cliente que subisse o ganho
+    # no meio da sessão passaria pela checagem do início e seria pego aqui.
+    teto = audio_max_gain()
+    if body.gain_peak is not None and body.gain_peak > teto:
+        raise ProblemException(422, "Volume acima do limite",
+                               "O ganho máximo reproduzido excede o limite do estudo.")
+    if (body.gain_mean is not None and body.gain_peak is not None
+            and body.gain_mean > body.gain_peak):
+        raise ProblemException(422, "Volume inconsistente",
+                               "O ganho médio não pode ser maior que o máximo.")
+    s.paused_seconds = body.paused_seconds
+    s.gain_mean = body.gain_mean
+    s.gain_peak = body.gain_peak
+    if body.relaxation_0_10 is not None:
+        # Só preenche: o item pode chegar num reenvio posterior, e um envio sem ele não
+        # deve apagar a resposta já dada.
+        s.relaxation_0_10 = body.relaxation_0_10
     # ``completed`` é o que a análise conta como ADESÃO (desfecho primário): o protocolo
     # exige pelo menos 80% da duração prescrita. Marcar toda sessão encerrada como concluída
     # inflaria a adesão — quem abriu o áudio por dois minutos contaria igual a quem ouviu os

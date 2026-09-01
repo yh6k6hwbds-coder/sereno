@@ -70,6 +70,10 @@ class _FakeRepo extends SessionRepository {
   int completeCalls = 0;
   int? lastEffective;
   int? lastInterruptions;
+  int? lastPaused;
+  double? lastGainMean;
+  double? lastGainPeak;
+  int? lastRelaxation;
 
   @override
   Future<AudioBytesSource> obtainAudio(String sessionId,
@@ -78,10 +82,19 @@ class _FakeRepo extends SessionRepository {
 
   @override
   Future<void> complete(String sessionId,
-      {required int effectiveSeconds, required int interruptions}) async {
+      {required int effectiveSeconds,
+      required int interruptions,
+      int? pausedSeconds,
+      double? gainMean,
+      double? gainPeak,
+      int? relaxation0to10}) async {
     completeCalls++;
     lastEffective = effectiveSeconds;
     lastInterruptions = interruptions;
+    lastPaused = pausedSeconds;
+    lastGainMean = gainMean;
+    lastGainPeak = gainPeak;
+    lastRelaxation = relaxation0to10;
     if (failComplete) throw Exception('rede');
   }
 }
@@ -100,7 +113,12 @@ final _session = SessionStart(sessionId: 's1', protocolHandle: 'delta', contentH
 
 TelemetrySender _senderFor(_FakeRepo repo, TelemetryQueue q) => TelemetrySender(
       (i) => repo.complete(i.sessionId,
-          effectiveSeconds: i.effectiveSeconds, interruptions: i.interruptions),
+          effectiveSeconds: i.effectiveSeconds,
+          interruptions: i.interruptions,
+          pausedSeconds: i.pausedSeconds,
+          gainMean: i.gainMean,
+          gainPeak: i.gainPeak,
+          relaxation0to10: i.relaxation0to10),
       q,
     );
 
@@ -171,7 +189,47 @@ void main() {
     expect(repo.completeCalls, 1);
     expect(repo.lastEffective, 3);
     expect(repo.lastInterruptions, 1);
+    // G10 — o protocolo pede "interrupções E SUA DURAÇÃO": o segundo em pausa foi contado,
+    // e não entrou no tempo efetivo.
+    expect(repo.lastPaused, 1);
+    // Volume médio e máximo do que foi REPRODUZIDO. O ganho é travado, então coincidem com
+    // ele — o valor é medido no player, não copiado da constante.
+    expect(repo.lastGainMean, closeTo(audioGain, 1e-9));
+    expect(repo.lastGainPeak, audioGain);
     expect(player.pauseCalls, greaterThanOrEqualTo(2)); // pausa manual + pausa no encerrar
+    await _teardown(tester);
+  });
+
+  testWidgets('o item de relaxamento 0–10 é perguntado e complementa o registro',
+      (tester) async {
+    // O protocolo lista, por sessão, "resposta a um item único de percepção de relaxamento
+    // em escala numérica de 0 a 10". Ele é perguntado DEPOIS de a adesão já ter sido
+    // enviada — responder não pode ser condição para a sessão contar.
+    final repo = _FakeRepo();
+    final player = _FakePlayer();
+    await tester.pumpWidget(_screen(repo, player, _senderFor(repo, _MemQueue())));
+    await _settleLoad(tester);
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byIcon(Icons.stop_rounded));
+    await tester.pump();
+    await tester.pump();
+
+    // O diálogo tem animação de entrada; a onda de fundo é infinita, então pumpAndSettle
+    // aqui nunca terminaria — avança-se o relógio à mão.
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(repo.completeCalls, 1);
+    expect(repo.lastRelaxation, isNull);          // o primeiro envio não espera a resposta
+    expect(find.textContaining('Quão relaxado'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '8'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(repo.completeCalls, 2);                 // complemento, não substituição
+    expect(repo.lastRelaxation, 8);
+    expect(repo.lastEffective, 1);                 // o resto do registro vai junto de novo
     await _teardown(tester);
   });
 

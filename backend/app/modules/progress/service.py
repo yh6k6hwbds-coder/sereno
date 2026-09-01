@@ -1,7 +1,7 @@
 """
-modules/progress/service.py — Onde o participante está no protocolo, e quando ele sai (G6).
+modules/progress/service.py — Onde o participante está no protocolo, e quando ele sai (G6/G9).
 
-Duas coisas que o protocolo pede e o sistema não tinha:
+Três coisas que o protocolo pede e o sistema não tinha:
 
   1. **A avaliação intermediária T2.** O instrumento (PHQ-9 de segurança) e a tela já existem
      desde o G5; o que faltava era o **momento** — quando ela é devida, até quando, e se já foi
@@ -17,6 +17,12 @@ Duas coisas que o protocolo pede e o sistema não tinha:
 403) e continua no denominador da análise: é o que ITT quer dizer, e é por isso que
 ``discontinued`` é um status diferente de ``withdrawn``.
 
+  3. **A dose de exposição auditiva** (G9, ADR-108). O protocolo promete "contabilização de
+     dose acumulada" e "alerta ao atingir 50% do limite de referência" (80 dB(A) por 40 h
+     semanais, OMS/UIT). A conta mora aqui e não em ``sessions`` porque é uma leitura do
+     histórico do participante, como a adesão — e sai pelo mesmo endpoint de status, para
+     que a tela inicial não precise de uma segunda chamada.
+
 **A regra nunca rebaixa um status mais forte.** Quem já foi retirado por segurança
 (``removed``), retirou o consentimento (``withdrawn``) ou concluiu não vira ``discontinued`` —
 a mesma precaução que o ADR-102 tomou com o ``erase``.
@@ -30,12 +36,14 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core import hearing
+from app.core.config import audio_calibrated_spl_dba
 from app.core.email import EmailMessage, get_email_delivery
 from app.core.models import (Allocation, Participant, ProtocolDiscontinuation,
                              SafetyAssessment, Session as SessionModel)
 from app.core.protocol import (MIN_WEEK2_ADHERENCE_PCT, PRESCRIBED_SESSIONS, T2_WEEK,
-                               adherence_pct, prescribed_through_week, study_day, study_week,
-                               t2_window, week2_deadline)
+                               adherence_pct, as_utc, prescribed_through_week, study_day,
+                               study_week, t2_window, week2_deadline)
 from app.modules.audit.service import record_event
 
 REASONS = ("solicitacao_participante", "evento_adverso", "adesao_insuficiente")
@@ -164,6 +172,75 @@ def sweep_week2(db: Session, now: dt.datetime | None = None) -> list[ProtocolDis
     return [s for s in saidas if s is not None]
 
 
+def hearing_exposure(db: Session, participant_id: uuid.UUID,
+                     now: dt.datetime | None = None) -> dict:
+    """Dose de exposição auditiva do participante, pela referência OMS/UIT (G9).
+
+    O protocolo promete "contabilização de dose acumulada" e "alerta ao atingir 50% do
+    limite de referência". A referência é **semanal** (80 dB(A) por 40 h), então quem manda
+    no alerta é a janela móvel de 7 dias; a soma do estudo inteiro vai junto porque é a
+    "dose acumulada" que o texto nomeia, mas comparar 4 semanas de exposição com uma
+    permissão de 1 semana exageraria o número.
+
+    Conta o **tempo efetivo de reprodução**, não a duração do arquivo: quem pausou não se
+    expôs. Sessão sem ``effective_seconds`` (aberta, ou nunca encerrada) contribui zero.
+    """
+    agora = now or dt.datetime.now(dt.timezone.utc)
+    fundo_de_escala = audio_calibrated_spl_dba()
+    desde = agora - dt.timedelta(days=hearing.WINDOW_DAYS)
+
+    linhas = db.execute(
+        select(SessionModel.started_at, SessionModel.effective_seconds,
+               SessionModel.gain_mean, SessionModel.audio_gain)
+        .where(SessionModel.participant_id == participant_id,
+               SessionModel.effective_seconds.isnot(None))).all()
+
+    horas_semana = horas_total = fracao_semana = fracao_total = 0.0
+    for iniciada_em, segundos, ganho_medio, ganho_declarado in linhas:
+        horas = max(int(segundos or 0), 0) / 3600.0
+        if horas <= 0:
+            continue
+        nivel = _spl_da_sessao(ganho_medio, ganho_declarado, fundo_de_escala)
+        fracao = hearing.dose_fraction(nivel, horas)
+        horas_total += horas
+        fracao_total += fracao
+        if as_utc(iniciada_em) >= desde:
+            horas_semana += horas
+            fracao_semana += fracao
+
+    return {
+        # A calibração em acoplador (etapa (i) do protocolo / F2.7) ainda não foi feita:
+        # enquanto isso a dose é PREVISTA no nível prescrito, e o cliente precisa poder
+        # dizer isso na tela em vez de exibir uma medida que não existe.
+        "calibrated": fundo_de_escala is not None,
+        "assumed_spl_dba": None if fundo_de_escala is not None else hearing.PROTOCOL_TARGET_SPL_DBA,
+        "reference_spl_dba": hearing.REFERENCE_SPL_DBA,
+        "reference_hours_per_week": hearing.REFERENCE_HOURS_PER_WEEK,
+        "window_days": hearing.WINDOW_DAYS,
+        "week_hours": round(horas_semana, 3),
+        "week_pct": round(100.0 * fracao_semana, 2),
+        "total_hours": round(horas_total, 3),
+        "total_pct": round(100.0 * fracao_total, 2),
+        "alert_at_pct": round(100.0 * hearing.ALERT_FRACTION, 1),
+        "alert": fracao_semana >= hearing.ALERT_FRACTION,
+    }
+
+
+def _spl_da_sessao(ganho_medio, ganho_declarado, fundo_de_escala: float | None) -> float:
+    """Nível em dB(A) de uma sessão. Sem calibração, o nível PRESCRITO pelo protocolo.
+
+    Prefere o ganho médio efetivamente aplicado (G10) ao declarado no início (G3): é o que
+    descreve a exposição de quem, por qualquer razão, reproduziu abaixo do que declarou."""
+    if fundo_de_escala is None:
+        return hearing.PROTOCOL_TARGET_SPL_DBA
+    ganho = ganho_medio if ganho_medio is not None else ganho_declarado
+    if ganho is None:
+        # Calibrado, mas a sessão é anterior ao registro de ganho: o nível prescrito é a
+        # melhor descrição disponível, e é o que o protocolo previa para ela.
+        return hearing.PROTOCOL_TARGET_SPL_DBA
+    return hearing.spl_for_gain(float(ganho), fundo_de_escala)
+
+
 def participant_progress(db: Session, participant_id: uuid.UUID,
                          now: dt.datetime | None = None) -> dict:
     """Onde o participante está: semana, adesão, T2 e (se houver) a descontinuação.
@@ -192,6 +269,9 @@ def participant_progress(db: Session, participant_id: uuid.UUID,
         "adherence_pct": adherence_pct(feitas, PRESCRIBED_SESSIONS),
         "t2": None,
         "discontinuation": None,
+        # G9 — a dose auditiva não depende de alocação nem de braço: é a exposição de quem
+        # ouviu, e a tela precisa dela mesmo antes do T2.
+        "hearing": hearing_exposure(db, participant_id, agora),
     }
     if saida is not None:
         corpo["discontinuation"] = {"reason": saida.reason, "decided_at": saida.decided_at,

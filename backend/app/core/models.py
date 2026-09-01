@@ -235,10 +235,31 @@ class Session(Base):
     # Ganho digital travado com que o cliente reproduziu (G3). Como o app fixa o ganho e não
     # oferece controle de volume, um valor por sessão descreve a exposição inteira.
     audio_gain: Mapped[float] = mapped_column(Numeric(4, 3), nullable=True)
+    # G10 — o que o protocolo manda registrar por sessão, em "Registro e monitoramento":
+    # "interrupções E SUA DURAÇÃO" (a contagem acima sozinha não distingue quem pausou 5 s
+    # de quem pausou meia hora) e "volume médio e máximo". O ganho é travado (G3), então
+    # hoje médio e máximo coincidem com ``audio_gain`` — registrá-los assim mesmo é o que
+    # transforma "é constante por construção" em fato auditável sessão a sessão.
+    paused_seconds: Mapped[int] = mapped_column(Integer, nullable=True)
+    gain_mean: Mapped[float] = mapped_column(Numeric(4, 3), nullable=True)
+    gain_peak: Mapped[float] = mapped_column(Numeric(4, 3), nullable=True)
+    # "resposta a um item único de percepção de relaxamento em escala numérica de 0 a 10".
+    # Fica na SESSÃO, e não no questionário pós-sessão (que é opcional e usa escalas de 0 a
+    # 4): o protocolo pede o item para CADA sessão, e amarrá-lo ao questionário faria a
+    # coleta desaparecer junto com ele.
+    relaxation_0_10: Mapped[int] = mapped_column(SmallInteger, nullable=True)
     device_info: Mapped[dict] = mapped_column(JSONB, nullable=True)
     __table_args__ = (
         CheckConstraint("audio_gain is null or (audio_gain > 0 and audio_gain <= 1)",
                         name="ck_session_audio_gain"),
+        CheckConstraint("gain_mean is null or (gain_mean > 0 and gain_mean <= 1)",
+                        name="ck_session_gain_mean"),
+        CheckConstraint("gain_peak is null or (gain_peak > 0 and gain_peak <= 1)",
+                        name="ck_session_gain_peak"),
+        CheckConstraint("paused_seconds is null or paused_seconds >= 0",
+                        name="ck_session_paused_seconds"),
+        CheckConstraint("relaxation_0_10 is null or relaxation_0_10 between 0 and 10",
+                        name="ck_session_relaxation_0_10"),
     )
 
 

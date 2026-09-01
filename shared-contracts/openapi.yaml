@@ -1160,9 +1160,38 @@ components:
         started_at: { type: string, format: date-time }
     SessionCompleteIn:
       type: object
+      description: >-
+        Telemetria do fim da sessão. Além do tempo efetivo e da contagem de interrupções,
+        carrega o que o protocolo manda registrar por sessão (G10): a DURAÇÃO das
+        interrupções, o volume médio e máximo efetivamente aplicados e o item único de
+        percepção de relaxamento em escala de 0 a 10. Todos opcionais: um cliente antigo,
+        ou um reenvio da fila offline gravada antes desta versão, continua encerrando a
+        sessão — a adesão é desfecho primário e não pode se perder por um campo novo.
       properties:
         effective_seconds: { type: integer, minimum: 0, maximum: 86400 }
         interruptions: { type: integer, minimum: 0 }
+        paused_seconds:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 86400
+          description: "tempo total em pausa (protocolo: 'interrupções e sua duração')"
+        gain_mean:
+          type: [number, "null"]
+          exclusiveMinimum: 0
+          maximum: 1
+          description: "ganho MÉDIO aplicado na reprodução"
+        gain_peak:
+          type: [number, "null"]
+          exclusiveMinimum: 0
+          maximum: 1
+          description: >-
+            Ganho MÁXIMO aplicado. O teto de volume (G3) é reconferido aqui: acima de
+            AUDIO_MAX_GAIN, ou abaixo de `gain_mean`, o encerramento é recusado com 422.
+        relaxation_0_10:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 10
+          description: "item único de percepção de relaxamento, por sessão"
       required: [effective_seconds]
     SessionCompleteOut:
       type: object
@@ -1309,7 +1338,35 @@ components:
         adherence_pct: { type: number }
         t2: { oneOf: [ { $ref: '#/components/schemas/T2Window' }, { type: "null" } ] }
         discontinuation: { oneOf: [ { $ref: '#/components/schemas/DiscontinuationBrief' }, { type: "null" } ] }
-      required: [status, allocated, sessions_completed, sessions_prescribed, adherence_pct]
+        hearing: { $ref: '#/components/schemas/HearingExposure' }
+      required: [status, allocated, sessions_completed, sessions_prescribed, adherence_pct, hearing]
+    HearingExposure:
+      type: object
+      description: >-
+        Dose de exposição auditiva (G9). O protocolo promete "contabilização de dose
+        acumulada" e "alerta ao atingir 50% do limite de referência" — 80 dB(A) por 40 h
+        SEMANAIS (OMS/UIT, 2019). Por isso `alert` observa a janela móvel de 7 dias
+        (`week_pct`), e não o acumulado do estudo (`total_pct`), que vai junto por ser a
+        "dose acumulada" que o texto nomeia. `calibrated=false` significa que a calibração
+        em acoplador de orelha ainda não foi feita e a dose é uma PREVISÃO no nível
+        prescrito (`assumed_spl_dba`), não uma medida. Idêntico nos dois braços — a energia
+        acústica é a mesma.
+      properties:
+        calibrated: { type: boolean }
+        assumed_spl_dba:
+          type: [number, "null"]
+          description: "nível assumido quando não há calibração (60 dB(A), o prescrito)"
+        reference_spl_dba: { type: number, examples: [80] }
+        reference_hours_per_week: { type: number, examples: [40] }
+        window_days: { type: integer, examples: [7] }
+        week_hours: { type: number, description: "horas de reprodução efetiva nos últimos 7 dias" }
+        week_pct: { type: number, description: "% da permissão semanal consumida na janela" }
+        total_hours: { type: number }
+        total_pct: { type: number, description: "% da permissão semanal, acumulado no estudo" }
+        alert_at_pct: { type: number, examples: [50] }
+        alert: { type: boolean, description: "week_pct atingiu alert_at_pct" }
+      required: [calibrated, reference_spl_dba, reference_hours_per_week, window_days,
+                 week_hours, week_pct, total_hours, total_pct, alert_at_pct, alert]
     T2Window:
       type: object
       description: "Avaliação intermediária da 2ª semana: quando abre, até quando, e se já foi feita."

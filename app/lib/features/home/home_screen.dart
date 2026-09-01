@@ -21,7 +21,8 @@ import '../safety/safety_check_screen.dart';
 /// diário, seguimento, relato de EA). Serviços a partir do armazenamento seguro.
 ///
 /// O andamento no protocolo (G6) vem do servidor: é ele que sabe quando a avaliação
-/// intermediária (T2) é devida e se a participação foi descontinuada. A tela é útil
+/// intermediária (T2) é devida, se a participação foi descontinuada e quanta dose de
+/// exposição auditiva já se acumulou (G9). A tela é útil
 /// **antes** de a resposta chegar e continua útil se ela não chegar — sem rede, mostra o
 /// que sempre mostrou, e o cartão do T2 simplesmente não aparece. Perder um convite é
 /// melhor do que travar a tela inicial de quem só quer ouvir a sessão do dia.
@@ -106,6 +107,51 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
+  /// Dose de exposição auditiva (G9) — o protocolo promete exibi-la e alertar na metade da
+  /// referência de audição segura. Só aparece depois da primeira sessão: antes disso a
+  /// linha diria "0%" a quem nunca se expôs, que é ruído, não informação.
+  ///
+  /// Quando não há calibração do transdutor, o texto diz que é estimativa no nível previsto —
+  /// exibir um número medido que ninguém mediu seria pior do que exibir a ressalva.
+  Widget _hearingCard(AppLocalizations t, HearingExposure h) => Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        color: h.alert ? SerenoColors.alert.withOpacity(0.10) : null,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(h.alert ? Icons.warning_amber_rounded : Icons.hearing_outlined,
+                  color: h.alert ? SerenoColors.alert : SerenoColors.petrol, size: 20),
+              const SizedBox(width: 8),
+              Text(t.hearingTitle,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            ]),
+            const SizedBox(height: 8),
+            Text(t.hearingSummary(_pct(h.weekPct), _horas(h.totalHours))),
+            const SizedBox(height: 4),
+            Text(h.calibrated ? t.hearingMeasured : t.hearingEstimate,
+                style: const TextStyle(fontSize: 12, color: SerenoColors.muted)),
+            if (h.alert) ...[
+              const SizedBox(height: 8),
+              Text(t.hearingAlert,
+                  style: const TextStyle(fontSize: 13, color: SerenoColors.alert)),
+            ],
+          ]),
+        ),
+      );
+
+  /// Percentuais minúsculos (a exposição prevista do estudo é ~0,17% da referência) viram
+  /// "0%" com arredondamento inteiro, que lê como "nada foi contabilizado".
+  static String _pct(double v) {
+    if (v > 0 && v < 0.1) return '< 0,1%';
+    return '${v.toStringAsFixed(v < 10 ? 2 : 1).replaceAll('.', ',')}%';
+  }
+
+  static String _horas(double h) {
+    final total = (h * 60).round();
+    return total < 60 ? '${total}min' : '${total ~/ 60}h${(total % 60).toString().padLeft(2, '0')}';
+  }
+
   /// Descontinuado: a sessão não abre mais, e a tela precisa dizer isso sem parecer punição.
   Widget _discontinuedCard(AppLocalizations t) => Card(
         margin: const EdgeInsets.only(bottom: 16),
@@ -179,6 +225,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
                 if (descontinuado) _discontinuedCard(t),
                 if (p != null && p.t2Due) _t2Card(context, t),
+                if (p?.hearing != null && p!.hearing!.totalHours > 0)
+                  _hearingCard(t, p.hearing!),
                 // Sem o CTA quando a participação foi descontinuada: o servidor recusaria a
                 // sessão com 403, e oferecer um botão que não funciona é pior que não oferecer.
                 if (!descontinuado) _startSessionCta(context, t),

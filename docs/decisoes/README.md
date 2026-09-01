@@ -119,4 +119,8 @@ e aviso ao mantenedor (ver `CLAUDE.md`). As marcadas **[inegociável]** quebram 
 
 | 106 | **A avaliação intermediária (T2) vira um momento e a descontinuação vira um registro:** janela abrindo ao fim da 2ª semana com convite na Home, status `discontinued` que **para a sessão e mantém o ITT**, os três critérios do protocolo (pedido, evento adverso, adesão < 50%) e uma varredura que alcança quem parou de abrir o app. Dose e régua de adesão passam a viver em `core/protocol.py` **[novo]** |
 
+| 107 | **O registro por sessão que o protocolo lista:** relendo "Registro e monitoramento" contra o schema, **três dos seis itens** não tinham coluna — a **duração** das interrupções (só a contagem existia), o **volume médio e máximo** (só o ganho declarado ao iniciar) e o **item único de relaxamento 0–10** (havia um de 0–4, dentro do questionário opcional). O item é perguntado **depois** de a adesão já ter sido enviada, e o teto de volume passa a valer também no encerramento **[novo]** |
+
+| 108 | **Dose de exposição auditiva** (OMS/UIT, 80 dB(A) por 40 h **semanais**): a conta é a da troca de 3 dB sobre o **tempo efetivo**, a janela do alerta é **móvel de 7 dias** (a permissão é semanal) e o acumulado vai junto. Sem a calibração em acoplador, a dose é **previsão no nível prescrito** e a tela diz isso — 6h40 a 60 dB(A) consomem **0,17%** da permissão, então o alerta dos 50% não deve disparar no piloto **[novo]** |
+
 Para novas decisões, criar `ADR-041-titulo.md` com: contexto, decisão, alternativas, consequências.

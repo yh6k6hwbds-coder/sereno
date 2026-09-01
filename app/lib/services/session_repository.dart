@@ -73,11 +73,23 @@ class SessionRepository {
     );
   }
 
+  /// Encerra a sessão com o registro que o protocolo pede (G10). Os campos opcionais
+  /// são omitidos quando nulos: o servidor não sobrescreve com nulo o que já gravou.
   Future<void> complete(String sessionId,
-          {required int effectiveSeconds, required int interruptions}) =>
-      api.post('/sessions/$sessionId/complete',
-          {'effective_seconds': effectiveSeconds, 'interruptions': interruptions},
-          authenticated: true);
+          {required int effectiveSeconds,
+          required int interruptions,
+          int? pausedSeconds,
+          double? gainMean,
+          double? gainPeak,
+          int? relaxation0to10}) =>
+      api.post('/sessions/$sessionId/complete', {
+        'effective_seconds': effectiveSeconds,
+        'interruptions': interruptions,
+        if (pausedSeconds != null) 'paused_seconds': pausedSeconds,
+        if (gainMean != null) 'gain_mean': gainMean,
+        if (gainPeak != null) 'gain_peak': gainPeak,
+        if (relaxation0to10 != null) 'relaxation_0_10': relaxation0to10,
+      }, authenticated: true);
 
   /// Devolve a fonte do áudio da sessão, baixando-o **uma vez por protocolo**.
   ///

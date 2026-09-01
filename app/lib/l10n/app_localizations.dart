@@ -154,6 +154,16 @@ class AppLocalizations {
       'playerAnswerQuick': 'Responder rápido',
       'playerBackHome': 'Voltar ao início',
       'playerBreathe': 'Feche os olhos e respire com calma.',
+      // Item único de relaxamento, 0 a 10 — o protocolo pede um por sessão (G10).
+      'playerRelaxPrompt': 'Quão relaxado(a) você se sente agora? (0 nada – 10 muito)',
+      'playerRelaxThanks': 'Registrado. Obrigado.',
+      // Dose de exposição auditiva (G9)
+      'hearingTitle': 'Sua exposição sonora',
+      'hearingEstimate': 'Estimativa no nível previsto pelo protocolo (60 dB(A)).',
+      'hearingMeasured': 'Calculada a partir do nível calibrado do aparelho.',
+      'hearingAlert':
+          'Você atingiu metade da dose semanal de referência de audição segura. '
+              'Considere reduzir a exposição a outros sons altos nesta semana.',
       // Pós-sessão
       'surveyTitle': 'Como foi a sessão',
       'surveyFeeling': 'Como você se sente agora? (0 muito mal – 4 muito bem)',
@@ -308,6 +318,14 @@ class AppLocalizations {
       'playerAnswerQuick': 'Quick answer',
       'playerBackHome': 'Back to start',
       'playerBreathe': 'Close your eyes and breathe calmly.',
+      'playerRelaxPrompt': 'How relaxed do you feel now? (0 not at all – 10 very)',
+      'playerRelaxThanks': 'Recorded. Thank you.',
+      'hearingTitle': 'Your sound exposure',
+      'hearingEstimate': 'Estimated at the level prescribed by the protocol (60 dB(A)).',
+      'hearingMeasured': 'Computed from the calibrated level of the device.',
+      'hearingAlert':
+          'You have reached half of the weekly reference dose for safe listening. '
+              'Consider reducing exposure to other loud sounds this week.',
       'surveyTitle': 'How was the session',
       'surveyFeeling': 'How do you feel now? (0 very bad – 4 very good)',
       'surveyRelaxation': 'How relaxed are you? (0 not at all – 4 very)',
@@ -582,6 +600,15 @@ class AppLocalizations {
   String get playerAnswerQuick => _t('playerAnswerQuick');
   String get playerBackHome => _t('playerBackHome');
   String get playerBreathe => _t('playerBreathe');
+  String get playerRelaxPrompt => _t('playerRelaxPrompt');
+  String get playerRelaxThanks => _t('playerRelaxThanks');
+  String get hearingTitle => _t('hearingTitle');
+  String get hearingEstimate => _t('hearingEstimate');
+  String get hearingMeasured => _t('hearingMeasured');
+  String get hearingAlert => _t('hearingAlert');
+  String hearingSummary(String semana, String horas) => locale.languageCode == 'en'
+      ? '$semana of the weekly reference dose · $horas in the study'
+      : '$semana da dose semanal de referência · $horas no estudo';
   // Pós-sessão
   String get surveyTitle => _t('surveyTitle');
   String get surveyFeeling => _t('surveyFeeling');

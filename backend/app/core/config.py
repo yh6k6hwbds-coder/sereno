@@ -82,6 +82,29 @@ def audio_max_gain() -> float:
     return valor
 
 
+def audio_calibrated_spl_dba() -> float | None:
+    """Nível em dB(A) medido em ACOPLADOR DE ORELHA com o ganho digital em 1,0 (G9).
+
+    ``None`` = a calibração da etapa (i) do protocolo ainda não foi feita, e a dose de
+    exposição é estimada no nível **prescrito** (60 dB(A)), não medido — ver
+    ``core.hearing``. Não há default numérico de propósito: um valor plausível chutado aqui
+    viraria "dose medida" na tela do participante e num relatório ao CEP."""
+    raw = os.getenv("AUDIO_CALIBRATED_SPL_DBA")
+    if not raw or not raw.strip():
+        return None
+    try:
+        valor = float(raw)
+    except ValueError:
+        raise InsecureConfigError(f"AUDIO_CALIBRATED_SPL_DBA inválido: {raw!r}") from None
+    # Faixa de sanidade larga: fora dela é erro de digitação (dBFS no lugar de dB(A), por
+    # exemplo, entraria negativo), e uma dose calculada em cima de um erro de unidade é
+    # pior do que não ter dose nenhuma.
+    if not 0.0 < valor <= 120.0:
+        raise InsecureConfigError(
+            "AUDIO_CALIBRATED_SPL_DBA deve ser um nível em dB(A) dentro de (0, 120].")
+    return valor
+
+
 def audio_format() -> str:
     """Formato do áudio materializado e servido (``flac`` por padrão)."""
     raw = (os.getenv("AUDIO_FORMAT") or DEFAULT_AUDIO_FORMAT).strip().lower()

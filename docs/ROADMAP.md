@@ -18,12 +18,21 @@
 
 ## Estado atual (baseline deste roadmap)
 
+> ### ⛳ Marco (2026-08-31, 2ª rodada): **a Fase G fecha em código.**
+> ADR-107 e 108 fecharam **G10** e **G9**. O parágrafo "Registro e monitoramento" passou a ter as
+> seis colunas que nomeia (faltavam três: duração das interrupções, volume médio/máximo e o item
+> de relaxamento **0–10**, que existia só como 0–4 dentro do questionário opcional), e a **dose de
+> exposição auditiva** virou conta com teste: 6h40 a 60 dB(A) consomem **0,17%** da permissão
+> semanal da OMS/UIT, então o alerta dos 50% não deve disparar no piloto. CI-espelho verde:
+> **454 testes de backend a 91,5%**, migração `d0e1f2a3b4c5`, OpenAPI válido.
+> **O que sobra da Fase G não é código:** **G2** (leito ambiente — decisão do mantenedor) e os
+> **valores** de G3/G9, que saem da mesma **calibração em acoplador** (F2.7).
+>
 > ### ⛳ Marco (2026-08-31): **a Fase G fecha, menos o que depende de decisão ou de calibração.**
 > ADR-104 a 106 fecharam G6, G7 e G8. O calendário do estudo (T0/T2/T4), a descontinuação de
 > protocolo com ITT, os blocos permutados de 4 e 6 e os critérios de elegibilidade do protocolo
 > estão no código. CI-espelho verde: **437 testes de backend a 91,5%**, migração `c9d0e1f2a3b4`,
-> OpenAPI válido, TCLE em sincronia. Restam **G9/G10** (dose acumulada e registro por sessão),
-> **G2** (leito ambiente — decisão do mantenedor) e o **valor** do teto de volume (calibração).
+> OpenAPI válido, TCLE em sincronia.
 >
 > ### ⛳ Marco (2026-08-30): **o áudio do protocolo aprovado chega ao participante.**
 > ADR-100 a 103 fecharam G1, G3 (mecanismo), G4 e G5. CI-espelho verde: **396 testes de backend**,
@@ -572,18 +581,23 @@ já está preparado", não redesenhar.
 | G6 | **Avaliação intermediária T2 + descontinuação** — ✅ **FEITO** (2026-08-31, ADR-106): a janela do T2 abre ao fim da 2ª semana (marco = alocação) e vira **convite na Home**; `GET /participants/me/status` diz semana, adesão e se o T2 é devido; status **`discontinued`** que para a sessão e **mantém o ITT**, com os três critérios do protocolo e uma **varredura** que alcança quem parou de abrir o app. Dose e régua de adesão passaram a viver em `core/protocol.py` | ✅ | ADR-106; protocolo, "Instrumentos e desfechos" |
 | G7 | **Blocos permutados de tamanho VARIÁVEL** — ✅ **FEITO** (2026-08-31, ADR-104): 4 e 6, com o tamanho sorteado na mesma sequência determinística (reprodutibilidade intacta); `ALLOCATION_BLOCK_SIZES` na config e a variável antiga recusada em voz alta | ✅ | ADR-104; ADR-045 |
 | G8 | **Critérios de elegibilidade do protocolo** — ✅ **FEITO** (2026-08-31, ADR-105): 7 inclusões e as 9 exclusões (a)–(i), conjunto **fechado** (chave faltando/desconhecida = 422), faixa sintomática e alínea (d) **derivadas dos escores**, catálogo em `GET /screening/criteria`. Fechou de passagem um defeito: triagem vazia respondia **elegível** (`all([])` é `True`) | ✅ | ADR-105; ADR-057 |
-| G9 | **Dose acumulada + alerta em 50%** da referência de audição segura (OMS/UIT), como o protocolo promete exibir. O `audio_gain` por sessão (G3) é o insumo que faltava | ⬜ | protocolo, "Intensidade e segurança auditiva" |
-| G10 | **Registro por sessão**: ✅ resultado da verificação de fones e ganho de reprodução já entram na linha da sessão (ADR-101); falta o **volume médio/máximo** quando houver algo que varie, e revisar o que mais o protocolo lista | 🟡 | protocolo, "Registro e monitoramento" |
+| G9 | **Dose acumulada + alerta em 50%** — ✅ **FEITO** (2026-08-31, ADR-108): `core/hearing.py` com a troca de 3 dB sobre o **tempo efetivo**; janela do alerta **móvel de 7 dias** (a permissão OMS/UIT é semanal) e acumulado do estudo junto; sai por `GET /participants/me/status` e vira cartão na Home. Sem calibração, é **previsão no nível prescrito** e a tela diz isso. A conta confirma o protocolo: 6h40 a 60 dB(A) = **0,17%** da permissão (em 60 dB(A) cabem 4000 h/semana) | ✅ | ADR-108; protocolo, "Intensidade e segurança auditiva" |
+| G10 | **Registro por sessão** — ✅ **FEITO** (2026-08-31, ADR-107): a revisão do parágrafo achou **três** itens sem coluna, não um. Entraram `paused_seconds` (o protocolo pede "interrupções **e sua duração**"), `gain_mean`/`gain_peak` (volume médio e máximo **aplicados**, não o declarado) e `relaxation_0_10` — o item único do protocolo, que existia só como **0–4** dentro do questionário **opcional**. O item é perguntado **depois** de a adesão ser enviada, e o teto de volume passou a valer também no encerramento | ✅ | ADR-107; protocolo, "Registro e monitoramento" |
 
 ## Ordem sugerida de execução
 
-**Código (Fase G):** ~~G4 (fones)~~, ~~G3 (mecanismo do limite de volume)~~,
+**Código (Fase G): acabou.** ~~G4 (fones)~~, ~~G3 (mecanismo do limite de volume)~~,
 ~~G5 (PHQ-9/encaminhamento)~~ e ~~G1 (entrega do áudio)~~ feitos em 2026-08-30 (ADR-101 a 103);
-~~G6 (T2 e descontinuação)~~, ~~G7 (blocos variáveis)~~ e ~~G8 (critérios de elegibilidade)~~ em
-2026-08-31 (ADR-104 a 106). **Resta `G9/G10`** (dose acumulada e alerta em 50% da referência de
-audição segura; o que mais o protocolo manda registrar por sessão) — e **G2 continua exigindo
-decisão do mantenedor** (leito ambiente vs. gate de pureza espectral). O **valor** do teto de G3
-depende da calibração em acoplador (F2.7).
+~~G6 (T2 e descontinuação)~~, ~~G7 (blocos variáveis)~~, ~~G8 (critérios de elegibilidade)~~,
+~~G9 (dose auditiva)~~ e ~~G10 (registro por sessão)~~ em 2026-08-31 (ADR-104 a 108).
+
+**O que sobra da Fase G não se resolve escrevendo código:**
+- **G2** — leito ambiente de baixa intensidade nos dois braços **vs.** o gate de pureza espectral
+  ≤ −60 dB, que um leito reprovaria. **Decisão do mantenedor** (ou o leito sai do protocolo, ou o
+  gate ganha uma exceção nomeada e justificada no dossiê).
+- **Os valores de G3 e G9** — qual ganho digital corresponde a 60 dB(A), e qual o nível em fundo
+  de escala do transdutor. Os dois saem da **mesma medição**: a calibração em acoplador de orelha
+  da etapa (i) (**F2.7**). Até lá, `AUDIO_MAX_GAIN=1.0` não restringe nada e a dose é previsão.
 
 **Operação nova (entra na F3):** a regra de adesão da 2ª semana precisa de alguém que a chame
 para alcançar quem sumiu — `POST /v1/discontinuations/evaluate`, semanalmente. É o mesmo problema

@@ -4,7 +4,9 @@ modules/progress/router.py — Andamento do participante e descontinuação de p
 GET /v1/participants/me/status (participante `progress:read`): em que semana está, quantas
 sessões contaram para a adesão, se a avaliação intermediária (T2) está aberta e se houve
 descontinuação. É o que permite ao aplicativo convidar para o T2 **na hora certa** em vez de
-deixar a tela sempre disponível e torcer. **Não** revela braço, condição nem escore.
+deixar a tela sempre disponível e torcer. Traz junto a **dose de exposição auditiva** (G9),
+que o protocolo manda contabilizar e alertar em 50% da referência OMS/UIT. **Não** revela
+braço, condição nem escore — a dose é idêntica em desenho nos dois braços (mesma energia).
 
 POST /v1/participants/{id}/discontinue (staff `enroll:write`): registra os dois motivos que
 são juízo humano — pedido do participante e evento adverso que contraindique a continuidade.
@@ -41,6 +43,21 @@ class T2Out(BaseModel):
     completed: bool
 
 
+class HearingOut(BaseModel):
+    """Dose de exposição auditiva (G9). ``calibrated=False`` = previsão, não medida."""
+    calibrated: bool
+    assumed_spl_dba: float | None
+    reference_spl_dba: float
+    reference_hours_per_week: float
+    window_days: int
+    week_hours: float
+    week_pct: float
+    total_hours: float
+    total_pct: float
+    alert_at_pct: float
+    alert: bool
+
+
 class DiscontinuationBrief(BaseModel):
     reason: str
     decided_at: dt.datetime
@@ -57,6 +74,7 @@ class ProgressOut(BaseModel):
     adherence_pct: float
     t2: T2Out | None
     discontinuation: DiscontinuationBrief | None
+    hearing: HearingOut
 
 
 class DiscontinueIn(BaseModel):

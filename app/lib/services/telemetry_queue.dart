@@ -3,27 +3,62 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 /// Encerramento de sessão pendente de envio (telemetria de adesão). É neutro quanto
-/// ao braço: só duração efetiva e interrupções.
+/// ao braço: duração efetiva, interrupções (com a duração delas), volume aplicado e o
+/// item de relaxamento — nada que dependa da condição.
+///
+/// Os campos do G10 são anuláveis porque a fila é PERSISTENTE: um arquivo gravado pela
+/// versão anterior volta sem eles e precisa continuar sendo enviável — perder um
+/// encerramento enfileirado é perder uma sessão da adesão, que é desfecho primário.
 class PendingComplete {
   final String sessionId;
   final int effectiveSeconds;
   final int interruptions;
+  /// Tempo total em pausa (protocolo: "interrupções e sua duração").
+  final int? pausedSeconds;
+  /// Volume médio e máximo efetivamente aplicados na reprodução.
+  final double? gainMean;
+  final double? gainPeak;
+  /// Item único de percepção de relaxamento, 0 a 10 (`null` = não respondeu).
+  final int? relaxation0to10;
+
   PendingComplete({
     required this.sessionId,
     required this.effectiveSeconds,
     required this.interruptions,
+    this.pausedSeconds,
+    this.gainMean,
+    this.gainPeak,
+    this.relaxation0to10,
   });
+
+  PendingComplete withRelaxation(int? valor) => PendingComplete(
+        sessionId: sessionId,
+        effectiveSeconds: effectiveSeconds,
+        interruptions: interruptions,
+        pausedSeconds: pausedSeconds,
+        gainMean: gainMean,
+        gainPeak: gainPeak,
+        relaxation0to10: valor,
+      );
 
   Map<String, dynamic> toJson() => {
         'session_id': sessionId,
         'effective_seconds': effectiveSeconds,
         'interruptions': interruptions,
+        if (pausedSeconds != null) 'paused_seconds': pausedSeconds,
+        if (gainMean != null) 'gain_mean': gainMean,
+        if (gainPeak != null) 'gain_peak': gainPeak,
+        if (relaxation0to10 != null) 'relaxation_0_10': relaxation0to10,
       };
 
   factory PendingComplete.fromJson(Map<String, dynamic> j) => PendingComplete(
         sessionId: j['session_id'] as String,
         effectiveSeconds: j['effective_seconds'] as int,
         interruptions: j['interruptions'] as int,
+        pausedSeconds: j['paused_seconds'] as int?,
+        gainMean: (j['gain_mean'] as num?)?.toDouble(),
+        gainPeak: (j['gain_peak'] as num?)?.toDouble(),
+        relaxation0to10: j['relaxation_0_10'] as int?,
       );
 }
 
