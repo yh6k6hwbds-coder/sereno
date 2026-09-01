@@ -169,6 +169,33 @@ coberto por teste automatizado; o detalhamento item a item está no `lgpd-nit-ch
 
 ---
 
+## 4b. Parâmetros que a implementação fixou — **declarar, não perguntar**
+
+O protocolo aprovado descreve alguns pontos de forma **qualitativa** ("de baixa intensidade",
+"ao final da segunda semana"). Software não executa adjetivo: em cada um desses pontos alguém teve
+de escolher um número. Esta seção existe para que essas escolhas **cheguem ao comitê por escrito**,
+em vez de viverem só no código — e para que fique claro quais são do protocolo e quais são da
+implementação.
+
+Nenhuma delas contradiz o protocolo; todas o **completam** onde ele é silente. Se o comitê preferir
+outro valor, a troca é de uma constante nomeada e um novo `content_hash` — não de arquitetura.
+
+| # | Parâmetro | O que o protocolo diz | O que foi fixado | Onde vive |
+|---|---|---|---|---|
+| D1 | **Nível do leito ambiente** | "trilha de fundo ambiental de **baixa intensidade**, idêntica em conteúdo, duração e nível" | **−30 dB** em relação ao nível nominal do estímulo. Audível como presença; muito longe de mascarar — há verificação automática de que o leito **não põe energia** na banda do estímulo (medido: −179 dB em 230–273 Hz), o que torna a recusa do protocolo ao mascaramento uma afirmação **conferível**, não uma promessa | `BED_LEVEL_DBR`; ADR-109 |
+| D2 | **Timbre do leito** | (não especifica) | Tonal, **diótico** (idêntico nas duas orelhas, portanto sem diferença interaural que pudesse gerar batimento não prescrito), quatro parciais graves entre 55 e 137,5 Hz — **abaixo** da banda do estímulo. Idêntico nos dois braços, **bit a bit** | `BED_PARTIALS_HZ`; ADR-109 |
+| D3 | **Janela da avaliação intermediária (T2)** | "ao final da 2ª semana" | Abre no **dia 14** e dura **7 dias**; passado o prazo o convite continua, com outra redação — resposta atrasada ainda informa | ADR-106 |
+| D4 | **Quando uma sessão "conta"** | (não especifica) | **80%** da duração prescrita. Abaixo disso a sessão fica registrada, mas não conta para a adesão | `MIN_COMPLETION_RATIO`; ADR-100 |
+| D5 | **Plataforma de uso** | "smartphone compatível com a versão distribuída do aplicativo" (critério de inclusão) | **Android**, aplicativo instalado. As sessões **não** rodam no navegador: a reprodução sem alteração do áudio é verificável na pilha nativa e não na do navegador. O critério de inclusão já prevê esta definição — **não é emenda** | ADR-114 |
+| D6 | **Teto digital do arquivo** | "60 dB(A)" no acoplador | −12 dBFS de pico no arquivo; o nível absoluto sai da **calibração em acoplador de orelha** (etapa (i)), ainda pendente | ADR-100/101 |
+
+> **D1 e D2 são o que o participante ouve.** Estão nesta lista, e não na de perguntas, porque o
+> protocolo já autorizou a existência do leito — o que faltava era o número. Se o comitê entender
+> que o valor deve ser outro, ou que a trilha deve sair, é emenda de protocolo e o sistema
+> acompanha: o leito é uma coluna do banco, anulável, não uma constante espalhada pelo código.
+
+---
+
 ## 5. Checklist antes de submeter
 
 - [ ] Campos do `formulario-protocolo-clinico.md` preenchidos e transcritos para o termo.
@@ -182,6 +209,8 @@ coberto por teste automatizado; o detalhamento item a item está no `lgpd-nit-ch
 - [ ] Registro no ReBEC providenciado.
 - [ ] Coerência entre protocolo, termo e este dossiê conferida — os três precisam contar a mesma
       história.
+- [ ] **Seção 4b levada ao comitê junto com o protocolo** — são os números que a implementação
+      fixou onde o protocolo é qualitativo; o comitê precisa vê-los para poder discordar.
 
 ---
 

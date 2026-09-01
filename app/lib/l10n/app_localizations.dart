@@ -117,6 +117,13 @@ class AppLocalizations {
       't2CardBody': 'Chegou a hora do acompanhamento de meio do estudo. São poucas perguntas '
           'e leva cerca de dois minutos.',
       't2CardLate': 'O prazo sugerido passou, mas responder ainda ajuda a equipe.',
+      // Sessão no navegador: bloqueada por FIDELIDADE, não por preferência (ADR-114).
+      'webBlockTitle': 'As sessões rodam no aplicativo',
+      'webBlockBody': 'Para que o áudio do estudo seja reproduzido exatamente como foi '
+          'preparado, as sessões acontecem no aplicativo instalado no celular — o navegador '
+          'processa o som de um jeito que o estudo não consegue conferir. O restante (diário, '
+          'questionários) funciona normalmente por aqui.',
+      'webBlockHow': 'A equipe do estudo entrega o aplicativo e ajuda na instalação.',
       'discontinuedTitle': 'Sua participação foi descontinuada',
       'discontinuedBody': 'As sessões foram encerradas, mas tudo o que você registrou continua '
           'fazendo parte do estudo. Isso não traz nenhum prejuízo para você — a pesquisadora '
@@ -284,6 +291,11 @@ class AppLocalizations {
       't2CardTitle': 'Week 2 check-in',
       't2CardBody': 'It is time for the mid-study check-in. A few questions, about two minutes.',
       't2CardLate': 'The suggested window has passed, but answering still helps the team.',
+      'webBlockTitle': 'Sessions run in the app',
+      'webBlockBody': 'So the study audio plays exactly as prepared, sessions happen in the '
+          'app installed on your phone — the browser processes sound in a way the study '
+          'cannot verify. Everything else (diary, questionnaires) works here.',
+      'webBlockHow': 'The study team provides the app and helps you install it.',
       'discontinuedTitle': 'Your participation was discontinued',
       'discontinuedBody': 'Sessions have ended, but everything you recorded stays part of the '
           'study. This brings you no disadvantage — the lead researcher can explain the next '
@@ -640,6 +652,9 @@ class AppLocalizations {
   String get t2CardTitle => _t('t2CardTitle');
   String get t2CardBody => _t('t2CardBody');
   String get t2CardLate => _t('t2CardLate');
+  String get webBlockTitle => _t('webBlockTitle');
+  String get webBlockBody => _t('webBlockBody');
+  String get webBlockHow => _t('webBlockHow');
   String get discontinuedTitle => _t('discontinuedTitle');
   String get discontinuedBody => _t('discontinuedBody');
   String get ok => _t('ok');

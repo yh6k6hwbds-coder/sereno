@@ -9,5 +9,7 @@ Fonte: `anexos-docx/Etapa2_Player_Instrumento.docx` · código: `../audio-pipeli
   protocolo recusa. O nível é escolha da implementação e **falta ratificar/declarar ao CEP**.
 - Síntese determinística offline; **sham Δf=0**; **validação por FFT** (executada) — a pureza
   espectral é medida no estímulo **isolado**, e o leito responde por quatro itens próprios.
-- Reprodução **bit-a-bit**, sem perdas, sem DSP; fones com fio; teto de volume.
+- Reprodução **bit-a-bit**, sem perdas, sem DSP; fones com fio; teto de volume. **Só no app
+  Android instalado (ADR-114):** no navegador o áudio passa pela pilha do browser, que reamostra —
+  caminho nunca validado —, então a Home simplesmente não oferece a sessão ali.
 - Ocultação de alocação por handle neutro; cegamento no app.

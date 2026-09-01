@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
@@ -29,7 +30,13 @@ import '../safety/safety_check_screen.dart';
 class HomeScreen extends StatefulWidget {
   /// Injetável para teste: sem ele a Home tentaria falar com a API no `pumpWidget`.
   final ProgressRepository? progressRepo;
-  const HomeScreen({super.key, this.progressRepo});
+
+  /// Se a sessão está sendo aberta no NAVEGADOR (ADR-114). Injetável porque `kIsWeb` é
+  /// `const` e o widget test não roda em web: sem este parâmetro, a trava seria código
+  /// que nenhum teste alcança — e trava que ninguém testa é trava que some numa refatoração.
+  final bool isWeb;
+
+  const HomeScreen({super.key, this.progressRepo, this.isWeb = kIsWeb});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -152,6 +159,38 @@ class _HomeScreenState extends State<HomeScreen> {
     return total < 60 ? '${total}min' : '${total ~/ 60}h${(total % 60).toString().padLeft(2, '0')}';
   }
 
+  /// Navegador: a sessão NÃO abre — e o motivo é fidelidade, não preferência (ADR-114).
+  ///
+  /// A reprodução bit-a-bit é decisão inegociável do estímulo (#3) e foi verificada na pilha
+  /// NATIVA (ExoPlayer decodifica o FLAC e devolve o mesmo PCM do WAV). Na web, o áudio passa
+  /// pela pilha do navegador — que reamostra para a taxa do `AudioContext` e pode aplicar
+  /// ganho próprio —, e **ninguém validou esse caminho**. Deixar a sessão rodar aqui seria
+  /// coletar dado de um estímulo que o estudo não consegue afirmar qual é.
+  ///
+  /// O bloqueio é só da SESSÃO: diário, questionários e a tela de senha da equipe continuam
+  /// funcionando na web, porque nenhum deles depende da fidelidade do áudio.
+  Widget _webBlockCard(AppLocalizations t) => Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Icon(Icons.phone_iphone_rounded, color: SerenoColors.teal),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(t.webBlockTitle,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Text(t.webBlockBody, style: const TextStyle(color: SerenoColors.muted)),
+            const SizedBox(height: 8),
+            Text(t.webBlockHow,
+                style: const TextStyle(color: SerenoColors.muted, fontStyle: FontStyle.italic)),
+          ]),
+        ),
+      );
+
   /// Descontinuado: a sessão não abre mais, e a tela precisa dizer isso sem parecer punição.
   Widget _discontinuedCard(AppLocalizations t) => Card(
         margin: const EdgeInsets.only(bottom: 16),
@@ -199,6 +238,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final t = AppLocalizations.of(context);
     final p = _progress;
     final descontinuado = p != null && p.isDiscontinued;
+    // A sessão só abre onde a reprodução bit-a-bit foi verificada: a pilha nativa (ADR-114).
+    final semSessao = descontinuado || widget.isWeb;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -224,12 +265,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(t.ready, style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 20),
                 if (descontinuado) _discontinuedCard(t),
+                // Descontinuado tem precedência: quem saiu do protocolo não deve receber,
+                // por cima, uma instrução para instalar o aplicativo.
+                if (!descontinuado && widget.isWeb) _webBlockCard(t),
                 if (p != null && p.t2Due) _t2Card(context, t),
                 if (p?.hearing != null && p!.hearing!.totalHours > 0)
                   _hearingCard(t, p.hearing!),
-                // Sem o CTA quando a participação foi descontinuada: o servidor recusaria a
-                // sessão com 403, e oferecer um botão que não funciona é pior que não oferecer.
-                if (!descontinuado) _startSessionCta(context, t),
+                // Sem o CTA quando a participação foi descontinuada (o servidor recusaria a
+                // sessão com 403) nem no navegador (a fidelidade do áudio não é verificável
+                // ali). Oferecer um botão que não deve funcionar é pior que não oferecer.
+                if (!semSessao) _startSessionCta(context, t),
                 const SizedBox(height: 24),
                 Text(t.records, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                 const SizedBox(height: 10),

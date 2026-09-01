@@ -27,12 +27,55 @@ jobs:
       - uses: subosito/flutter-action@v2
       - name: Gerar plataforma Android + dependencias
         run: cd app && flutter create --platforms=android --project-name sereno . && flutter pub get
-      - name: Build do APK (release, para teste)
+      - name: Build do APK (release)
         run: cd app && flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"
+
+      # Sem keystore, `flutter build apk --release` assina com a chave de DEBUG: publica, mas
+      # a chave e publica, nenhuma loja aceita, e trocar de chave depois obriga o participante
+      # a desinstalar (perdendo o cache cifrado de audio). O piloto distribui por link direto
+      # (ADR-114), entao a assinatura propria e o que da identidade ao arquivo.
+      - name: Assinar o APK para distribuicao (so com o keystore em segredo)
+        id: assinatura
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/app/outputs/flutter-apk/app-release.apk
+          if [ -z "${KEYSTORE_B64:-}" ]; then
+            echo "::warning::Sem ANDROID_KEYSTORE_BASE64: o APK sai com a chave de DEBUG e NAO deve ser distribuido (ver docs/distribuir-o-app.md)."
+            echo "assinado=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Segredo pela metade e pior que segredo nenhum: falharia so na hora de assinar,
+          # depois de o build inteiro passar, e o artefato sairia com nome de confiavel.
+          for v in STORE_PASS KEY_ALIAS KEY_PASS; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 definido, mas falta $v."; exit 1
+            fi
+          done
+          echo "$KEYSTORE_B64" | base64 -d > /tmp/sereno.jks
+          APKSIGNER="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name apksigner 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$APKSIGNER" ]; then echo "::error::apksigner nao encontrado no runner."; exit 1; fi
+          "$APKSIGNER" sign --ks /tmp/sereno.jks \
+            --ks-pass "pass:$STORE_PASS" --ks-key-alias "$KEY_ALIAS" --key-pass "pass:$KEY_PASS" \
+            --out /tmp/sereno-assinado.apk "$APK"
+          mv /tmp/sereno-assinado.apk "$APK"
+          rm -f /tmp/sereno.jks
+          # A impressao digital vai para o log de proposito: e por ela que a equipe confere,
+          # antes de distribuir, que o arquivo saiu DAQUI e nao de outro lugar.
+          "$APKSIGNER" verify --print-certs "$APK" | grep -i "SHA-256 digest" || true
+          echo "assinado=true" >> "$GITHUB_OUTPUT"
+
+      # O nome do artefato DIZ se ele pode ser distribuido. Um APK de debug com nome limpo e
+      # exatamente o que alguem baixa com pressa e entrega a um participante.
       - name: Publicar o APK como artefato
         uses: actions/upload-artifact@v4
         with:
-          name: sereno-apk
+          name: ${{ steps.assinatura.outputs.assinado == 'true' && 'sereno-apk' || 'sereno-apk-DEBUG-NAO-DISTRIBUIR' }}
           path: app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 

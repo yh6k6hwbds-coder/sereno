@@ -8,6 +8,9 @@
 > O `deploy-fly.md` cobre a **infraestrutura** (subir, configurar, agendar). Aqui é a **operação
 > do dia a dia**: inscrever, alocar, acompanhar, responder a evento adverso, exportar.
 >
+> A entrega do aplicativo ao participante está em **`distribuir-o-app.md`** — inclusive por que as
+> sessões **não** rodam no navegador.
+>
 > **Este documento não autoriza coletar dado real.** Isso depende da base legal (F1.1) e do
 > parecer do CEP. Ver `solicitacao-nit-base-legal.md`.
 

@@ -18,6 +18,21 @@
 
 ## Estado atual (baseline deste roadmap)
 
+> ### ⛳ Marco (2026-09-01, 7ª rodada): **as duas pendências de decisão foram resolvidas; a Fase H está completa.**
+> **G2 ratificado:** o leito ambiente fica em **−30 dBr**, e a declaração ao CEP está escrita —
+> `dossie-submissao-cep.md` **§4b**, uma tabela nova com **todos** os parâmetros que a
+> implementação fixou onde o protocolo é qualitativo (nível e timbre do leito, janela de 7 dias do
+> T2, régua de 80% da adesão, plataforma, teto digital). O que sustenta a ratificação é que a
+> garantia de **não mascarar** não depende do número: depende de o leito viver **fora da banda** do
+> estímulo, o que o gate verifica a cada execução.
+> **H5 decidido (ADR-114):** Android por **link direto**, com APK **assinado com a chave do
+> estudo**; sem keystore o artefato do CI sai nomeado `sereno-apk-DEBUG-NAO-DISTRIBUIR`. E a
+> pergunta técnica que estava junto virou **trava em código**: a sessão **não abre no navegador**,
+> porque ali o áudio passa por uma pilha que reamostra e que nunca foi validada — deixar rodar
+> seria coletar dado sobre um estímulo que o estudo não consegue afirmar qual é. Android-only
+> **não é emenda de protocolo**: o critério de inclusão já dizia "compatível com a versão
+> distribuída".
+>
 > ### ⛳ Marco (2026-09-01, 6ª rodada): **a Fase H fecha em código — sobra uma decisão.**
 > `docs/operar-o-estudo.md` fechou o **H4**. O ADR-096 dispensou o painel de staff de propósito, e
 > o preço disso era a equipe depender de quem programa; o receituário é o que paga esse preço, com
@@ -640,7 +655,7 @@ já está preparado", não redesenhar.
 | # | Pendência | Estado | Onde |
 |---|---|---|---|
 | G1 | **Formato de entrega do áudio** — ✅ **FEITO** (2026-08-30, ADR-103): o artefato passou a **FLAC** (sem perdas; mesmo PCM do WAV, **14%** do tamanho — 230 MB viram ~33 MB), é **servido do disco em janelas** (nem materializar nem transmitir carrega a sessão na memória) e o aparelho guarda uma **biblioteca cifrada**, revalidada por `If-None-Match` → 304: as 20 sessões baixam o arquivo **uma vez**. Baixar a taxa de amostragem segue disponível, mas é **emenda de protocolo** | ✅ | ADR-103; ADR-053/054/082 |
-| G2 | **Leito ambiente** de baixa intensidade nos dois braços — ✅ **FEITO** (2026-09-01, ADR-109): o impasse com o gate era falso (o piso de −60 dB mede energia **espúria**; o leito é conteúdo **prescrito**). A pureza passou a ser medida no estímulo **isolado** e o gate **ganhou quatro itens**: diótico, no nível declarado, **fora da banda** do estímulo (−179 dB — é o que torna verificável a recusa ao ruído rosa) e **bit a bit igual entre os braços**. Leito tonal (55–137,5 Hz), diótico, de fórmula fechada; coluna `bed_level_dbr` com `CHECK < 0`; estudo em v1.1.0. ⚠️ **Falta o VALOR ser ratificado**: −30 dBr é escolha da implementação (o protocolo diz só "baixa intensidade") e precisa ir declarado ao CEP | 🟡 | ADR-109; protocolo, "Parâmetros comuns aos dois braços" |
+| G2 | **Leito ambiente** — ✅ **FEITO E RATIFICADO** (2026-09-01, ADR-109; nível declarado ao CEP no dossiê §4b/D1): o impasse com o gate era falso (o piso de −60 dB mede energia **espúria**; o leito é conteúdo **prescrito**). A pureza passou a ser medida no estímulo **isolado** e o gate **ganhou quatro itens**: diótico, no nível declarado, **fora da banda** do estímulo (−179 dB — é o que torna verificável a recusa ao ruído rosa) e **bit a bit igual entre os braços**. Leito tonal (55–137,5 Hz), diótico, de fórmula fechada; coluna `bed_level_dbr` com `CHECK < 0`; estudo em v1.1.0. O **valor (−30 dBr) foi ratificado** e entrou na tabela de declarações do dossiê — a garantia de não mascarar não depende dele, e sim de o leito viver fora da banda do estímulo, o que o gate confere a cada execução | ✅ | ADR-109; protocolo, "Parâmetros comuns aos dois braços" |
 | G3 | **Limite de volume por software** — ✅ **MECANISMO FEITO** (2026-08-30, ADR-101): o app não oferece controle de volume, trava o ganho, declara-o ao iniciar e o servidor recusa acima de `AUDIO_MAX_GAIN`. ⚠️ **Falta o VALOR**: qual ganho corresponde a 60 dB(A) sai da calibração em acoplador de orelha (etapa (i)/F2.7) — até lá o padrão 1.0 não restringe nada | 🟡 | ADR-101; protocolo, "Intensidade e segurança auditiva" |
 | G4 | **Verificação dicótica de fones** — ✅ **FEITO** (2026-08-30, ADR-101): duas rodadas com orelha sorteada, errar reinicia o teste, `headphones_ok` saiu do contrato e a evidência (`rounds`/`errors`/`attempts`/`ears`) fica gravada por sessão | ✅ | ADR-101; protocolo, "Posologia e contexto de uso" |
 | G5 | **PHQ-9 de segurança + fluxo de encaminhamento** — ✅ **FEITO** (2026-08-30, ADR-102): escore com item 9 separado, regra de risco versionada valendo na triagem e no seguimento, status `removed` que **para a sessão**, ficha com confirmação de acolhimento, bloco `seguranca` no relatório ao CEP e tela do participante **sem escore**. ⚠️ Enunciados do PHQ-9 são próprios até a versão validada PT-BR ser licenciada; o aviso à equipe depende de `TEAM_NOTIFY_EMAIL` (F3.7) | ✅ | ADR-102; protocolo, "Fluxo de encaminhamento" |
@@ -665,7 +680,7 @@ chamar.
 | H3 | **Bootstrap da primeira conta de staff** — ✅ **FEITO** (2026-09-01, ADR-112): `scripts/bootstrap_staff.py`, que **nunca define senha** (conta nasce com hash desconhecido + token de uso único, como o convite do ADR-094) e **cobra o segundo admin**, porque o descegamento exige dois distintos (ADR-075) e uma instalação com um só descobre isso no fim do estudo. `--print-link` é o caminho **antes do SMTP** — o link é segredo, vale uma vez. Recusa-se a agir havendo staff: dali em diante o caminho é a API, que registra quem convidou quem. Passo §3.35 do `deploy-fly.md` | ✅ | ADR-112; auditoria, lacuna 1; ADR-075 |
 | H4 | **Receituário de operação** — ✅ **FEITO** (2026-09-01): `docs/operar-o-estudo.md`, orientado a TAREFA e não a endpoint (entrar com 2º fator, funil de inscrição, as cinco listas, evento adverso, encaminhamento, rotinas semanais, export, descegamento, contas, LGPD), com uma tabela de erros em português. Aponta o `/docs` navegável da própria API como caminho principal para quem não usa terminal. Todo comando foi conferido contra o contrato — três imprecisões minhas foram corrigidas na revisão (`justification` e não `reason` no descegamento; `limit` diferente na lista de participantes; o export devolve **JSON enquanto processa** e CSV só no fim) | ✅ | `operar-o-estudo.md`; auditoria, lacuna 5; ADR-096 |
 | H6 | **A lista de participantes deixa de mentir** — ✅ **FEITO** (2026-09-01, ADR-113): era um stub que respondia **200 com lista vazia** e um `TODO` no corpo — pior que rota faltando, que ao menos dá 404. Implementada na forma que o contrato **já prometia**: braço **codificado** (nulo = ainda não randomizado), adesão, sessões e eventos adversos, keyset em `(enrolled_at, id)`. As contagens saem por **subconsulta**: um `join` de sessões com eventos adversos multiplicaria uma pela outra, e a adesão sairia errada por um fator — continuando plausível | ✅ | ADR-113; achado do ADR-111 |
-| H5 | **Distribuição do app** — não há build iOS; o APK sai como *artifact* do CI, sem assinatura de loja. E **ninguém validou a fidelidade bit-a-bit no navegador** (a inegociável #3 foi testada no cliente Flutter) | ⬜ | auditoria, lacuna 3; inegociável #3 |
+| H5 | **Distribuição do app** — ✅ **FEITO** (2026-09-01, ADR-114): **Android por link direto**, com o APK **assinado com a chave do estudo** (passo novo no `release.yml`; sem o keystore o artefato sai nomeado `sereno-apk-DEBUG-NAO-DISTRIBUIR`, e segredo pela metade **falha alto**). A questão da fidelidade virou trava: **a sessão não abre no navegador** — ali o áudio passa pela pilha do browser, que reamostra, e esse caminho nunca foi validado. O bloqueio é da SESSÃO; diário, questionários e a tela de senha da equipe seguem na web. Android-only **não é emenda**: o critério de inclusão já diz "compatível com a versão distribuída" (declarado no dossiê §4b/D5). Runbook: `distribuir-o-app.md` | ✅ | ADR-114; inegociável #3; auditoria, lacuna 3 |
 
 > A **lacuna 2** da auditoria (biblioteca de estímulos em produção) fechou por outro caminho:
 > `scripts/seed_protocols.py` existe, foi para v1.1.0 com o leito ambiente (ADR-109) e o
@@ -680,21 +695,20 @@ chamar.
 ~~G9 (dose auditiva)~~ e ~~G10 (registro por sessão)~~ em 2026-08-31 (ADR-104 a 108).
 
 **O que sobra da Fase G não se resolve escrevendo código:**
-- **O nível do leito (G2)** — −30 dBr é escolha da implementação; o protocolo diz apenas "baixa
-  intensidade". O código está pronto e testado, e o número vive nomeado em um lugar só de cada
-  lado (`BED_LEVEL_DBR`). Falta **ratificar e declarar ao CEP**, como a janela de 7 dias do T2.
+- ~~**O nível do leito (G2)**~~ — **RATIFICADO em 2026-09-01** em −30 dBr e **declarado** no
+  `dossie-submissao-cep.md` §4b (itens D1 e D2), junto dos demais parâmetros que a implementação
+  fixou onde o protocolo é qualitativo. Ver a "Ratificação" no fim do ADR-109.
 - **Os valores de G3 e G9** — qual ganho digital corresponde a 60 dB(A), e qual o nível em fundo
   de escala do transdutor. Os dois saem da **mesma medição**: a calibração em acoplador de orelha
   da etapa (i) (**F2.7**). Até lá, `AUDIO_MAX_GAIN=1.0` não restringe nada e a dose é previsão.
 
-**Fase H: sobra um item, e ele é decisão.** ~~H1 (eventos adversos)~~, ~~H2 (registro por
-sessão)~~, ~~H3 (bootstrap de staff)~~, ~~H6 (lista de participantes)~~ e ~~H4 (receituário)~~
-feitos em 2026-09-01 (ADR-110 a 113 + `operar-o-estudo.md`).
+**Fase H: COMPLETA.** ~~H1 (eventos adversos)~~, ~~H2 (registro por sessão)~~, ~~H3 (bootstrap de
+staff)~~, ~~H4 (receituário)~~, ~~H5 (distribuição)~~ e ~~H6 (lista de participantes)~~ — 2026-09-01,
+ADR-110 a 114 mais `operar-o-estudo.md` e `distribuir-o-app.md`.
 
-**H5 (distribuição do app) precisa do mantenedor**, não de código: escolher entre Play Console
-(teste interno), TestFlight ou link direto muda o que se constrói — e há uma pergunta técnica
-aberta junto, que **nenhuma das opções resolve sozinha**: a fidelidade bit-a-bit (inegociável #3)
-foi testada no cliente Flutter e **nunca no navegador**, onde o áudio passa pela pilha do browser.
+**Não sobra código de piloto.** O que falta é execução do mundo físico e institucional: a
+calibração em acoplador (F2.7), que destrava os valores de G3/G9; a base legal (F1.1); o parecer do
+CEP; e os passos de infraestrutura da F3 que dependem de credencial ou de alguém agendar.
 
 **Operação nova (entra na F3):** a regra de adesão da 2ª semana precisa de alguém que a chame
 para alcançar quem sumiu — `POST /v1/discontinuations/evaluate`, semanalmente. É o mesmo problema

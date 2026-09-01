@@ -1,6 +1,6 @@
 # ADR-109 — Leito ambiente: o que o protocolo promete, sem afrouxar o gate de pureza
 
-- **Status:** Aceito — com **um número a ratificar** (o nível do leito; ver "Pendências")
+- **Status:** Aceito — **e ratificado em 2026-09-01** (ver "Ratificação", no fim)
 - **Data:** 2026-09-01
 - **Decisores:** Arquiteto (Claude), a partir do protocolo aprovado
 - **Etapas relacionadas:** 2 (player/instrumento), 5 (backend)
@@ -103,16 +103,27 @@ ter sessões apontando para ela.
   no CI) e `backend/` (materializador do servidor) cresceu junto com o leito. Continua amarrada
   por teste que compara as duas sínteses **amostra a amostra**.
 
-## Pendências
+## Ratificação (2026-09-01)
 
-**O NÍVEL do leito (−30 dBr) é escolha desta implementação, não número do protocolo**, que diz
-apenas "baixa intensidade". −30 dB abaixo do estímulo é audível como presença e fica muito longe
-de mascarar. Mas é **um parâmetro do que o participante ouve**: precisa de ratificação do
-mantenedor e de declaração ao CEP, como a janela de 7 dias do T2 (ADR-106). Está nomeado em um
-lugar só de cada lado (`BED_LEVEL_DBR`), e há teste que amarra os dois.
+**O mantenedor ratificou −30 dBr** como o nível do leito, e o timbre como especificado. A pendência
+que esta ADR abriu está fechada.
 
-O **timbre** (parciais, ganhos, LFOs) tem a mesma natureza: soa como um bordão grave e estável, e
-mudá-lo é emenda de protocolo, não ajuste de código.
+O que sustentou a ratificação, e que vale registrar porque é o que um comitê perguntaria: o valor
+não é confortável por acaso. A −30 dB o leito é **audível como presença** e fica a mais de duas
+ordens de grandeza em energia abaixo do estímulo; e a garantia de que ele **não mascara** não
+depende do número escolhido — depende de as parciais viverem **fora da banda** do estímulo, o que é
+verificado a cada execução do gate (medido: −179 dB em 230–273 Hz). Ou seja: mesmo um erro de
+julgamento no nível não converteria a trilha em mascaramento, que é o risco que o protocolo nomeia.
+
+**A declaração ao CEP está escrita** — `dossie-submissao-cep.md` §4b, item **D1** (nível) e **D2**
+(timbre), na tabela dos parâmetros que a implementação fixou onde o protocolo é qualitativo, ao
+lado da janela de 7 dias do T2 (ADR-106) e da régua de 80% da adesão. A seção entra na submissão
+**junto com o protocolo**, e o checklist do dossiê cobra isso.
+
+Se o comitê pedir outro valor, a troca é de **uma constante nomeada em cada lado**
+(`BED_LEVEL_DBR`, com teste amarrando os dois) e de uma **nova versão** do protocolo de áudio —
+nunca um `UPDATE` na linha auditada. O leito é coluna anulável do banco, então "remover a trilha"
+também é uma mudança de dado, não de arquitetura.
 
 ## Alternativas consideradas
 
