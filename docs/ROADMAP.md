@@ -18,6 +18,17 @@
 
 ## Estado atual (baseline deste roadmap)
 
+> ### ⛳ Marco (2026-09-01, 3ª rodada): **o registro por sessão fica legível — e o cegamento decide o que sai.**
+> ADR-111 fechou o **H2**. As seis colunas do ADR-107 saem agora por `GET /v1/sessions/registry`,
+> pseudonimizadas e **sem nada do protocolo de áudio**: como só existem dois protocolos, um por
+> braço, qualquer identificador estável do áudio agruparia os participantes **por braço** — quem
+> lesse não saberia qual grupo é o ativo, mas saber quem está com quem já quebra o cegamento da
+> análise, que tem rito próprio (ADR-075). Pelo mesmo motivo, o histórico do participante deixou
+> de repetir `content_hash`: dois participantes comparando o valor descobririam que estão em
+> braços diferentes. De quebra, `GET /v1/sessions` **passou a existir** — o contrato o prometia e
+> a rota não estava lá. Achado novo virou **H6**: `GET /research/participants` é um stub que
+> devolve lista vazia com um `TODO`, e responde errado **em silêncio**.
+>
 > ### ⛳ Marco (2026-09-01, 2ª rodada): **a equipe passa a LER o que só sabia escrever.**
 > ADR-110 abriu a **Fase H** (operar o estudo) e fechou o **H1**. Segurança é desfecho
 > **primário** e os eventos adversos eram o único dado do estudo **sem leitura nenhuma** — havia
@@ -622,9 +633,10 @@ chamar.
 | # | Item | Status | Fonte |
 |---|---|---|---|
 | H1 | **Ler e acompanhar eventos adversos** — ✅ **FEITO** (2026-09-01, ADR-110): `GET /v1/adverse-events` pseudonimizado, com filtro `pending=true` (moderado/grave **ainda sem desfecho**), e `POST /v1/adverse-events/{id}/outcome`, que escreve a coluna `outcome` — existente desde o ADR-051 e que **nada jamais preenchia**: um evento entrava e nunca era encerrado. O e-mail de alerta mandava "acesse o painel de pesquisa", que **nunca existiu**; agora aponta para os endpoints reais. Segurança é desfecho **primário** e era o único dado do estudo sem leitura nenhuma | ✅ | ADR-110; pendência do ADR-051; auditoria, lacuna 4 |
-| H2 | **Ler o registro por sessão** — não há `GET` de sessões para a equipe. O ADR-107 acrescentou seis colunas que o protocolo manda registrar (interrupções e sua duração, volume médio/máximo, relaxamento 0–10) e **nenhuma delas é legível** fora do export agregado. Mesma forma do H1 | ⬜ | ADR-107; protocolo, "Registro e monitoramento" |
+| H2 | **Ler o registro por sessão** — ✅ **FEITO** (2026-09-01, ADR-111): `GET /v1/sessions/registry` (equipe) com as seis colunas do ADR-107, pseudonimizado e **sem nada do protocolo de áudio** — só há dois protocolos, um por braço, então qualquer identificador estável do áudio agruparia os participantes por braço. Sessões **abertas** aparecem, com os campos do fim nulos. E `GET /v1/sessions` (o histórico do próprio participante) passou a **existir**: o contrato o prometia e a rota não estava lá | ✅ | ADR-111; ADR-107; protocolo, "Registro e monitoramento" |
 | H3 | **Bootstrap da primeira conta de staff em produção** — `POST /v1/staff` exige `user:manage`; banco novo = ninguém entra. Agrava: o descegamento exige **2 admins distintos** (ADR-075), então são ≥2 contas desde o início | ⬜ | auditoria, lacuna 1; ADR-075 |
 | H4 | **Receituário de operação** para uma equipe que não programa — já são cinco listagens de staff só por API (`/referrals`, `/discontinuations`, `/adverse-events`, `/research/*`, `/staff`). O `deploy-fly.md` cobre infra, não operação | ⬜ | auditoria, lacuna 5; ADR-096 |
+| H6 | **`GET /v1/research/participants` é um stub que responde `{items: [], next_cursor: null}`** com um `TODO` no corpo — não é rota faltando, é rota que **responde errado em silêncio**: quem a chama conclui que não há participantes. Ou ganha a implementação (braço **codificado** e paginação por cursor) ou sai do contrato; escolher é decisão, não digitação | ⬜ | achado do ADR-111 |
 | H5 | **Distribuição do app** — não há build iOS; o APK sai como *artifact* do CI, sem assinatura de loja. E **ninguém validou a fidelidade bit-a-bit no navegador** (a inegociável #3 foi testada no cliente Flutter) | ⬜ | auditoria, lacuna 3; inegociável #3 |
 
 > A **lacuna 2** da auditoria (biblioteca de estímulos em produção) fechou por outro caminho:
@@ -647,9 +659,10 @@ chamar.
   de escala do transdutor. Os dois saem da **mesma medição**: a calibração em acoplador de orelha
   da etapa (i) (**F2.7**). Até lá, `AUDIO_MAX_GAIN=1.0` não restringe nada e a dose é previsão.
 
-**Próximo código: a Fase H.** Ordem sugerida — `H2 (ler sessões, mesma forma do H1) →
-H3 (bootstrap de staff, que é caminho crítico do primeiro deploy) → H4 (receituário) →
-H5 (distribuição)`.
+**Próximo código: a Fase H.** ~~H1 (ler eventos adversos)~~ e ~~H2 (ler o registro por sessão)~~
+feitos em 2026-09-01 (ADR-110, ADR-111). Ordem sugerida do que sobra —
+`H3 (bootstrap de staff, caminho crítico do primeiro deploy) → H6 (o stub que mente) →
+H4 (receituário de operação) → H5 (distribuição)`.
 
 **Operação nova (entra na F3):** a regra de adesão da 2ª semana precisa de alguém que a chame
 para alcançar quem sumiu — `POST /v1/discontinuations/evaluate`, semanalmente. É o mesmo problema

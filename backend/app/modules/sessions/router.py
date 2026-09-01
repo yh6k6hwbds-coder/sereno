@@ -91,6 +91,52 @@ class SessionCompleteIn(BaseModel):
         description="item único de percepção de relaxamento (0 a 10), por sessão")
 
 
+class SessionSummaryOut(BaseModel):
+    """Uma sessão como o PARTICIPANTE a vê: o próprio histórico, sem nada do protocolo.
+
+    Sem ``content_hash`` e sem handle: no começo da sessão o cliente precisa deles para buscar
+    o áudio, mas um histórico que os repita daria ao participante dois identificadores estáveis
+    para comparar com os de outra pessoa — e duas pessoas com hashes diferentes saberiam que
+    estão em braços diferentes. O histórico responde "o que eu já fiz", não "o que eu ouvi"."""
+    session_id: uuid.UUID
+    started_at: dt.datetime
+    ended_at: dt.datetime | None
+    completed: bool
+    effective_seconds: int | None
+    relaxation_0_10: int | None
+
+
+class SessionSummaryPage(BaseModel):
+    items: list[SessionSummaryOut]
+
+
+class StaffSessionOut(BaseModel):
+    """Uma sessão como a EQUIPE a vê: o registro que o protocolo manda manter (ADR-107).
+
+    **Nada do protocolo de áudio sai daqui** — nem ``protocol_uuid``, nem ``protocol_hash``,
+    nem a banda. Não é excesso de zelo: só existem dois protocolos, um por braço, então
+    qualquer identificador estável do áudio particiona os participantes em dois grupos. Quem
+    lê não saberia qual grupo é o ativo, mas saber **quem está com quem** já quebra o
+    cegamento da análise — e o descegamento tem rito próprio, com dois admins (ADR-075)."""
+    session_id: uuid.UUID
+    study_code: str
+    started_at: dt.datetime
+    ended_at: dt.datetime | None
+    completed: bool
+    effective_seconds: int | None
+    interruptions: int
+    paused_seconds: int | None
+    audio_gain: float | None
+    gain_mean: float | None
+    gain_peak: float | None
+    relaxation_0_10: int | None
+    headphones_ok: bool
+
+
+class StaffSessionPage(BaseModel):
+    items: list[StaffSessionOut]
+
+
 @router.get("/_status")
 async def status():
     return {"module": "sessions", "status": "stub"}
@@ -378,3 +424,64 @@ async def submit_survey(session_id: uuid.UUID, body: SurveyIn,
         would_repeat=body.would_repeat, answered_at=dt.datetime.now(dt.timezone.utc)))
     db.flush()
     return {"status": "recorded"}
+
+
+def _num(v) -> float | None:
+    """``Numeric`` volta do banco como ``Decimal``; o JSON do estudo fala em número."""
+    return None if v is None else float(v)
+
+
+@router.get("", response_model=SessionSummaryPage)
+async def list_my_sessions(limit: int = 100, db: DbSession = Depends(get_db),
+                           participant_id: uuid.UUID = Depends(current_participant),
+                           _user: dict = Depends(require("session:write"))):
+    """O histórico do próprio participante, do mais recente para o mais antigo.
+
+    O contrato **já prometia** esta rota ("listar sessões do participante") e ela não existia:
+    o módulo tinha o POST, o complete, o áudio e o questionário. Só devolve o que é do
+    solicitante — o filtro por ``participant_id`` vem do token, nunca de parâmetro."""
+    limit = max(1, min(limit, 500))
+    linhas = db.scalars(
+        select(SessionModel)
+        .where(SessionModel.participant_id == participant_id)
+        .order_by(SessionModel.started_at.desc(), SessionModel.id)
+        .limit(limit)).all()
+    return SessionSummaryPage(items=[
+        SessionSummaryOut(
+            session_id=x.id, started_at=x.started_at, ended_at=x.ended_at,
+            completed=bool(x.completed), effective_seconds=x.effective_seconds,
+            relaxation_0_10=x.relaxation_0_10)
+        for x in linhas])
+
+
+@router.get("/registry", response_model=StaffSessionPage)
+async def list_sessions_for_staff(limit: int = 100, study_code: str | None = None,
+                                  db: DbSession = Depends(get_db),
+                                  _user: dict = Depends(require("research:read"))):
+    """O registro por sessão que o protocolo manda manter, legível pela equipe (H2).
+
+    O ADR-107 acrescentou as colunas que faltavam — duração das interrupções, volume médio e
+    máximo, relaxamento 0–10 — e **nenhuma delas era legível**: existiam no banco e saíam, no
+    máximo, agregadas no relatório. "Registro e monitoramento" é uma obrigação de manter dado
+    recuperável, e dado que só o SQL alcança não está mantido para quem responde pelo estudo.
+
+    Fica sob ``/sessions/registry``, e não em ``/research``, porque é o registro operacional da
+    sessão — não a análise. ``study_code`` filtra por participante pelo mesmo pseudônimo que o
+    resto da API da equipe usa; um código inexistente devolve lista vazia, não 404: a pergunta
+    "este participante tem sessões?" tem "nenhuma" como resposta legítima."""
+    limit = max(1, min(limit, 500))
+    q = (select(SessionModel, Participant.study_code)
+         .join(Participant, Participant.id == SessionModel.participant_id))
+    if study_code is not None:
+        q = q.where(Participant.study_code == study_code)
+    linhas = db.execute(
+        q.order_by(SessionModel.started_at.desc(), SessionModel.id).limit(limit)).all()
+    return StaffSessionPage(items=[
+        StaffSessionOut(
+            session_id=x.id, study_code=code, started_at=x.started_at, ended_at=x.ended_at,
+            completed=bool(x.completed), effective_seconds=x.effective_seconds,
+            interruptions=x.interruptions, paused_seconds=x.paused_seconds,
+            audio_gain=_num(x.audio_gain), gain_mean=_num(x.gain_mean),
+            gain_peak=_num(x.gain_peak), relaxation_0_10=x.relaxation_0_10,
+            headphones_ok=bool(x.headphones_ok))
+        for x, code in linhas])

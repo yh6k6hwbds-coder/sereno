@@ -311,13 +311,41 @@ paths:
         '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/SessionOut' } } } }
         '422': { $ref: '#/components/responses/Problem' }
     get:
-      summary: Listar sessões do participante
+      summary: Listar as sessões DO PRÓPRIO participante
+      description: >-
+        O histórico de quem pede — o filtro vem do token, nunca de parâmetro. NÃO repete
+        identificador do áudio (`content_hash`, handle): dois participantes comparando esses
+        valores descobririam que estão em braços diferentes. Responde "o que eu já fiz", não
+        "o que eu ouvi".
       operationId: listSessions
       parameters:
         - { $ref: '#/components/parameters/Limit' }
-        - { $ref: '#/components/parameters/Cursor' }
       responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SessionPage' } } } }
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SessionSummaryPage' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /sessions/registry:
+    get:
+      summary: Registro por sessão do estudo (equipe)
+      description: >-
+        O que o protocolo manda manter em "Registro e monitoramento": duração das interrupções,
+        volume médio e máximo, relaxamento 0–10, adesão e verificação de fones — pseudonimizado
+        por `study_code`. NADA do protocolo de áudio sai daqui (nem `protocol_uuid`, nem
+        `protocol_hash`, nem a banda): só existem dois protocolos, um por braço, então qualquer
+        identificador estável do áudio particionaria os participantes em dois grupos, e saber
+        quem está com quem já quebra o cegamento da análise (descegamento tem rito próprio,
+        com dois admins). `study_code` inexistente devolve lista vazia, não 404.
+      operationId: listSessionRegistry
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - name: study_code
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/StaffSessionPage' } } } }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /sessions/{id}/complete:
     post:
       summary: Encerrar a sessão (telemetria)
@@ -1300,6 +1328,48 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/SessionOut' } }
         next_cursor: { type: [string, "null"] }
+      required: [items]
+    SessionSummary:
+      type: object
+      description: >-
+        Uma sessão como o PRÓPRIO participante a vê. Sem identificador do áudio, de propósito.
+      properties:
+        session_id: { type: string, format: uuid }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: [string, "null"], format: date-time }
+        completed: { type: boolean, description: "contou para a adesão (>= 80% da duração)" }
+        effective_seconds: { type: [integer, "null"] }
+        relaxation_0_10: { type: [integer, "null"] }
+      required: [session_id, started_at, completed]
+    SessionSummaryPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/SessionSummary' } }
+      required: [items]
+    StaffSession:
+      type: object
+      description: >-
+        Uma sessão como a EQUIPE a vê: o registro do protocolo, pseudonimizado e SEM nada do
+        protocolo de áudio (item de cegamento).
+      properties:
+        session_id: { type: string, format: uuid }
+        study_code: { type: string, description: "pseudônimo — nunca nome/e-mail" }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: [string, "null"], format: date-time }
+        completed: { type: boolean }
+        effective_seconds: { type: [integer, "null"] }
+        interruptions: { type: integer }
+        paused_seconds: { type: [integer, "null"], description: "protocolo: interrupções E SUA DURAÇÃO" }
+        audio_gain: { type: [number, "null"], description: "ganho travado declarado ao iniciar" }
+        gain_mean: { type: [number, "null"], description: "volume MÉDIO aplicado" }
+        gain_peak: { type: [number, "null"], description: "volume MÁXIMO aplicado" }
+        relaxation_0_10: { type: [integer, "null"] }
+        headphones_ok: { type: boolean, description: "derivado da verificação dicótica" }
+      required: [session_id, study_code, started_at, completed, interruptions, headphones_ok]
+    StaffSessionPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/StaffSession' } }
       required: [items]
     ResearchParticipant:
       type: object
