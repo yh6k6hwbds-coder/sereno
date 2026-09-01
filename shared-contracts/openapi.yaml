@@ -609,6 +609,10 @@ paths:
   /research/participants:
     get:
       summary: Listar participantes (pesquisa) — RBAC, braço codificado
+      description: >-
+        Quem está no estudo, com adesão e contagem de eventos adversos, paginado por cursor
+        (keyset em `enrolled_at, id`, que desempata inscrições no mesmo instante). O braço sai
+        CODIFICADO (A/B) e nunca traduzido; nulo = ainda não randomizado.
       operationId: researchListParticipants
       parameters:
         - { $ref: '#/components/parameters/Limit' }
@@ -1373,11 +1377,21 @@ components:
       required: [items]
     ResearchParticipant:
       type: object
+      description: >-
+        Quem está no estudo, como a área de pesquisa o enxerga. O braço sai CODIFICADO e nunca
+        traduzido: A/B não dizem qual é o ativo, e o mapa fica selado até o data lock.
       properties:
-        study_code: { type: string }
-        arm_coded: { type: string, enum: [A, B] }
-        adherence_pct: { type: number }
+        study_code: { type: string, description: "pseudônimo — nunca nome/e-mail" }
+        arm_coded:
+          type: [string, "null"]
+          enum: [A, B, null]
+          description: "nulo = inscrito e AINDA NÃO randomizado (estado real do estudo)"
+        status: { type: string, enum: [active, withdrawn, completed, removed, discontinued] }
+        adherence_pct: { type: number, description: "sobre as 20 sessões prescritas" }
+        sessions_completed: { type: integer, description: "sessões que contaram para a adesão" }
         adverse_events: { type: integer }
+        enrolled_at: { type: string, format: date-time }
+      required: [study_code, status, adherence_pct, sessions_completed, adverse_events]
     ResearchPage:
       type: object
       properties:

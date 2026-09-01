@@ -11,6 +11,7 @@ from app.modules.audit.service import list_events, record_event
 from app.modules.research.export_service import build_export_csv_from_db, get_job_store
 from app.modules.research.features_service import build_features_csv_from_db
 from app.modules.research.analysis_service import build_report
+from app.modules.research.participants_service import list_research_participants
 from app.modules.recommender.service import coherence as recommendation_coherence
 
 router = APIRouter(prefix="/research", tags=["research"])
@@ -22,9 +23,23 @@ async def status():
 
 
 @router.get("/participants")
-async def list_participants(user: dict = Depends(require("research:read"))):
-    # TODO (fatia vertical): listar com braço CODIFICADO (A/B) e paginação por cursor.
-    return {"items": [], "next_cursor": None}
+async def list_participants(limit: int = 20, cursor: str | None = None,
+                            db: Session = Depends(get_db),
+                            _user: dict = Depends(require("research:read"))):
+    """Quem está no estudo, com o braço CODIFICADO (A/B) — ADR-113.
+
+    Até aqui esta rota era um stub que devolvia lista vazia com um `TODO` no corpo. Não era uma
+    rota faltando: era uma rota que **respondia errado em silêncio** — quem a chamasse concluiria
+    que não há participantes, e nada indicaria o contrário.
+
+    `arm_coded` (A/B) sai daqui porque é assim que a área de pesquisa enxerga o estudo inteiro
+    (o relatório de análise já reporta por braço codificado): **A e B não dizem qual é o ativo**.
+    O mapa A/B→condição fica selado e só abre no *data lock*, com dois admins (ADR-075).
+
+    Participante sem alocação aparece com `arm_coded: null` — está inscrito e ainda não foi
+    randomizado, que é um estado real do estudo e não uma linha a esconder."""
+    limit = max(1, min(limit, 200))
+    return list_research_participants(db, limit=limit, cursor=cursor)
 
 
 @router.get("/analysis")
