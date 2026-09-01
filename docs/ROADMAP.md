@@ -18,6 +18,14 @@
 
 ## Estado atual (baseline deste roadmap)
 
+> ### ⛳ Marco (2026-09-01, 4ª rodada): **o primeiro deploy deixa de ser um sistema em que ninguém entra.**
+> ADR-112 fechou o **H3**. `scripts/bootstrap_staff.py` cria as primeiras contas **sem definir
+> senha nenhuma** — hash desconhecido + token de uso único, a disciplina do ADR-094 — e **cobra o
+> segundo admin**, porque descegar exige dois distintos (ADR-075) e quem tem um só descobre isso
+> no fim do estudo. `--print-link` existe porque o SMTP é o item 1 da ordem de deploy e ainda não
+> está de pé: sem ele o convite não chega e o bootstrap seria impossível justo quando é preciso.
+> Virou o passo **§3.35** do `deploy-fly.md`, entre o `STAFF_SETUP_URL` e o áudio.
+>
 > ### ⛳ Marco (2026-09-01, 3ª rodada): **o registro por sessão fica legível — e o cegamento decide o que sai.**
 > ADR-111 fechou o **H2**. As seis colunas do ADR-107 saem agora por `GET /v1/sessions/registry`,
 > pseudonimizadas e **sem nada do protocolo de áudio**: como só existem dois protocolos, um por
@@ -634,7 +642,7 @@ chamar.
 |---|---|---|---|
 | H1 | **Ler e acompanhar eventos adversos** — ✅ **FEITO** (2026-09-01, ADR-110): `GET /v1/adverse-events` pseudonimizado, com filtro `pending=true` (moderado/grave **ainda sem desfecho**), e `POST /v1/adverse-events/{id}/outcome`, que escreve a coluna `outcome` — existente desde o ADR-051 e que **nada jamais preenchia**: um evento entrava e nunca era encerrado. O e-mail de alerta mandava "acesse o painel de pesquisa", que **nunca existiu**; agora aponta para os endpoints reais. Segurança é desfecho **primário** e era o único dado do estudo sem leitura nenhuma | ✅ | ADR-110; pendência do ADR-051; auditoria, lacuna 4 |
 | H2 | **Ler o registro por sessão** — ✅ **FEITO** (2026-09-01, ADR-111): `GET /v1/sessions/registry` (equipe) com as seis colunas do ADR-107, pseudonimizado e **sem nada do protocolo de áudio** — só há dois protocolos, um por braço, então qualquer identificador estável do áudio agruparia os participantes por braço. Sessões **abertas** aparecem, com os campos do fim nulos. E `GET /v1/sessions` (o histórico do próprio participante) passou a **existir**: o contrato o prometia e a rota não estava lá | ✅ | ADR-111; ADR-107; protocolo, "Registro e monitoramento" |
-| H3 | **Bootstrap da primeira conta de staff em produção** — `POST /v1/staff` exige `user:manage`; banco novo = ninguém entra. Agrava: o descegamento exige **2 admins distintos** (ADR-075), então são ≥2 contas desde o início | ⬜ | auditoria, lacuna 1; ADR-075 |
+| H3 | **Bootstrap da primeira conta de staff** — ✅ **FEITO** (2026-09-01, ADR-112): `scripts/bootstrap_staff.py`, que **nunca define senha** (conta nasce com hash desconhecido + token de uso único, como o convite do ADR-094) e **cobra o segundo admin**, porque o descegamento exige dois distintos (ADR-075) e uma instalação com um só descobre isso no fim do estudo. `--print-link` é o caminho **antes do SMTP** — o link é segredo, vale uma vez. Recusa-se a agir havendo staff: dali em diante o caminho é a API, que registra quem convidou quem. Passo §3.35 do `deploy-fly.md` | ✅ | ADR-112; auditoria, lacuna 1; ADR-075 |
 | H4 | **Receituário de operação** para uma equipe que não programa — já são cinco listagens de staff só por API (`/referrals`, `/discontinuations`, `/adverse-events`, `/research/*`, `/staff`). O `deploy-fly.md` cobre infra, não operação | ⬜ | auditoria, lacuna 5; ADR-096 |
 | H6 | **`GET /v1/research/participants` é um stub que responde `{items: [], next_cursor: null}`** com um `TODO` no corpo — não é rota faltando, é rota que **responde errado em silêncio**: quem a chama conclui que não há participantes. Ou ganha a implementação (braço **codificado** e paginação por cursor) ou sai do contrato; escolher é decisão, não digitação | ⬜ | achado do ADR-111 |
 | H5 | **Distribuição do app** — não há build iOS; o APK sai como *artifact* do CI, sem assinatura de loja. E **ninguém validou a fidelidade bit-a-bit no navegador** (a inegociável #3 foi testada no cliente Flutter) | ⬜ | auditoria, lacuna 3; inegociável #3 |
@@ -659,10 +667,9 @@ chamar.
   de escala do transdutor. Os dois saem da **mesma medição**: a calibração em acoplador de orelha
   da etapa (i) (**F2.7**). Até lá, `AUDIO_MAX_GAIN=1.0` não restringe nada e a dose é previsão.
 
-**Próximo código: a Fase H.** ~~H1 (ler eventos adversos)~~ e ~~H2 (ler o registro por sessão)~~
-feitos em 2026-09-01 (ADR-110, ADR-111). Ordem sugerida do que sobra —
-`H3 (bootstrap de staff, caminho crítico do primeiro deploy) → H6 (o stub que mente) →
-H4 (receituário de operação) → H5 (distribuição)`.
+**Próximo código: a Fase H.** ~~H1 (ler eventos adversos)~~, ~~H2 (ler o registro por sessão)~~ e
+~~H3 (bootstrap de staff)~~ feitos em 2026-09-01 (ADR-110 a 112). Ordem sugerida do que sobra —
+`H6 (o stub que responde errado em silêncio) → H4 (receituário de operação) → H5 (distribuição)`.
 
 **Operação nova (entra na F3):** a regra de adesão da 2ª semana precisa de alguém que a chame
 para alcançar quem sumiu — `POST /v1/discontinuations/evaluate`, semanalmente. É o mesmo problema

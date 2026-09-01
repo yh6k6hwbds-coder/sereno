@@ -20,6 +20,7 @@ infraestrutura ou alguém agendar. Marque conforme for.
 | 2 | **Deploy na Fly** (F3.3) | Cartão na conta Fly | §0–§3 | Só existe o ambiente local/túnel |
 | 3 | **Chave selada A/B** (`ARM_CONDITION_MAP`) | Sorteio decidido e custodiado fora do sistema | §2 | O guard **recusa subir** em produção |
 | 4 | **`STAFF_SETUP_URL`** (F3.10) | App publicado no GitHub Pages | §3.3 | O convite da equipe manda o token cru |
+| 4b | **A PRIMEIRA conta de staff** (H3) | Só o deploy no ar | §3.35 | **Ninguém entra**: criar staff exige `user:manage`, que só staff tem |
 | 5 | **`TEAM_NOTIFY_EMAIL`** (F3.7) | Um endereço da equipe | §3.2 | O alerta só vai para o log — ninguém vê |
 | 6 | **Agendar o expurgo** (F3.1) | Deploy no ar (ou um host externo) | §3.1 | O mecanismo existe e **nunca roda**; item E2 do checklist LGPD segue aberto |
 | 7 | **Worker de e-mail** (F3.8) | Redis + processo `worker` no `fly.toml` | §3.2 | ⚠️ Ligar `EMAIL_DELIVERY=queue` **sem worker** para o OTP de vez |
@@ -189,6 +190,42 @@ fly secrets set --app sereno-piloto-api `
 Verificação ponta a ponta (depois do SMTP configurado): crie um staff sem senha
 (`POST /v1/staff` sem `password`), confirme que o e-mail chegou **com link clicável**, abra-o e
 defina a senha. O token some da barra de endereços ao carregar a tela.
+
+## 3.35. A PRIMEIRA conta de staff (H3, ADR-112) — sem isto ninguém entra
+
+`POST /v1/staff` exige a permissão `user:manage`, que **só um staff já existente tem**. A tabela
+nasce vazia na migração inicial e o `seed_demo.py` não cria staff. Banco novo = **sistema em que
+ninguém entra**, e não havia passo nenhum para isso até a Fase H.
+
+```bash
+fly ssh console --app sereno-piloto-api -C \
+  "python scripts/bootstrap_staff.py --email ana@uninta.edu.br --email bruno@uninta.edu.br --print-link"
+```
+
+**Duas contas, não uma.** O descegamento exige **dois admins distintos** (ADR-075). Uma instalação
+com um admin só descobre isso no fim do estudo, na hora de abrir a chave selada — quando o
+conserto é mais caro. O `--check` cobra o segundo:
+
+```bash
+fly ssh console --app sereno-piloto-api -C "python scripts/bootstrap_staff.py --check"
+```
+
+> **O script nunca define senha.** Cada conta nasce com um hash de senha aleatória que ninguém
+> conhece e recebe um **token de uso único** para a própria pessoa definir a sua — a mesma
+> disciplina do ADR-094. Um `--password` na linha de comando entraria no histórico do shell e nos
+> logs do provedor; e quem opera o deploy ganharia caminho para entrar como outra pessoa.
+>
+> **`--print-link` é o caminho ANTES do SMTP (item 1 da ordem).** Sem e-mail configurado, o
+> convite não chega e o bootstrap seria impossível justamente quando é necessário. Com a flag, o
+> link sai no seu terminal: **é segredo**, vale uma vez, expira (`STAFF_INVITE_TTL_H`, padrão no
+> `setup_service`) e **não deve ser colado em chat, ticket ou registro de deploy**.
+>
+> **Faça isto DEPOIS do §3.3** (`STAFF_SETUP_URL`): sem ela, o link impresso é o token cru, e a
+> pessoa precisa montar um `POST` na mão.
+>
+> Havendo staff, o script **se recusa** a agir — dali em diante o caminho é `POST /v1/staff`, que
+> registra quem convidou quem. `--force` existe para o caso real da instalação que ficou com um
+> admin só e ninguém consegue entrar.
 
 ## 3.4. Áudio: formato, disco e primeira materialização (ADR-103)
 
