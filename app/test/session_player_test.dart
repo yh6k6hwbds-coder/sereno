@@ -55,6 +55,13 @@ class _FakePlayer implements AudioPlayerPort {
   @override
   Future<void> get onComplete => _done.future;
 
+  /// Posição controlada pelo teste: é a fonte de verdade do tempo efetivo, e o teste
+  /// precisa poder simular "tocou 20 min com o app em segundo plano" sem esperar 20 min.
+  Duration posicao = Duration.zero;
+
+  @override
+  Duration get position => posicao;
+
   @override
   bool get isPlaying => playing;
 
@@ -122,9 +129,23 @@ TelemetrySender _senderFor(_FakeRepo repo, TelemetryQueue q) => TelemetrySender(
       q,
     );
 
-Widget _screen(_FakeRepo repo, _FakePlayer player, TelemetrySender sender) => MaterialApp(
+/// Relógio de parede falso, avançado pelo teste. Sem ele a duração das pausas seria sempre
+/// zero: `pump` move o relógio do Flutter, não o do sistema.
+class _Relogio {
+  DateTime instante = DateTime.utc(2026, 1, 1);
+  DateTime chamar() => instante;
+  void avancar(Duration d) => instante = instante.add(d);
+}
+
+Widget _screen(_FakeRepo repo, _FakePlayer player, TelemetrySender sender,
+        {_Relogio? relogio}) =>
+    MaterialApp(
       home: SessionPlayerScreen(
-          repo: repo, session: _session, player: player, telemetry: sender),
+          repo: repo,
+          session: _session,
+          player: player,
+          telemetry: sender,
+          agora: (relogio ?? _Relogio()).chamar),
     );
 
 /// Deixa o _prepare() assíncrono terminar (download → load → play → setState).
@@ -170,17 +191,25 @@ void main() {
       (tester) async {
     final repo = _FakeRepo();
     final player = _FakePlayer();
-    await tester.pumpWidget(_screen(repo, player, _senderFor(repo, _MemQueue())));
+    final relogio = _Relogio();
+    await tester.pumpWidget(
+        _screen(repo, player, _senderFor(repo, _MemQueue()), relogio: relogio));
     await _settleLoad(tester);
 
-    await tester.pump(const Duration(seconds: 1)); // efetivo = 1
-    await tester.pump(const Duration(seconds: 1)); // efetivo = 2
+    // O tempo efetivo é a POSIÇÃO do áudio, não o relógio: quem avança é o player. As duas
+    // grandezas andam juntas enquanto toca, e só o relógio anda enquanto está pausado.
+    player.posicao = const Duration(seconds: 2);
+    relogio.avancar(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.byIcon(Icons.pause_rounded)); // interrupção = 1, pausa
     await tester.pump();
-    await tester.pump(const Duration(seconds: 1)); // pausado → efetivo continua 2
+    relogio.avancar(const Duration(seconds: 1)); // pausado → a posição NÃO anda
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.byIcon(Icons.play_arrow_rounded)); // retoma
     await tester.pump();
-    await tester.pump(const Duration(seconds: 1)); // efetivo = 3
+    player.posicao = const Duration(seconds: 3);
+    relogio.avancar(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
 
     await tester.tap(find.byIcon(Icons.stop_rounded));
     await tester.pump();
@@ -200,6 +229,36 @@ void main() {
     await _teardown(tester);
   });
 
+  testWidgets('a sessão ouvida em SEGUNDO PLANO conta a adesão inteira', (tester) async {
+    // Regressão do defeito achado no primeiro teste em aparelho real (etapa ii): o tempo
+    // efetivo vinha de um `Timer` da tela, e o Android suspende a isolate do Dart quando o
+    // app vai para segundo plano — tela bloqueada, que é o esperado numa sessão de 20 min de
+    // relaxamento. O áudio seguia tocando no player nativo e o cronômetro ficava parado:
+    // 20 minutos ouvidos chegavam ao servidor como `effective_seconds: 0`, e a adesão
+    // (desfecho primário) seria zero no estudo inteiro.
+    //
+    // O teste reproduz isso não deixando NENHUM tique acontecer: a posição do player salta
+    // de uma vez, como salta quando o app volta do segundo plano.
+    final repo = _FakeRepo();
+    final player = _FakePlayer();
+    final relogio = _Relogio();
+    await tester.pumpWidget(
+        _screen(repo, player, _senderFor(repo, _MemQueue()), relogio: relogio));
+    await _settleLoad(tester);
+
+    player.posicao = const Duration(minutes: 20);
+    relogio.avancar(const Duration(minutes: 20));
+
+    await tester.tap(find.byIcon(Icons.stop_rounded));
+    await tester.pump();
+    await tester.pump();
+
+    expect(repo.lastEffective, 20 * 60);
+    expect(repo.lastPaused, 0);                        // tocou o tempo todo
+    expect(repo.lastGainMean, closeTo(audioGain, 1e-9)); // houve áudio: há volume a relatar
+    await _teardown(tester);
+  });
+
   testWidgets('o item de relaxamento 0–10 é perguntado e complementa o registro',
       (tester) async {
     // O protocolo lista, por sessão, "resposta a um item único de percepção de relaxamento
@@ -209,6 +268,7 @@ void main() {
     final player = _FakePlayer();
     await tester.pumpWidget(_screen(repo, player, _senderFor(repo, _MemQueue())));
     await _settleLoad(tester);
+    player.posicao = const Duration(seconds: 1);
     await tester.pump(const Duration(seconds: 1));
 
     await tester.tap(find.byIcon(Icons.stop_rounded));
@@ -241,7 +301,8 @@ void main() {
     await tester.pumpWidget(_screen(repo, player, _senderFor(repo, queue)));
     await _settleLoad(tester);
 
-    await tester.pump(const Duration(seconds: 1)); // efetivo = 1
+    player.posicao = const Duration(seconds: 1); // efetivo = 1
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.byIcon(Icons.stop_rounded));
     await tester.pump();
     await tester.pump();

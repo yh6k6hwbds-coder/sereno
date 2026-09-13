@@ -349,6 +349,16 @@ paths:
   /sessions/{id}/complete:
     post:
       summary: Encerrar a sessão (telemetria)
+      description: >-
+        Pode ser chamada MAIS DE UMA VEZ para a mesma sessão, de propósito: o encerramento é
+        enviado antes de perguntar o item de relaxamento (a adesão não pode depender de o
+        participante responder), e a fila de telemetria reenvia quando a rede falha. Por isso
+        o registro é MONOTÔNICO nos campos de adesão — um envio com `effective_seconds` MENOR
+        que o já gravado é aceito (200) mas não substitui tempo, interrupções, pausa nem
+        volume; só complementa `relaxation_0_10`. Sem essa regra, um reenvio atrasado — ou de
+        um app reaberto, que perdeu os contadores — rebaixava em silêncio uma sessão inteira
+        ouvida, e a adesão é desfecho primário. A resposta sempre reflete o estado GRAVADO,
+        não o corpo enviado.
       operationId: completeSession
       parameters: [ { $ref: '#/components/parameters/PathId' } ]
       requestBody:

@@ -223,9 +223,20 @@ async def complete_session(session_id: uuid.UUID, body: SessionCompleteIn,
         SessionModel.id == session_id, SessionModel.participant_id == participant_id))
     if s is None:
         raise ProblemException(404, "Sessão não encontrada", "Sessão inexistente para este participante.")
+    # Encerramento é MONOTÔNICO nos campos de adesão. O cliente chama esta rota DUAS vezes de
+    # propósito (ADR-107): o encerramento vai antes de perguntar o item de relaxamento, para
+    # que a adesão não dependa de o participante responder, e a resposta vem num segundo
+    # envio com o registro completo. Só que a fila de telemetria também reenvia, e um reenvio
+    # atrasado — ou de um app reaberto, que perdeu os contadores — chegava com tempo MENOR e
+    # rebaixava o que já estava gravado. `completed` é a adesão, que é desfecho primário: uma
+    # sessão inteira ouvida virava não-cumprida em silêncio. Aceitar só o que não regride
+    # preserva o complemento pretendido e barra o apagamento.
+    anterior = s.effective_seconds or 0
+    regride = body.effective_seconds is not None and body.effective_seconds < anterior
     s.ended_at = dt.datetime.now(dt.timezone.utc)
-    s.effective_seconds = body.effective_seconds
-    s.interruptions = body.interruptions
+    if not regride:
+        s.effective_seconds = body.effective_seconds
+        s.interruptions = body.interruptions
     # G10 — o restante do registro por sessão. O teto de volume (G3) vale para o que foi
     # REPRODUZIDO, não só para o que foi declarado ao iniciar: um cliente que subisse o ganho
     # no meio da sessão passaria pela checagem do início e seria pego aqui.
@@ -237,9 +248,10 @@ async def complete_session(session_id: uuid.UUID, body: SessionCompleteIn,
             and body.gain_mean > body.gain_peak):
         raise ProblemException(422, "Volume inconsistente",
                                "O ganho médio não pode ser maior que o máximo.")
-    s.paused_seconds = body.paused_seconds
-    s.gain_mean = body.gain_mean
-    s.gain_peak = body.gain_peak
+    if not regride:
+        s.paused_seconds = body.paused_seconds
+        s.gain_mean = body.gain_mean
+        s.gain_peak = body.gain_peak
     if body.relaxation_0_10 is not None:
         # Só preenche: o item pode chegar num reenvio posterior, e um envio sem ele não
         # deve apagar a resposta já dada.

@@ -27,12 +27,17 @@ class SessionPlayerScreen extends StatefulWidget {
   final AudioPlayerPort player;
   final TelemetrySender telemetry;
 
+  /// Relógio de parede. Injetável porque a duração das pausas é a diferença entre ele e a
+  /// posição do áudio, e o `pump` do widget test avança o relógio do Flutter, não este.
+  final DateTime Function() agora;
+
   const SessionPlayerScreen({
     super.key,
     required this.repo,
     required this.session,
     required this.player,
     required this.telemetry,
+    this.agora = DateTime.now,
   });
 
   /// Constrói a tela com as implementações reais (just_audio + fila em disco).
@@ -66,16 +71,16 @@ class SessionPlayerScreen extends StatefulWidget {
 
 class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
   Timer? _timer;
+  /// Só para o relógio na tela; o que vai ao servidor sai de [_efetivo].
   int _effective = 0;
   int _interruptions = 0;
-  /// Duração acumulada das interrupções — o protocolo pede "interrupções E SUA DURAÇÃO",
-  /// e a contagem sozinha não distingue quem pausou 5 s de quem pausou meia hora.
-  int _pausedSeconds = 0;
-  /// Volume aplicado, MEDIDO e não presumido: o ganho é travado (G3), então hoje médio e
-  /// máximo coincidem — mas quem registra o que reproduziu não pode partir do que pretendia.
+  /// Instante em que a reprodução começou. Junto da posição do player, dá a duração das
+  /// pausas sem depender de cronômetro: o protocolo pede "interrupções E SUA DURAÇÃO", e a
+  /// contagem sozinha não distingue quem pausou 5 s de quem pausou meia hora.
+  DateTime? _inicioReproducao;
+  /// Ganho aplicado, travado ao carregar (G3) e idêntico do começo ao fim: a tela não
+  /// oferece controle de volume. Registrado só quando houve áudio ouvido.
   double _gainNow = 0;
-  double _gainSum = 0;
-  double _gainPeak = 0;
   /// Item único de relaxamento (0–10) desta sessão; `null` enquanto não respondido.
   int? _relaxation;
   bool _paused = false;
@@ -103,6 +108,7 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
       await widget.player.setVolume(audioGain);
       _gainNow = audioGain;
       await widget.player.play();
+      _inicioReproducao = widget.agora();
       if (!mounted) return;
       setState(() => _loading = false);
       _timer = Timer.periodic(const Duration(seconds: 1), _tick);
@@ -119,17 +125,29 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
     }
   }
 
+  /// Tempo EFETIVAMENTE ouvido, em segundos, lido do player.
+  ///
+  /// Não é contado por cronômetro: veja [AudioPlayerPort.position]. Enquanto o app está em
+  /// segundo plano nada aqui roda, e ao voltar a posição já traz todo o tempo que passou.
+  int get _efetivo => widget.player.position.inSeconds;
+
+  /// Duração acumulada das pausas: o relógio de parede desde o play menos o que soou.
+  ///
+  /// Sai da mesma medição e pela mesma razão — o app pode ter passado a sessão inteira em
+  /// segundo plano, e a diferença entre os dois relógios é justamente o que não tocou.
+  int get _pausado {
+    final inicio = _inicioReproducao;
+    if (inicio == null) return 0;
+    final parede = widget.agora().difference(inicio).inSeconds;
+    final diff = parede - _efetivo;
+    return diff > 0 ? diff : 0;
+  }
+
+  /// Só atualiza o relógio da tela. Se o timer não rodar (app em segundo plano), nada se
+  /// perde: ele relê a posição do player no próximo tique.
   void _tick(Timer _) {
-    if (_paused) {
-      _pausedSeconds += 1;   // fora do setState: não muda nada na tela
-      return;
-    }
-    setState(() {
-      _effective += 1; // conta só o tempo efetivamente ouvido
-      // Integra o ganho no tempo OUVIDO: a média é do que soou, não do relógio de parede.
-      _gainSum += _gainNow;
-      if (_gainNow > _gainPeak) _gainPeak = _gainNow;
-    });
+    final agora = _efetivo;
+    if (agora != _effective) setState(() => _effective = agora);
   }
 
   Future<void> _pause() async {
@@ -148,15 +166,19 @@ class _SessionPlayerScreenState extends State<SessionPlayerScreen> {
   }
 
   /// O que esta sessão registra, no formato em que vai para o servidor e para a fila.
+  ///
+  /// Tudo é lido AGORA, do player, e não de contadores acumulados na tela: este getter é
+  /// chamado duas vezes — no encerramento e de novo quando o item de relaxamento é
+  /// respondido — e o segundo envio precisa ser um superconjunto honesto do primeiro.
   PendingComplete get _registro => PendingComplete(
         sessionId: widget.session.sessionId,
-        effectiveSeconds: _effective,
+        effectiveSeconds: _efetivo,
         interruptions: _interruptions,
-        pausedSeconds: _pausedSeconds,
+        pausedSeconds: _pausado,
         // Sem tempo ouvido não há volume aplicado a relatar — nulo, não zero (e o
         // servidor recusa ganho zero, que não é um volume, é a ausência de um).
-        gainMean: _effective > 0 ? _gainSum / _effective : null,
-        gainPeak: _gainPeak > 0 ? _gainPeak : null,
+        gainMean: _efetivo > 0 ? _gainNow : null,
+        gainPeak: _efetivo > 0 ? _gainNow : null,
         relaxation0to10: _relaxation,
       );
 

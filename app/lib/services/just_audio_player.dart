@@ -40,6 +40,9 @@ class JustAudioPlayer extends AudioPlayerPort {
   Future<void> get onComplete => _done.future;
 
   @override
+  Duration get position => _player.position;
+
+  @override
   bool get isPlaying => _player.playing;
 
   @override

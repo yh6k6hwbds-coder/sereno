@@ -47,6 +47,9 @@ class _FakePlayer implements AudioPlayerPort {
   @override
   Future<void> get onComplete => _done.future;
   @override
+  Duration get position => Duration.zero; // o tom da verificação não registra adesão
+
+  @override
   bool get isPlaying => false;
   @override
   Future<void> dispose() async {}

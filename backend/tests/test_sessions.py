@@ -119,6 +119,56 @@ def test_complete_records_telemetry(api):
         assert rec.completed is True and rec.effective_seconds == 1180 and rec.interruptions == 1
 
 
+def test_complete_nao_regride_a_adesao(api):
+    """Um reenvio com tempo MENOR não rebaixa o que já foi gravado.
+
+    O cliente chama esta rota duas vezes de propósito (encerramento, depois o item de
+    relaxamento), e a fila de telemetria pode reenviar mais tarde. Um reenvio atrasado —
+    ou de um app reaberto, que perdeu os contadores — chegava com zero e apagava a adesão
+    de uma sessão inteira ouvida, em silêncio. `completed` é desfecho primário.
+    """
+    client, TestSession = api
+    _seed_library(TestSession)
+    _pid, hdr = _seed_participant(TestSession, "P-MONO", "A")
+    sid = client.post(START, headers=hdr, json=start_body("alpha")).json()["session_id"]
+
+    bom = {"effective_seconds": 1180, "interruptions": 1, "paused_seconds": 12,
+           "gain_mean": 0.5, "gain_peak": 0.5}
+    assert client.post(f"{START}/{sid}/complete", headers=hdr, json=bom).status_code == 200
+
+    # Reenvio pobre: aceito (200), mas NÃO substitui — e ainda complementa o relaxamento.
+    pobre = {"effective_seconds": 0, "interruptions": 0, "paused_seconds": 0,
+             "relaxation_0_10": 8}
+    r = client.post(f"{START}/{sid}/complete", headers=hdr, json=pobre)
+    assert r.status_code == 200
+    assert r.json()["effective_seconds"] == 1180 and r.json()["counts_for_adherence"] is True
+
+    with TestSession() as s:
+        rec = s.get(SessionModel, uuid.UUID(sid))
+        assert rec.effective_seconds == 1180 and rec.completed is True
+        assert rec.interruptions == 1 and rec.paused_seconds == 12
+        assert rec.gain_mean == 0.5 and rec.gain_peak == 0.5
+        assert rec.relaxation_0_10 == 8      # o complemento pretendido segue passando
+
+
+def test_complete_aceita_reenvio_com_tempo_maior(api):
+    """O caminho normal do segundo envio: mesmo registro, agora com o relaxamento."""
+    client, TestSession = api
+    _seed_library(TestSession)
+    _pid, hdr = _seed_participant(TestSession, "P-MAIOR", "B")
+    sid = client.post(START, headers=hdr, json=start_body("alpha")).json()["session_id"]
+    client.post(f"{START}/{sid}/complete", headers=hdr,
+                json={"effective_seconds": 600, "interruptions": 0})
+    r = client.post(f"{START}/{sid}/complete", headers=hdr,
+                    json={"effective_seconds": 1200, "interruptions": 2,
+                          "relaxation_0_10": 9})
+    assert r.status_code == 200 and r.json()["effective_seconds"] == 1200
+    with TestSession() as s:
+        rec = s.get(SessionModel, uuid.UUID(sid))
+        assert rec.effective_seconds == 1200 and rec.interruptions == 2
+        assert rec.relaxation_0_10 == 9
+
+
 def test_complete_other_participants_session_404_idor(api):
     client, TestSession = api
     _seed_library(TestSession)

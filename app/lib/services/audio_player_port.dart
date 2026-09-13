@@ -29,6 +29,16 @@ abstract class AudioPlayerPort {
   /// Completa quando a reprodução chega ao fim naturalmente (uma vez).
   Future<void> get onComplete;
 
+  /// Quanto do áudio JÁ SOOU, medido pelo próprio player.
+  ///
+  /// É a fonte de verdade do tempo efetivo da sessão, e não um cronômetro da tela: o
+  /// Android suspende a isolate do Dart quando o app vai para segundo plano — tela
+  /// bloqueada, que é o esperado numa sessão de relaxamento de 20 min — e qualquer
+  /// `Timer` para junto. O áudio, não: quem toca é o player nativo. Um cronômetro de
+  /// tela registraria zero numa sessão inteira ouvida, zerando a adesão (desfecho
+  /// primário). A posição continua correndo porque é o próprio áudio contando.
+  Duration get position;
+
   bool get isPlaying;
 
   Future<void> dispose();
