@@ -27,8 +27,38 @@ jobs:
       - uses: subosito/flutter-action@v2
       - name: Gerar plataforma Android + dependencias
         run: cd app && flutter create --platforms=android --project-name sereno . && flutter pub get
+
+      # `flutter create` declara INTERNET so nos manifestos de debug e profile; o de `main`,
+      # que e o do build RELEASE, sai sem ela. Como a pasta android/ e regerada aqui a cada
+      # execucao, todo APK release deste pipeline nascia SEM PERMISSAO DE REDE: o Android
+      # bloqueava toda chamada antes de sair do aparelho e o app so dizia "falha de conexao".
+      - name: Declarar a permissao de internet no manifesto de release
+        run: |
+          set -euo pipefail
+          f=app/android/app/src/main/AndroidManifest.xml
+          if grep -q 'android.permission.INTERNET' "$f"; then
+            echo "ja declarada"
+          else
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET"/>' "$f"
+            grep -q 'android.permission.INTERNET' "$f" || { echo "::error::nao consegui injetar a permissao em $f"; exit 1; }
+            echo "permissao injetada"
+          fi
+
       - name: Build do APK (release)
         run: cd app && flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"
+
+      # Guard: sem isto o defeito volta em silencio na proxima vez que alguem mexer no passo
+      # acima — e o sintoma (nada chega ao servidor) so aparece com o app ja na mao de alguem.
+      - name: Conferir que o APK pede INTERNET
+        run: |
+          set -euo pipefail
+          apk=app/build/app/outputs/flutter-apk/app-release.apk
+          if unzip -p "$apk" AndroidManifest.xml | strings -el | grep -q 'android.permission.INTERNET'; then
+            echo "APK declara android.permission.INTERNET"
+          else
+            echo "::error::o APK saiu SEM android.permission.INTERNET — nenhuma chamada de rede funcionaria."
+            exit 1
+          fi
 
       # Sem keystore, `flutter build apk --release` assina com a chave de DEBUG: publica, mas
       # a chave e publica, nenhuma loja aceita, e trocar de chave depois obriga o participante
